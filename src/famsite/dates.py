@@ -1,0 +1,83 @@
+from __future__ import annotations
+
+import calendar
+import re
+from dataclasses import dataclass
+
+_FAMSITE = re.compile(r"^(~?)(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$")
+_GEDCOM = re.compile(r"^(?:(ABT|CAL|EST)\s+)?(?:(\d{1,2})\s+)?(?:([A-Z]{3})\s+)?(\d{3,4})$")
+_MONTHS = {
+    m: i
+    for i, m in enumerate(
+        ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"], start=1
+    )
+}
+
+
+@dataclass(frozen=True)
+class ParsedDate:
+    year: int
+    month: int | None
+    day: int | None
+    approx: bool
+
+
+def parse_date(text: str | None) -> ParsedDate | None:
+    if text is None:
+        return None
+    match = _FAMSITE.match(text.strip())
+    if not match:
+        return None
+    approx, year_s, month_s, day_s = match.groups()
+    year = int(year_s)
+    if year == 0:
+        return None
+    month = int(month_s) if month_s else None
+    day = int(day_s) if day_s else None
+    if month is not None and not 1 <= month <= 12:
+        return None
+    if day is not None and not 1 <= day <= calendar.monthrange(year, month)[1]:
+        return None
+    return ParsedDate(year, month, day, bool(approx))
+
+
+def date_year(text: str | None) -> int | None:
+    parsed = parse_date(text)
+    return parsed.year if parsed else None
+
+
+def _year_label(text: str | None) -> str:
+    parsed = parse_date(text)
+    if parsed is None:
+        return ""
+    return ("~" if parsed.approx else "") + str(parsed.year)
+
+
+def format_years(birth: str | None, death: str | None) -> str:
+    born, died = _year_label(birth), _year_label(death)
+    if not born and not died:
+        return ""
+    return f"{born}–{died}"
+
+
+def from_gedcom(text: str) -> tuple[str, bool]:
+    """Convert a GEDCOM date to famsite form. Returns (value, ok); on failure value is the original text."""
+    raw = text.strip()
+    match = _GEDCOM.match(raw.upper())
+    if not match:
+        return raw, False
+    qualifier, day, month, year = match.groups()
+    if day and not month:
+        return raw, False
+    if month and month not in _MONTHS:
+        return raw, False
+    out = f"{int(year):04d}"
+    if month:
+        out += f"-{_MONTHS[month]:02d}"
+    if day:
+        out += f"-{int(day):02d}"
+    if qualifier:
+        out = "~" + out
+    if parse_date(out) is None:
+        return raw, False
+    return out, True
