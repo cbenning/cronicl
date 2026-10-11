@@ -124,6 +124,9 @@ def cmd_build(args) -> int:
         _print_issues(errors, "text")
         print("error: fix the problems above or use --force", file=sys.stderr)
         return 1
+    warnings = [i for i in issues if i.severity == "warning"]
+    if warnings:
+        _print_issues(warnings, "text")
     out = Path(args.out) if args.out else root / "out"
     summary = build_site(tree, out, today=date.today())
     print(f"built {summary.people} people, {summary.files} files into {out}")

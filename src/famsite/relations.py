@@ -76,7 +76,11 @@ def build_relations(tree: Tree) -> Relations:
                 pairs.add(tuple(sorted((pid, other))))
         for marriage in person.marriages:
             other = marriage.with_id
-            if other not in people:
+            if not other:
+                issues.append(
+                    Issue("W-MARRIAGE-NO-PARTNER", f"{pid}: marriage entry names no partner (with:)", person.location)
+                )
+            elif other not in people:
                 dangling(pid, "marriages.with", other)
             elif other == pid:
                 issues.append(Issue("W-SELF-REFERENCE", f"{pid}: marriage with themselves", person.location))

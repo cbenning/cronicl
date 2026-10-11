@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import os
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -43,18 +44,23 @@ def plan_fix(data_dir: Path) -> FixPlan:
     skipped: set[int] = set()
 
     for index, person in enumerate(people):
-        if person.id_pinned and is_valid_id(person.id):
+        if not person.id_pinned:
+            continue
+        if explicit_counts[person.id] > 1:
+            # Two files claim one id: which one a reference meant is a human decision.
+            skipped.add(index)
             final[index] = person.id
             taken.add(person.id)
-            if explicit_counts[person.id] > 1:
-                skipped.add(index)
-                plan.unresolved.append(
-                    Issue(
-                        "E-DUPLICATE-ID",
-                        f"id {person.id!r} is used by more than one file; resolve by hand",
-                        _rel(person.path, data_dir),
-                    )
+            plan.unresolved.append(
+                Issue(
+                    "E-DUPLICATE-ID",
+                    f"id {person.id!r} is used by more than one file; resolve by hand",
+                    _rel(person.path, data_dir),
                 )
+            )
+        elif is_valid_id(person.id):
+            final[index] = person.id
+            taken.add(person.id)
 
     pending = [i for i in range(len(people)) if i not in final]
     pending.sort(key=lambda i: (natural_key(people[i].gedcom_id or ""), str(people[i].path)))
@@ -84,7 +90,9 @@ def plan_fix(data_dir: Path) -> FixPlan:
             parents=[ref(x) for x in person.parents],
             spouse=[ref(x) for x in person.spouse],
             children=[ref(x) for x in person.children],
-            marriages=[Marriage(ref(m.with_id), m.date, m.place) for m in person.marriages],
+            marriages=[
+                Marriage(ref(m.with_id) if m.with_id else "", m.date, m.place, m.extra) for m in person.marriages
+            ],
             id_pinned=True,
         )
         content = dump_person(updated)
@@ -105,5 +113,9 @@ def apply_plan(plan: FixPlan) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
     for path in plan.deletes:
-        if path not in plan.writes and path.exists():
-            path.unlink()
+        if path in plan.writes or not path.exists():
+            continue
+        # On a case-insensitive filesystem the old and new names are one file; never unlink that.
+        if any(w.exists() and os.path.samefile(w, path) for w in plan.writes):
+            continue
+        path.unlink()

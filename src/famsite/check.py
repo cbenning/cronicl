@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .dates import parse_date
 from .issues import Issue
+from .layout import generation_conflict
 from .model import Person, Tree
 from .relations import build_relations
 from .slug import is_valid_id
@@ -64,7 +65,12 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
         for marriage in person.marriages:
             _check_date(marriage.date, "marriage", person, issues)
 
-    for pid in sorted(_cycle_members(relations.parents)):
+    cycle_members = _cycle_members(relations.parents)
+    for pid in sorted(cycle_members):
         issues.append(Issue("E-CYCLE", f"{pid}: person is their own ancestor", tree.people[pid].location))
+    if not cycle_members:
+        conflict = generation_conflict(tree)
+        if conflict:
+            issues.append(Issue("E-GENERATION-CONFLICT", conflict))
 
     return sorted(issues, key=lambda i: (i.path or "", i.code, i.message))

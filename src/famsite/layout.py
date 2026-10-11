@@ -21,24 +21,52 @@ def _num(value: float):
     return int(value) if value.is_integer() else value
 
 
+def _generation_pass(gen, unions, kids) -> set[str]:
+    """One relaxation pass; returns the couples whose members or children moved."""
+    moved: set[str] = set()
+    for uid in sorted(unions):
+        members = unions[uid]
+        row = max(gen[p] for p in members)
+        for pid in members:
+            if gen[pid] != row:
+                gen[pid] = row
+                moved.add(uid)
+        for kid in kids[uid]:
+            if gen[kid] < row + 1:
+                gen[kid] = row + 1
+                moved.add(uid)
+    return moved
+
+
 def _generations(people, unions, kids) -> dict[str, int]:
     gen = {pid: 0 for pid in people}
     for _ in range(len(people) + len(unions) + 2):
-        changed = False
-        for uid in sorted(unions):
-            members = unions[uid]
-            row = max(gen[p] for p in members)
-            for pid in members:
-                if gen[pid] != row:
-                    gen[pid] = row
-                    changed = True
-            for kid in kids[uid]:
-                if gen[kid] < row + 1:
-                    gen[kid] = row + 1
-                    changed = True
-        if not changed:
+        if not _generation_pass(gen, unions, kids):
             return gen
-    raise LayoutError("could not assign generations; the tree probably contains an ancestry cycle")
+    involved: set[str] = set()
+    for _ in range(len(unions) + 2):
+        involved |= _generation_pass(gen, unions, kids)
+    raise LayoutError(
+        "could not assign generations: spouses must share a row but their ancestry puts them in different "
+        "generations (or the tree has an ancestry cycle); couples involved: " + ", ".join(sorted(involved))
+    )
+
+
+def _couples_and_kids(tree: Tree):
+    relations = build_relations(tree)
+    unions = {cid: list(couple.partners) for cid, couple in sorted(relations.couples.items())}
+    kids = {cid: list(relations.kids.get(cid, [])) for cid in unions}
+    return relations, unions, kids
+
+
+def generation_conflict(tree: Tree) -> str | None:
+    """Return a description of why generations cannot be assigned, or None if they can."""
+    _, unions, kids = _couples_and_kids(tree)
+    try:
+        _generations(sorted(tree.people), unions, kids)
+    except LayoutError as exc:
+        return str(exc)
+    return None
 
 
 def _order_component(component: list[str], adj: dict[str, set[str]]) -> list[str]:
@@ -121,10 +149,8 @@ def _pack(order: list[int], desired: dict[int, float | None], widths: dict[int, 
 
 
 def compute_layout(tree: Tree) -> dict:
-    relations = build_relations(tree)
+    relations, unions, kids = _couples_and_kids(tree)
     people = sorted(tree.people)
-    unions = {cid: list(couple.partners) for cid, couple in sorted(relations.couples.items())}
-    kids = {cid: list(relations.kids.get(cid, [])) for cid in unions}
     parent_union = dict(relations.birth_couple)
 
     if not people:

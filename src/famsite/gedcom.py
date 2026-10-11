@@ -137,8 +137,12 @@ def _event(node: Node, label: str, owner: str, extra: list[Node], issues: list[I
             date = value or None
             if value and not ok:
                 issues.append(Issue("W-DATE-UNPARSED", f"{owner}: {label} date {value!r} kept as text"))
+            if child.children:
+                leftovers.append(child)
         elif child.tag == "PLAC" and place is None:
             place = child.value.strip() or None
+            if child.children:
+                leftovers.append(child)
         else:
             leftovers.append(child)
     if leftovers:
@@ -185,8 +189,11 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
             given, surname = _parse_name(child, extra)
         elif tag == "SEX" and "SEX" not in seen:
             seen.add("SEX")
-            letter = child.value.strip().upper()[:1]
-            sex = letter if letter in ("M", "F") else "U"
+            value = child.value.strip().upper()
+            if value in ("M", "F"):
+                sex = value
+            elif value not in ("", "U"):
+                extra.append(child)  # keep unrecognised values (e.g. X) verbatim
         elif tag == "BIRT" and "BIRT" not in seen:
             seen.add("BIRT")
             birth = _event(child, "birth", xref, extra, issues)
@@ -196,12 +203,16 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
         elif tag == "FAMC":
             if not famc:
                 famc.append(child.value.strip())
+                if child.children:
+                    extra.append(child)  # e.g. 2 PEDI adopted
             else:
                 extra.append(child)
         elif tag == "FAMS":
             continue  # derived from the FAM records
         elif tag == "NOTE" and child.value and not _is_pointer(child.value.strip()):
             notes.append(child.value)
+            if child.children:
+                extra.append(child)  # e.g. 2 SOUR under the note
         else:
             extra.append(child)
     person = Person(
@@ -275,7 +286,12 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
                     issues.append(Issue("W-DANGLING-PARTNER", f"{xref}: {tag} {child.value!r} is not a known person"))
                     extra.append(child)
             elif tag == "CHIL":
-                chil.append(child.value.strip().strip("@"))
+                target = child.value.strip().strip("@")
+                if target in person_by_xref:
+                    chil.append(target)
+                else:
+                    issues.append(Issue("W-DANGLING-CHILD", f"{xref}: CHIL {child.value!r} is not a known person"))
+                    extra.append(child)
             elif tag == "MARR":
                 marr_nodes.append(child)
             else:

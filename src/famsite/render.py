@@ -81,8 +81,21 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+_GENERATED_DIRS = ("data", "p")
+_GENERATED_FILES = ("index.html", "layout.json", "index.json", "viewer.js", "style.css")
+
+
+def _clear_generated(out_dir: Path) -> None:
+    """Remove what a previous build wrote, so a person who became private cannot linger in the output."""
+    for name in _GENERATED_DIRS:
+        shutil.rmtree(out_dir / name, ignore_errors=True)
+    for name in _GENERATED_FILES:
+        (out_dir / name).unlink(missing_ok=True)
+
+
 def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     out_dir = Path(out_dir)
+    _clear_generated(out_dir)
     privacy = tree.site.get("privacy", {}) or {}
     visible = redact(
         tree,

@@ -8,16 +8,18 @@ from pathlib import Path
 class Event:
     date: str | None = None
     place: str | None = None
+    extra: dict = field(default_factory=dict)
 
     def is_empty(self) -> bool:
-        return not (self.date or self.place)
+        return not (self.date or self.place or self.extra)
 
 
 @dataclass
 class Marriage:
-    with_id: str
+    with_id: str  # "" for an entry that names no partner
     date: str | None = None
     place: str | None = None
+    extra: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -25,6 +27,7 @@ class Person:
     id: str
     given: str | None = None
     surname: str | None = None
+    name_extra: dict = field(default_factory=dict)
     sex: str = "U"
     birth: Event | None = None
     death: Event | None = None

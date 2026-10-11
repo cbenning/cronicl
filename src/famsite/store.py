@@ -49,21 +49,26 @@ def _parse_event(value) -> Event | None:
     if value is None:
         return None
     if isinstance(value, dict):
-        return Event(date=_opt(value.get("date")), place=_opt(value.get("place")))
+        return Event(
+            date=_opt(value.get("date")),
+            place=_opt(value.get("place")),
+            extra={k: v for k, v in value.items() if k not in ("date", "place")},
+        )
     text = _opt(value)
     return Event(date=text) if text else None
 
 
-def _parse_name(value) -> tuple[str | None, str | None]:
+def _parse_name(value) -> tuple[str | None, str | None, dict]:
     if isinstance(value, dict):
-        return _opt(value.get("given")), _opt(value.get("surname"))
+        extra = {k: v for k, v in value.items() if k not in ("given", "surname")}
+        return _opt(value.get("given")), _opt(value.get("surname")), extra
     text = _opt(value)
     if not text:
-        return None, None
+        return None, None, {}
     parts = text.split()
     if len(parts) == 1:
-        return parts[0], None
-    return " ".join(parts[:-1]), parts[-1]
+        return parts[0], None, {}
+    return " ".join(parts[:-1]), parts[-1], {}
 
 
 def _parse_bool(value) -> bool | None:
@@ -96,21 +101,70 @@ def _parse_marriages(value) -> list[Marriage]:
     if not isinstance(value, list):
         return out
     for item in value:
-        if not isinstance(item, dict):
+        if not isinstance(item, dict) or not item:
             continue
-        with_id = _opt(item.get("with"))
-        if with_id:
-            out.append(Marriage(with_id, _opt(item.get("date")), _opt(item.get("place"))))
+        out.append(
+            Marriage(
+                _opt(item.get("with")) or "",
+                _opt(item.get("date")),
+                _opt(item.get("place")),
+                {k: v for k, v in item.items() if k not in ("with", "date", "place")},
+            )
+        )
     return out
 
 
+def _require_text(value, label: str) -> None:
+    if value is not None and not isinstance(value, str):
+        raise ValueError(f"{label} must be a single value, not a list or mapping")
+
+
+def _require_text_list(value, label: str) -> None:
+    if value is None or isinstance(value, str):
+        return
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise ValueError(f"{label} must be a value or a list of values")
+
+
+def _require_mapping_of_text(value, label: str, keys: tuple[str, ...]) -> None:
+    if value is None or isinstance(value, str):
+        return
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be a value or a mapping")
+    for key in keys:
+        _require_text(value.get(key), f"{label}.{key}")
+
+
+def _validate_shapes(data: dict) -> None:
+    """Reject well-formed YAML whose values have the wrong shape (a list where text is expected, ...)."""
+    for key in ("id", "sex", "living", "gedcom_id", "gedcom_extra"):
+        _require_text(data.get(key), key)
+    _require_mapping_of_text(data.get("name"), "name", ("given", "surname"))
+    _require_mapping_of_text(data.get("birth"), "birth", ("date", "place"))
+    _require_mapping_of_text(data.get("death"), "death", ("date", "place"))
+    for key in ("parents", "spouse", "children"):
+        _require_text_list(data.get(key), key)
+    marriages = data.get("marriages")
+    if marriages is not None and not isinstance(marriages, (str, dict, list)):
+        raise ValueError("marriages must be a list of mappings")
+    if isinstance(marriages, dict):
+        marriages = [marriages]
+    if isinstance(marriages, list):
+        for item in marriages:
+            if not isinstance(item, dict):
+                raise ValueError("marriages entries must be mappings")
+            for key in ("with", "date", "place"):
+                _require_text(item.get(key), f"marriages.{key}")
+
+
 def _make_person(data: dict, body: str, path: Path) -> Person:
-    given, surname = _parse_name(data.get("name"))
+    given, surname, name_extra = _parse_name(data.get("name"))
     explicit = _opt(data.get("id"))
     return Person(
         id=explicit or slugify(path.stem) or FALLBACK_SLUG,
         given=given,
         surname=surname,
+        name_extra=name_extra,
         sex=(_opt(data.get("sex")) or "U").upper(),
         birth=_parse_event(data.get("birth")),
         death=_parse_event(data.get("death")),
@@ -142,6 +196,7 @@ def read_records(data_dir: Path) -> tuple[list[Person], list[Issue]]:
     for path in sorted((data_dir / "people").glob("*.md")):
         try:
             data, body = split_frontmatter(path.read_text(encoding="utf-8"))
+            _validate_shapes(data)
         except (ValueError, yaml.YAMLError, UnicodeDecodeError) as exc:
             issues.append(Issue("E-BAD-FRONTMATTER", f"cannot parse frontmatter: {exc}", _rel(path, data_dir)))
             continue
@@ -192,6 +247,13 @@ def _scalar(value: str) -> str:
     return dumped.removesuffix("\n...\n").strip()
 
 
+def _extra_lines(extra: dict, indent: int) -> list[str]:
+    if not extra:
+        return []
+    dumped = yaml.safe_dump(extra, sort_keys=False, allow_unicode=True, width=10**9)
+    return [" " * indent + line for line in dumped.rstrip("\n").split("\n")]
+
+
 def _event_lines(key: str, event: Event | None) -> list[str]:
     if event is None:
         return []
@@ -202,6 +264,7 @@ def _event_lines(key: str, event: Event | None) -> list[str]:
         lines.append(f"  date: {_scalar(event.date)}")
     if event.place:
         lines.append(f"  place: {_scalar(event.place)}")
+    lines += _extra_lines(event.extra, 2)
     return lines
 
 
@@ -216,11 +279,18 @@ def _marriage_lines(marriages: list[Marriage]) -> list[str]:
         return []
     lines = ["marriages:"]
     for marriage in marriages:
-        lines.append(f"  - with: {_scalar(marriage.with_id)}")
+        entry: list[str] = []
+        if marriage.with_id:
+            entry.append(f"with: {_scalar(marriage.with_id)}")
         if marriage.date:
-            lines.append(f"    date: {_scalar(marriage.date)}")
+            entry.append(f"date: {_scalar(marriage.date)}")
         if marriage.place:
-            lines.append(f"    place: {_scalar(marriage.place)}")
+            entry.append(f"place: {_scalar(marriage.place)}")
+        entry += _extra_lines(marriage.extra, 0)
+        if not entry:
+            continue
+        lines.append(f"  - {entry[0]}")
+        lines += [f"    {line}" for line in entry[1:]]
     return lines
 
 
@@ -243,6 +313,7 @@ def dump_person(person: Person) -> str:
         name.append(f"  given: {_scalar(person.given)}")
     if person.surname:
         name.append(f"  surname: {_scalar(person.surname)}")
+    name += _extra_lines(person.name_extra, 2)
     if name:
         lines += ["name:"] + name
     if person.sex and person.sex != "U":
