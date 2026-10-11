@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bar">
+  <h1>{{ title }}</h1>
+  <input id="search" type="search" placeholder="Search people" autocomplete="off" aria-label="Search people">
+  <ul id="results" hidden></ul>
+</header>
+<main>
+  <svg id="tree" role="img" aria-label="Family tree"></svg>
+  <aside id="panel" hidden></aside>
+</main>
+<noscript>
+  <ul class="plain-list">
+  {% for person in people %}
+    <li><a href="p/{{ person.id }}/">{{ person.name }}</a> {{ person.years }}</li>
+  {% endfor %}
+  </ul>
+</noscript>
+<script src="viewer.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ person.name }} — {{ title }}</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body class="person-page">
+<main>
+  <p><a href="../../index.html#/{{ person.id }}">← Show in tree</a></p>
+  <h1>{{ person.name }}</h1>
+  {% if person.years %}<p class="years">{{ person.years }}</p>{% endif %}
+  {% if person.birth and (person.birth.date or person.birth.place) %}
+  <p>Born {{ person.birth.date or "" }}{% if person.birth.place %} in {{ person.birth.place }}{% endif %}</p>
+  {% endif %}
+  {% if person.death and (person.death.date or person.death.place) %}
+  <p>Died {{ person.death.date or "" }}{% if person.death.place %} in {{ person.death.place }}{% endif %}</p>
+  {% endif %}
+  {{ person.bodyHtml | safe }}
+  {% for label, group in [("Parents", person.parents), ("Spouses", person.spouses), ("Children", person.children)] %}
+  {% if group %}
+  <h2>{{ label }}</h2>
+  <ul>
+    {% for rel in group %}<li><a href="../{{ rel.id }}/">{{ rel.name }}</a></li>{% endfor %}
+  </ul>
+  {% endif %}
+  {% endfor %}
+</main>
+</body>
+</html>
