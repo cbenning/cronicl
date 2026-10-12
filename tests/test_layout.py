@@ -142,3 +142,44 @@ def test_dangling_references_are_ignored(make_tree):
     tree = make_tree([person("a", parents=["ghost"], spouse=["phantom"])])
     layout = compute_layout(tree)
     assert [n["id"] for n in layout["nodes"]] == ["a"]
+
+
+def test_siblings_share_a_row_even_when_one_marries_into_a_deeper_branch(make_tree):
+    # a+b have s1 and s2. s1 marries x, whose own line is two generations deeper than a+b.
+    tree = make_tree(
+        [
+            person("a"), person("b"),
+            person("s1", parents=["a", "b"]), person("s2", parents=["a", "b"]),
+            person("r"), person("r2"),
+            person("q", parents=["r", "r2"]), person("q2"),
+            person("x", parents=["q", "q2"]),
+            person("kid", parents=["s1", "x"]),
+        ]
+    )
+    layout = compute_layout(tree)
+    assert_invariants(tree, layout)
+    rows = {n["id"]: n["y"] for n in layout["nodes"]}
+    assert rows["s1"] == rows["s2"]
+    assert rows["s1"] > rows["a"]
+
+
+def test_half_siblings_share_a_row_too(make_tree):
+    # p has c1 with b and c2 with d; c1 marries into a deeper branch, c2 must follow.
+    tree = make_tree(
+        [
+            person("p"), person("b"), person("d"),
+            person("c1", parents=["p", "b"]), person("c2", parents=["p", "d"]),
+            person("r"), person("r2"),
+            person("q", parents=["r", "r2"]), person("q2"),
+            person("x", parents=["q", "q2"]),
+            person("kid", parents=["c1", "x"]),
+        ]
+    )
+    layout = compute_layout(tree)
+    assert_invariants(tree, layout)
+    rows = {n["id"]: n["y"] for n in layout["nodes"]}
+    assert rows["c1"] == rows["c2"]
+
+
+def test_node_height_leaves_room_for_two_name_lines_and_years():
+    assert NODE_H >= 64

@@ -4,7 +4,7 @@ from .model import Tree
 from .relations import build_relations
 
 NODE_W = 160
-NODE_H = 56
+NODE_H = 64
 H_GAP = 24
 BLOCK_GAP = 56
 ROW_GAP = 84
@@ -21,8 +21,17 @@ def _num(value: float):
     return int(value) if value.is_integer() else value
 
 
-def _generation_pass(gen, unions, kids) -> set[str]:
-    """One relaxation pass; returns the couples whose members or children moved."""
+def _sibling_groups(unions, kids) -> dict[str, list[str]]:
+    """For every person, all their children across couples: full and half siblings share a row."""
+    by_parent: dict[str, set[str]] = {}
+    for uid, members in unions.items():
+        for pid in members:
+            by_parent.setdefault(pid, set()).update(kids[uid])
+    return {pid: sorted(children) for pid, children in sorted(by_parent.items()) if len(children) > 1}
+
+
+def _generation_pass(gen, unions, kids, siblings) -> set[str]:
+    """One relaxation pass; returns the couples (or sibling groups) that moved."""
     moved: set[str] = set()
     for uid in sorted(unions):
         members = unions[uid]
@@ -35,17 +44,24 @@ def _generation_pass(gen, unions, kids) -> set[str]:
             if gen[kid] < row + 1:
                 gen[kid] = row + 1
                 moved.add(uid)
+    for parent, children in siblings.items():
+        deepest = max(gen[c] for c in children)
+        for child in children:
+            if gen[child] != deepest:
+                gen[child] = deepest
+                moved.add(f"children of {parent}")
     return moved
 
 
 def _generations(people, unions, kids) -> dict[str, int]:
     gen = {pid: 0 for pid in people}
+    siblings = _sibling_groups(unions, kids)
     for _ in range(len(people) + len(unions) + 2):
-        if not _generation_pass(gen, unions, kids):
+        if not _generation_pass(gen, unions, kids, siblings):
             return gen
     involved: set[str] = set()
     for _ in range(len(unions) + 2):
-        involved |= _generation_pass(gen, unions, kids)
+        involved |= _generation_pass(gen, unions, kids, siblings)
     raise LayoutError(
         "could not assign generations: spouses must share a row but their ancestry puts them in different "
         "generations (or the tree has an ancestry cycle); couples involved: " + ", ".join(sorted(involved))
