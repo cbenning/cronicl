@@ -28,6 +28,12 @@ uv run famsite serve my-family            # http://127.0.0.1:8000/
 | `build [DIR] [--out DIR] [--force]` | Run `check`, then generate the static site. |
 | `serve [DIR] [--port N]` | Build and serve locally. |
 | `schema` | Print a JSON Schema for the frontmatter (for agents and editors). |
+| `search QUERY... [--dir DIR] [--limit N] [--format json]` | Fuzzy-find people and print their ids (name, id, years, places; typo- and accent-tolerant). `*` marks people the privacy rules treat as living. Exit 1 when nothing matches. |
+| `edit mark-deceased ID... [--dir DIR] [--dry-run]` | Write `living: false` for the named people. Targeted text edit; all ids are validated first. |
+| `edit mark-living ID... [--dir DIR] [--dry-run]` | Write `living: true` for the named people. |
+
+`edit` holds every command that changes a person file by hand-picked id, so it stays separate from the
+read-only utilities. There is deliberately no bulk form.
 
 ## Data layout
 
@@ -72,11 +78,15 @@ end and are merged. Couples are derived; there are no couple files.
 
 ## Privacy
 
-People are treated as living when `living: true`, or when they have no `death` and were born less than
-`cutoff_years` ago (default 100); no dates at all also counts as living. `site.yml` `privacy.living` is one of
-`hidden`, `placeholder` (default) or `full`. Living people are redacted before any output file is written, their
-ids are replaced by salted hashes, and marriage details involving a living spouse are dropped. Mentions of a
-living person's name inside someone else's biography are not detected.
+**Redaction is off by default.** `famsite init` writes `privacy.living: full`, and a site with no
+`privacy.living` key behaves the same: everyone is published. Turn it on by setting `placeholder` or `hidden`
+before you publish a site that contains living people.
+
+When redaction is on, people are treated as living when `living: true`, or when they have no `death` and were
+born less than `cutoff_years` ago (default 100); no dates at all also counts as living. Nothing is ever
+inferred: `edit mark-deceased` is how you tell famsite someone is dead. Living people are redacted before any
+output file is written, their ids are replaced by salted hashes, and marriage details involving a living
+spouse are dropped. Mentions of a living person's name inside someone else's biography are not detected.
 
 ## Development
 

@@ -12,18 +12,20 @@ from datetime import date
 from pathlib import Path
 
 from .check import check_tree
+from .edit import EditError, apply_living
 from .fix import apply_plan, plan_fix
 from .gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
 from .layout import LayoutError
 from .render import build_site, dumps
 from .schema import PERSON_SCHEMA
+from .search import search_people
 from .store import load_tree
 
 SITE_YML = """\
 title: Family Tree
 schema_version: 1
 privacy:
-  living: placeholder   # hidden | placeholder | full
+  living: full          # full (default: nothing hidden) | placeholder | hidden -- redaction is opt-in
   cutoff_years: 100
   id_salt: {salt}
 """
@@ -148,6 +150,41 @@ def cmd_serve(args) -> int:
     return 0
 
 
+def cmd_edit_living(args) -> int:
+    changes = apply_living(Path(args.dir), args.ids, args.living, dry_run=args.dry_run)
+    word = "would set" if args.dry_run else "set"
+    for path, changed in changes:
+        status = f"{word} living: {'true' if args.living else 'false'}" if changed else "unchanged"
+        print(f"{path.parent.name}/{path.name}: {status}")
+    return 0
+
+
+def cmd_search(args) -> int:
+    tree, _ = load_tree(Path(args.dir))
+    try:
+        hits = search_people(tree, " ".join(args.query), today=date.today(), limit=args.limit)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if args.format == "json":
+        print(json.dumps([h.to_dict() for h in hits], indent=2, ensure_ascii=False))
+    elif hits:
+        id_width = max(len(h.id) for h in hits)
+        name_width = max(len(h.name) for h in hits)
+        years_width = max(len(h.years or "-") for h in hits)
+        place_width = max(len(h.place or "-") for h in hits)
+        for h in hits:
+            marker = "*" if h.living else " "
+            parents = ", ".join(h.parents) if h.parents else "-"
+            print(
+                f"{h.id:<{id_width}} {marker} {h.name:<{name_width}}  {(h.years or '-'):<{years_width}}  "
+                f"{(h.place or '-'):<{place_width}}  parents: {parents}"
+            )
+        if any(h.living for h in hits):
+            print("* = treated as living by the privacy rules (no death date and born <100 years ago, or undated)")
+    return 0 if hits else 1
+
+
 def cmd_schema(args) -> int:
     print(dumps({"person": PERSON_SCHEMA}), end="")
     return 0
@@ -194,6 +231,25 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("schema", help="print the JSON Schema for frontmatter")
     p.set_defaults(func=cmd_schema)
+
+    p = sub.add_parser("search", help="fuzzy-find people and print their ids (read-only)")
+    p.add_argument("query", nargs="+", help="words to look for in names, ids, years and places")
+    p.add_argument("--dir", default=".")
+    p.add_argument("--limit", type=int, default=20)
+    p.add_argument("--format", choices=["text", "json"], default="text")
+    p.set_defaults(func=cmd_search)
+
+    p = sub.add_parser("edit", help="state-changing helpers (edit person files)")
+    edit_sub = p.add_subparsers(dest="edit_command", required=True)
+    for name, living, helptext in (
+        ("mark-deceased", False, "write `living: false` for the named people"),
+        ("mark-living", True, "write `living: true` for the named people"),
+    ):
+        q = edit_sub.add_parser(name, help=helptext)
+        q.add_argument("ids", nargs="+", help="person ids (find them with `famsite search`)")
+        q.add_argument("--dir", default=".")
+        q.add_argument("--dry-run", action="store_true")
+        q.set_defaults(func=cmd_edit_living, living=living)
     return parser
 
 
@@ -202,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except (GedcomError, ImportRefused, LayoutError) as exc:
+    except (GedcomError, ImportRefused, LayoutError, EditError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

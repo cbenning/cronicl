@@ -111,3 +111,11 @@ def test_living_people_never_appear_in_any_output_file(tmp_path, make_tree):
         assert "Qqwidget" not in text and "qqwidget" not in text, rel
         assert "Jane" not in text and "Tom bio" not in text, rel
     assert (tmp_path / "data/people/smith-bob.json").exists()
+
+
+def test_no_privacy_setting_means_no_redaction(tmp_path, make_tree):
+    tree = make_tree([p("a", "Al", "Living", birth=Event(date="2000"))])
+    tree.site = {}
+    build_site(tree, tmp_path, today=TODAY)
+    payload = json.loads((tmp_path / "data/people/a.json").read_text(encoding="utf-8"))
+    assert payload["name"] == "Al Living"

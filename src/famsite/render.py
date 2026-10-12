@@ -99,7 +99,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     privacy = tree.site.get("privacy", {}) or {}
     visible = redact(
         tree,
-        mode=privacy.get("living", "placeholder"),
+        mode=privacy.get("living", "full"),
         today=today,
         cutoff_years=int(privacy.get("cutoff_years", 100)),
         salt=str(privacy.get("id_salt", "")),
