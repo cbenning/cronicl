@@ -165,6 +165,44 @@
     return names[0] + ' ' + verb;
   }
 
+  // What to light up when `id` is selected: their parents' line, their own couples and those couples' children.
+  // Siblings' connectors are deliberately left out so one family can be traced through a dense tree.
+  function relatedFor(layout, id) {
+    var edges = new Set(), people = new Set(), unions = new Set();
+    var members = {};
+    (layout.unions || []).forEach(function (u) { members[u.id] = u.members || []; });
+    var own = new Set();
+    var birth = null;
+    layout.edges.forEach(function (e) {
+      if (e.kind === 'spouse' && e.from === id) own.add(e.to);
+      if (e.kind === 'child' && e.to === id) birth = e.from;
+    });
+    (layout.unions || []).forEach(function (u) {
+      if ((u.members || []).length === 1 && u.members[0] === id) own.add(u.id); // a lone parent has no spouse edge
+    });
+    var couples = new Set(own);
+    if (birth) couples.add(birth);
+    couples.forEach(function (uid) {
+      unions.add(uid);
+      (members[uid] || []).forEach(function (p) { people.add(p); });
+    });
+    layout.edges.forEach(function (e, i) {
+      if (e.kind === 'spouse' && couples.has(e.to)) {
+        edges.add(i);
+        people.add(e.from);
+      } else if (e.kind === 'child') {
+        if (own.has(e.from)) {
+          edges.add(i);
+          people.add(e.to);
+        } else if (e.from === birth && e.to === id) {
+          edges.add(i);
+        }
+      }
+    });
+    people.delete(id);
+    return { edges: edges, people: people, unions: unions };
+  }
+
   var GLYPH = { birth: '●', marriage: '⚭', death: '✝' };
 
   // ------------------------------------------------------------------ browser app
@@ -349,11 +387,17 @@
       var drag = null;
       var moved = false;
       var loading = null;
+      var hl = null;
+      var hiLayer = svgEl('g');
+      viewport.insertBefore(hiLayer, nodeLayer);
 
       function makeNode(id) {
         var n = nodes.get(id);
         var info = people.get(id) || { name: id, years: '' };
-        var g = svgEl('g', { 'class': 'node' + (id === state.selected ? ' selected' : ''), 'data-id': id });
+        var mark = '';
+        if (id === state.selected) mark = ' selected';
+        else if (hl) mark = hl.people.has(id) ? ' related' : ' dim';
+        var g = svgEl('g', { 'class': 'node' + mark, 'data-id': id });
         g.appendChild(svgEl('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 6 }));
         var wrapped = wrapName(info.name, n.w - 2 * NODE_PAD, measureName, 2);
         var tip = svgEl('title');
@@ -389,17 +433,21 @@
         }
         if (kind === 'u:') {
           var u = unionIndex.get(ref);
-          var dot = svgEl('circle', { cx: u.x, cy: u.y, r: 3, 'class': 'union' });
+          var dot = svgEl('circle', {
+            cx: u.x, cy: u.y, r: 3,
+            'class': 'union' + (hl ? (hl.unions.has(ref) ? ' hi' : ' dim') : '')
+          });
           nodeLayer.appendChild(dot);
           return dot;
         }
         var edge = state.layout.edges[Number(ref)];
+        var lit = hl && hl.edges.has(Number(ref));
         var line = svgEl('polyline', {
           points: edge.points.map(function (p) { return p.join(','); }).join(' '),
-          'class': 'edge ' + edge.kind,
+          'class': 'edge ' + edge.kind + (hl ? (lit ? ' hi' : ' dim') : ''),
           fill: 'none'
         });
-        edgeLayer.appendChild(line);
+        (lit ? hiLayer : edgeLayer).appendChild(line);
         return line;
       }
 
@@ -427,6 +475,7 @@
       }
 
       function rebuild() {
+        hl = state.selected && state.layout && nodes.has(state.selected) ? relatedFor(state.layout, state.selected) : null;
         live.forEach(function (el) { el.remove(); });
         live.clear();
         render();
@@ -805,6 +854,7 @@
     routeHash: routeHash,
     yearPosition: yearPosition,
     personTimelineEvents: personTimelineEvents,
+    relatedFor: relatedFor,
     eventText: eventText
   };
   if (typeof module !== 'undefined' && module.exports) {

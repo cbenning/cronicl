@@ -117,3 +117,41 @@ test('yearPosition places dated events inside their year', () => {
   assert.ok(v.yearPosition({ year: 1950, month: 6, day: 1 }) > 1950.4);
   assert.ok(v.yearPosition({ year: 1950, month: 1, day: 1 }) >= 1950);
 });
+
+const fam = {
+  unions: [
+    { id: 'a+b', x: 0, y: 0, members: ['a', 'b'] },
+    { id: 'c+x', x: 0, y: 0, members: ['c', 'x'] },
+    { id: 'solo+', x: 0, y: 0, members: ['solo'] },
+  ],
+  edges: [
+    { from: 'a', to: 'a+b', kind: 'spouse' },
+    { from: 'b', to: 'a+b', kind: 'spouse' },
+    { from: 'a+b', to: 'c', kind: 'child' },
+    { from: 'a+b', to: 'd', kind: 'child' },
+    { from: 'c', to: 'c+x', kind: 'spouse' },
+    { from: 'x', to: 'c+x', kind: 'spouse' },
+    { from: 'c+x', to: 'e', kind: 'child' },
+    { from: 'solo+', to: 'k', kind: 'child' },
+  ],
+};
+
+test('relatedFor lights up the parents line, own couples and children, not siblings', () => {
+  const r = v.relatedFor(fam, 'c');
+  assert.deepStrictEqual([...r.people].sort(), ['a', 'b', 'e', 'x']);
+  assert.deepStrictEqual([...r.edges].sort((m, n) => m - n), [0, 1, 2, 4, 5, 6]);
+  assert.ok(!r.edges.has(3), "sibling d's connector is not highlighted");
+  assert.deepStrictEqual([...r.unions].sort(), ['a+b', 'c+x']);
+});
+
+test('relatedFor works for a child with one known parent', () => {
+  const r = v.relatedFor(fam, 'k');
+  assert.deepStrictEqual([...r.people], ['solo']);
+  assert.deepStrictEqual([...r.edges], [7]);
+});
+
+test('relatedFor of an unconnected person highlights nothing', () => {
+  const r = v.relatedFor(fam, 'nobody');
+  assert.strictEqual(r.edges.size, 0);
+  assert.strictEqual(r.people.size, 0);
+});

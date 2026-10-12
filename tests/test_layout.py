@@ -224,3 +224,11 @@ def test_row_gap_grows_when_a_generation_needs_many_buses(make_tree):
     nodes = {n["id"]: n for n in layout["nodes"]}
     # children never overlap the buses drawn above them
     assert nodes["k00"]["y"] > nodes["p0a"]["y"] + NODE_H
+
+
+def test_unions_list_their_members_so_the_viewer_can_highlight_a_family(make_tree):
+    tree = nuclear(make_tree)
+    layout = compute_layout(tree)
+    assert layout["unions"][0]["members"] == ["a", "b"]
+    solo = compute_layout(make_tree([person("a"), person("c", parents=["a"])]))
+    assert solo["unions"][0]["members"] == ["a"]

@@ -66,12 +66,16 @@ async function main() {
   check('panel shows the person', (await ev(`document.querySelector('#panel h2')?.textContent`)) === 'Bob Smith');
   check('node is highlighted', (await ev(`document.querySelectorAll('.node.selected').length`)) === 1);
   check('url records the selection', (await ev(`location.hash`)) === '#/tree/smith-bob');
+  check('selected person lights up connectors', (await ev(`document.querySelectorAll('.edge.hi').length`)) >= 1);
+  check('relatives are marked related', (await ev(`document.querySelectorAll('.node.related').length`)) >= 2);
+  check('unrelated people and lines are faded', (await ev(`document.querySelectorAll('.node.dim').length`)) >= 1);
   await shot('tree-panel-open');
   await click('#panel .close');
   await sleep(300);
   check('close button hides the panel', (await ev(`document.getElementById('panel').hidden`)) === true);
   check('close deselects the node', (await ev(`document.querySelectorAll('.node.selected').length`)) === 0);
   check('close clears the url selection', (await ev(`location.hash`)) === '#/tree');
+  check('close removes all highlighting', (await ev(`document.querySelectorAll('.edge.hi, .edge.dim, .node.dim, .node.related').length`)) === 0);
   await click('.node[data-id="smith-john"]');
   await sleep(500);
   await ev(`document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))`);

@@ -295,7 +295,7 @@ def compute_layout(tree: Tree) -> dict:
         g = gen[members[0]]
         multi = len(members) >= 2
         jy = row_y(g) + (NODE_H / 2 if multi else NODE_H)
-        out_unions.append({"id": uid, "x": _num(jx), "y": _num(jy)})
+        out_unions.append({"id": uid, "x": _num(jx), "y": _num(jy), "members": list(members)})
         if multi:
             for pid in members:
                 c = center(pid)
