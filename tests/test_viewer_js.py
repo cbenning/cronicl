@@ -11,10 +11,9 @@ ROOT = Path(__file__).parent
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-def test_viewer_culling_unit_tests():
-    result = subprocess.run(
-        ["node", "--test", str(ROOT / "js" / "culling.test.js")], capture_output=True, text=True
-    )
+def test_viewer_js_unit_tests():
+    files = [str(ROOT / "js" / name) for name in ("culling.test.js", "viewer-helpers.test.js")]
+    result = subprocess.run(["node", "--test", *files], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
 
 

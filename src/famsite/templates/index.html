@@ -9,11 +9,22 @@
 <body>
 <header class="bar">
   <h1>{{ title }}</h1>
+  <nav id="tabs" aria-label="Views">
+    <a href="#/tree" data-view="tree">Tree</a>
+    <a href="#/timeline" data-view="timeline">Timeline</a>
+  </nav>
   <input id="search" type="search" placeholder="Search people" autocomplete="off" aria-label="Search people">
   <ul id="results" hidden></ul>
 </header>
 <main>
-  <svg id="tree" role="img" aria-label="Family tree"></svg>
+  <div id="views">
+    <svg id="tree" role="img" aria-label="Family tree"></svg>
+    <section id="timeline" hidden>
+      <div id="timeline-head"></div>
+      <svg id="timeline-svg" role="img" aria-label="Timeline"></svg>
+      <details id="undated" hidden></details>
+    </section>
+  </div>
   <aside id="panel" hidden></aside>
 </main>
 <noscript>

@@ -41,6 +41,20 @@ files previews by default and needs `--apply` (`-a`).
 `edit` holds every command that changes a person file by hand-picked id, so it stays separate from the
 read-only utilities. There is deliberately no bulk form.
 
+## Views
+
+`serve` / `build` produce a single-page site with tabs:
+
+- **Tree:** every person on a pan-and-zoom canvas (only what is on screen is drawn). Long names wrap onto two
+  lines; siblings and half-siblings always share a row.
+- **Timeline:** every dated birth, marriage and death on one horizontal, zoomable time axis. People with no
+  dated events are listed underneath.
+- **Person timeline:** `#/timeline/<id>`, or "Their timeline" in the side panel: that person's own events plus
+  their relatives' (parents' deaths, spouses' deaths, children's and siblings' births and deaths), with ages.
+
+Clicking a person opens the side panel; close it with **×**, **Esc**, or by clicking empty canvas (this also
+deselects). URLs are `#/tree[/<id>]` and `#/timeline[/<id>]`.
+
 ## Data layout
 
 ```
@@ -100,3 +114,7 @@ spouse are dropped. Mentions of a living person's name inside someone else's bio
 uv sync --extra dev
 uv run pytest
 ```
+
+The suite includes a click-through test that drives a built site in headless Chrome. It is skipped when `node`
+or a browser is missing; point `FAMSITE_CHROME` at a Chrome/Chromium/`chrome-headless-shell` binary to choose
+one.
