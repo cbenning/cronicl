@@ -14,6 +14,7 @@ from .layout import compute_layout
 from .model import Event, Tree
 from .privacy import redact
 from .relations import Relations, build_relations
+from .timeline import build_timeline
 
 _PACKAGE = Path(__file__).parent
 _markdown = MarkdownIt("commonmark", {"html": False})
@@ -82,7 +83,7 @@ def _write(path: Path, text: str) -> None:
 
 
 _GENERATED_DIRS = ("data", "p")
-_GENERATED_FILES = ("index.html", "layout.json", "index.json", "viewer.js", "style.css")
+_GENERATED_FILES = ("index.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css")
 
 
 def _clear_generated(out_dir: Path) -> None:
@@ -124,6 +125,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     env = _env()
     put("layout.json", dumps(layout))
     put("index.json", dumps(index))
+    put("timeline.json", dumps(build_timeline(visible, relations)))
     put("index.html", env.get_template("index.html").render(title=title, people=index))
     person_template = env.get_template("person.html")
     for pid, payload in payloads.items():
