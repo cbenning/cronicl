@@ -27,6 +27,22 @@ def assert_invariants(tree, layout):
         assert edge["from"] in known and edge["to"] in known
         assert len(edge["points"]) >= 2
     assert layout["bounds"]["w"] > 0 and layout["bounds"]["h"] > 0
+    assert_buses_do_not_overlap(layout)
+
+
+def assert_buses_do_not_overlap(layout):
+    """Child connectors of different couples must never share a horizontal line segment."""
+    buses = []
+    for edge in layout["edges"]:
+        if edge["kind"] != "child":
+            continue
+        (_, _), (x0, y0), (x1, y1), (_, _) = edge["points"]
+        assert y0 == y1
+        buses.append((y0, min(x0, x1), max(x0, x1), edge["from"]))
+    for i, (ya, a0, a1, ca) in enumerate(buses):
+        for yb, b0, b1, cb in buses[i + 1:]:
+            if ca != cb and ya == yb and a0 <= b1 and b0 <= a1 and not (a0 == a1 or b0 == b1):
+                raise AssertionError(f"couples {ca} and {cb} share a bus segment at y={ya}: {a0}-{a1} / {b0}-{b1}")
 
 
 def nuclear(make_tree):
@@ -183,3 +199,28 @@ def test_half_siblings_share_a_row_too(make_tree):
 
 def test_node_height_leaves_room_for_two_name_lines_and_years():
     assert NODE_H >= 64
+
+
+def test_neighbouring_couples_with_many_children_get_separate_buses(make_tree):
+    kids_a = [person(f"ka{i}", parents=["a1", "a2"]) for i in range(6)]
+    tree = make_tree(
+        [person("a1"), person("a2"), person("b1"), person("b2"), person("kb", parents=["b1", "b2"])] + kids_a
+    )
+    layout = compute_layout(tree)
+    assert_invariants(tree, layout)  # includes the no-shared-bus-segment check
+    buses = {e["from"]: e["points"][1][1] for e in layout["edges"] if e["kind"] == "child"}
+    assert buses["a1+a2"] != buses["b1+b2"]
+
+
+def test_row_gap_grows_when_a_generation_needs_many_buses(make_tree):
+    # many adjacent couples whose child buses all overlap force several bus levels
+    people = []
+    for n in range(8):
+        people += [person(f"p{n}a"), person(f"p{n}b")]
+        people += [person(f"k{n}{i}", parents=[f"p{n}a", f"p{n}b"]) for i in range(3)]
+    tree = make_tree(people)
+    layout = compute_layout(tree)
+    assert_invariants(tree, layout)
+    nodes = {n["id"]: n for n in layout["nodes"]}
+    # children never overlap the buses drawn above them
+    assert nodes["k00"]["y"] > nodes["p0a"]["y"] + NODE_H

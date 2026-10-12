@@ -10,6 +10,9 @@ BLOCK_GAP = 56
 ROW_GAP = 84
 MARGIN = 32
 SWEEPS = 4
+BUS_PAD = 8  # minimum horizontal clearance between two buses on one level
+BUS_STEP = 10  # vertical distance between bus levels
+BUS_EDGE = 18  # clearance between a row of boxes and its first/last bus level
 
 
 class LayoutError(Exception):
@@ -244,8 +247,42 @@ def compute_layout(tree: Tree) -> dict:
     for b in xl:
         xl[b] += shift
 
+    # Each couple's child connector is a horizontal "bus". Buses of different couples that would overlap
+    # are put on different levels so unrelated families never look joined; rows get taller as needed.
+    spans: dict[str, tuple[float, float]] = {}
+    for uid in unions:
+        if kids[uid]:
+            xs = [junction_x(uid)] + [center(k) for k in kids[uid]]
+            spans[uid] = (min(xs), max(xs))
+    level_of: dict[str, int] = {}
+    levels_in_gen: dict[int, int] = {}
+    by_gen: dict[int, list[str]] = {}
+    for uid in spans:
+        by_gen.setdefault(gen[unions[uid][0]], []).append(uid)
+    for g, uids in by_gen.items():
+        ends: list[float] = []
+        for uid in sorted(uids, key=lambda u: (spans[u][0], u)):
+            start, end = spans[uid]
+            if start == end:  # straight drop: nothing horizontal to collide with
+                level_of[uid] = 0
+                continue
+            for lvl, last in enumerate(ends):
+                if start > last + BUS_PAD:
+                    level_of[uid] = lvl
+                    ends[lvl] = end
+                    break
+            else:
+                level_of[uid] = len(ends)
+                ends.append(end)
+        levels_in_gen[g] = max(len(ends), 1)
+    row_top: dict[int, float] = {}
+    cursor = float(MARGIN)
+    for g in range(max(gen.values()) + 1):
+        row_top[g] = cursor
+        cursor += NODE_H + max(ROW_GAP, 2 * BUS_EDGE + levels_in_gen.get(g, 1) * BUS_STEP)
+
     def row_y(g: int) -> float:
-        return MARGIN + g * (NODE_H + ROW_GAP)
+        return row_top[g]
 
     nodes = [
         {"id": pid, "x": _num(center(pid) - NODE_W / 2), "y": _num(row_y(gen[pid])), "w": NODE_W, "h": NODE_H}
@@ -266,7 +303,7 @@ def compute_layout(tree: Tree) -> dict:
                 edges.append(
                     {"from": pid, "to": uid, "kind": "spouse", "points": [[_num(edge_x), _num(jy)], [_num(jx), _num(jy)]]}
                 )
-        mid = row_y(g) + NODE_H + ROW_GAP / 2
+        mid = row_y(g) + NODE_H + BUS_EDGE + level_of.get(uid, 0) * BUS_STEP
         for kid in kids[uid]:
             kx = center(kid)
             ky = row_y(gen[kid])
