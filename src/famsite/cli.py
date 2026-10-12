@@ -4,6 +4,7 @@ import argparse
 import functools
 import http.server
 import json
+import os
 import secrets
 import socketserver
 import subprocess
@@ -54,6 +55,7 @@ def _git_dirty(path: Path) -> bool | None:
 
 def cmd_init(args) -> int:
     root = Path(args.dir)
+    root.mkdir(parents=True, exist_ok=True)
     site = root / "site.yml"
     if site.exists():
         print(f"error: {site} already exists", file=sys.stderr)
@@ -88,10 +90,10 @@ def cmd_fix(args) -> int:
         print("nothing to fix")
         return 0
     if not args.apply:
-        print("dry run; re-run with --apply to write these changes")
+        print("dry run; re-run with --apply (-a) to write these changes")
         return 0
-    if _git_dirty(root) and not args.force:
-        print("error: git working tree has uncommitted changes; commit them or use --force", file=sys.stderr)
+    if _git_dirty(root) and not args.allow_dirty:
+        print("error: git working tree has uncommitted changes; commit them or use --allow-dirty", file=sys.stderr)
         return 2
     apply_plan(plan)
     print(f"applied {len(plan.writes)} write(s), {len(plan.deletes)} delete(s)")
@@ -110,9 +112,9 @@ def cmd_import(args) -> int:
         f"skipped records: {result.skipped or 'none'}"
     )
     if not args.apply:
-        print("dry run; re-run with --apply to write files")
+        print("dry run; re-run with --apply (-a) to write files")
         return 0
-    summary = write_import(result, Path(args.into), data, source.name)
+    summary = write_import(result, Path(args.dir), data, source.name)
     print(f"wrote {summary['people']} people; archived source at {summary['archive']}")
     return 0
 
@@ -122,9 +124,9 @@ def cmd_build(args) -> int:
     tree, load_issues = load_tree(root)
     issues = check_tree(tree, load_issues)
     errors = [i for i in issues if i.severity == "error"]
-    if errors and not args.force:
+    if errors and not args.ignore_errors:
         _print_issues(errors, "text")
-        print("error: fix the problems above or use --force", file=sys.stderr)
+        print("error: fix the problems above or use --ignore-errors", file=sys.stderr)
         return 1
     warnings = [i for i in issues if i.severity == "warning"]
     if warnings:
@@ -151,11 +153,13 @@ def cmd_serve(args) -> int:
 
 
 def cmd_edit_living(args) -> int:
-    changes = apply_living(Path(args.dir), args.ids, args.living, dry_run=args.dry_run)
-    word = "would set" if args.dry_run else "set"
+    changes = apply_living(Path(args.dir), args.ids, args.living, dry_run=not args.apply)
+    word = "set" if args.apply else "would set"
     for path, changed in changes:
         status = f"{word} living: {'true' if args.living else 'false'}" if changed else "unchanged"
         print(f"{path.parent.name}/{path.name}: {status}")
+    if not args.apply and any(changed for _, changed in changes):
+        print("dry run; re-run with --apply (-a) to write these changes")
     return 0
 
 
@@ -190,72 +194,85 @@ def cmd_schema(args) -> int:
     return 0
 
 
+def _common() -> argparse.ArgumentParser:
+    """Options shared by every command that works on a famsite folder."""
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "-C",
+        "--dir",
+        metavar="DIR",
+        default=argparse.SUPPRESS,
+        help="the famsite folder (default: $FAMSITE_DIR, else the current directory)",
+    )
+    return common
+
+
+def _add_apply(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("-a", "--apply", action="store_true", help="write the changes (default: preview only)")
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="famsite", description="Markdown family tree to static site")
+    common = _common()
+    parser = argparse.ArgumentParser(
+        prog="famsite", description="Markdown family tree to static site", parents=[common]
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("init", help="create a new data repository")
-    p.add_argument("dir", nargs="?", default=".")
+    p = sub.add_parser("init", parents=[common], help="create a new famsite folder")
     p.set_defaults(func=cmd_init)
 
-    p = sub.add_parser("check", help="report problems (read-only)")
-    p.add_argument("dir", nargs="?", default=".")
+    p = sub.add_parser("check", parents=[common], help="report problems (read-only)")
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.add_argument("--strict", action="store_true", help="exit 1 on warnings too")
     p.set_defaults(func=cmd_check)
 
-    p = sub.add_parser("fix", help="repair filenames and ids (dry run unless --apply)")
-    p.add_argument("dir", nargs="?", default=".")
-    p.add_argument("--apply", action="store_true")
-    p.add_argument("--force", action="store_true", help="run even if the git tree is dirty")
-    p.set_defaults(func=cmd_fix)
-
-    p = sub.add_parser("import-gedcom", help="import a GEDCOM file (dry run unless --apply)")
-    p.add_argument("file")
-    p.add_argument("--into", default=".")
-    p.add_argument("--apply", action="store_true")
-    p.set_defaults(func=cmd_import)
-
-    p = sub.add_parser("build", help="generate the static site")
-    p.add_argument("dir", nargs="?", default=".")
-    p.add_argument("--out")
-    p.add_argument("--force", action="store_true", help="build even if check reports errors")
-    p.set_defaults(func=cmd_build)
-
-    p = sub.add_parser("serve", help="build and serve locally")
-    p.add_argument("dir", nargs="?", default=".")
-    p.add_argument("--out")
-    p.add_argument("--port", type=int, default=8000)
-    p.add_argument("--force", action="store_true")
-    p.set_defaults(func=cmd_serve)
-
-    p = sub.add_parser("schema", help="print the JSON Schema for frontmatter")
-    p.set_defaults(func=cmd_schema)
-
-    p = sub.add_parser("search", help="fuzzy-find people and print their ids (read-only)")
+    p = sub.add_parser("search", parents=[common], help="fuzzy-find people and print their ids (read-only)")
     p.add_argument("query", nargs="+", help="words to look for in names, ids, years and places")
-    p.add_argument("--dir", default=".")
     p.add_argument("--limit", type=int, default=20)
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.set_defaults(func=cmd_search)
 
-    p = sub.add_parser("edit", help="state-changing helpers (edit person files)")
+    p = sub.add_parser("fix", parents=[common], help="repair filenames and ids (preview unless --apply)")
+    _add_apply(p)
+    p.add_argument("--allow-dirty", action="store_true", help="run even if the git tree has uncommitted changes")
+    p.set_defaults(func=cmd_fix)
+
+    p = sub.add_parser("import-gedcom", parents=[common], help="import a GEDCOM file (preview unless --apply)")
+    p.add_argument("file", help="the .ged file to import")
+    _add_apply(p)
+    p.set_defaults(func=cmd_import)
+
+    p = sub.add_parser("edit", parents=[common], help="state-changing helpers (edit person files)")
     edit_sub = p.add_subparsers(dest="edit_command", required=True)
     for name, living, helptext in (
         ("mark-deceased", False, "write `living: false` for the named people"),
         ("mark-living", True, "write `living: true` for the named people"),
     ):
-        q = edit_sub.add_parser(name, help=helptext)
+        q = edit_sub.add_parser(name, parents=[common], help=helptext)
         q.add_argument("ids", nargs="+", help="person ids (find them with `famsite search`)")
-        q.add_argument("--dir", default=".")
-        q.add_argument("--dry-run", action="store_true")
+        _add_apply(q)
         q.set_defaults(func=cmd_edit_living, living=living)
+
+    p = sub.add_parser("build", parents=[common], help="generate the static site")
+    p.add_argument("--out", help="output folder (default: <dir>/out)")
+    p.add_argument("--ignore-errors", action="store_true", help="build even if check reports errors")
+    p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("serve", parents=[common], help="build and serve locally")
+    p.add_argument("--out", help="output folder (default: <dir>/out)")
+    p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--ignore-errors", action="store_true")
+    p.set_defaults(func=cmd_serve)
+
+    p = sub.add_parser("schema", help="print the JSON Schema for frontmatter")
+    p.set_defaults(func=cmd_schema)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    args.dir = getattr(args, "dir", None) or os.environ.get("FAMSITE_DIR") or "."
     try:
         return args.func(args)
     except (GedcomError, ImportRefused, LayoutError, EditError) as exc:

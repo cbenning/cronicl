@@ -76,11 +76,11 @@ def test_dry_run_writes_nothing(tmp_path, write):
 
 def test_cli_mark_deceased_and_mark_living(tmp_path, write, capsys):
     make_repo(tmp_path, write)
-    assert main(["edit", "mark-deceased", "smith-bob", "--dir", str(tmp_path)]) == 0
+    assert main(["edit", "mark-deceased", "smith-bob", "--dir", str(tmp_path), "--apply"]) == 0
     assert "smith-bob.md" in capsys.readouterr().out
     tree, _ = load_tree(tmp_path)
     assert tree.people["smith-bob"].living is False
-    assert main(["edit", "mark-living", "smith-bob", "--dir", str(tmp_path)]) == 0
+    assert main(["edit", "mark-living", "smith-bob", "-C", str(tmp_path), "-a"]) == 0
     tree, _ = load_tree(tmp_path)
     assert tree.people["smith-bob"].living is True
 
@@ -88,14 +88,14 @@ def test_cli_mark_deceased_and_mark_living(tmp_path, write, capsys):
 def test_cli_unknown_id_exits_2_and_changes_nothing(tmp_path, write, capsys):
     make_repo(tmp_path, write)
     before = (tmp_path / "people/smith-bob.md").read_bytes()
-    assert main(["edit", "mark-deceased", "smith-bob", "ghost", "--dir", str(tmp_path)]) == 2
+    assert main(["edit", "mark-deceased", "smith-bob", "ghost", "--dir", str(tmp_path), "--apply"]) == 2
     assert "ghost" in capsys.readouterr().err
     assert (tmp_path / "people/smith-bob.md").read_bytes() == before
 
 
 def test_cli_unchanged_files_are_reported(tmp_path, write, capsys):
     make_repo(tmp_path, write)
-    main(["edit", "mark-deceased", "smith-bob", "--dir", str(tmp_path)])
+    main(["edit", "mark-deceased", "smith-bob", "--dir", str(tmp_path), "--apply"])
     capsys.readouterr()
-    assert main(["edit", "mark-deceased", "smith-bob", "--dir", str(tmp_path)]) == 0
+    assert main(["edit", "mark-deceased", "smith-bob", "--dir", str(tmp_path), "--apply"]) == 0
     assert "unchanged" in capsys.readouterr().out

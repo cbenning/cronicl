@@ -9,28 +9,34 @@ Status: v0.1. Design: `docs/superpowers/specs/2026-10-10-famsite-design.md`.
 
 ```bash
 uv sync
-uv run famsite init my-family            # creates site.yml, people/, archive/
-uv run famsite import-gedcom tree.ged --into my-family            # dry run
-uv run famsite import-gedcom tree.ged --into my-family --apply    # write files
-uv run famsite check my-family
-uv run famsite build my-family --out my-family/out
-uv run famsite serve my-family            # http://127.0.0.1:8000/
+export FAMSITE_DIR=~/my-family            # or pass --dir / -C on every command
+uv run famsite init                       # creates site.yml, people/, archive/
+uv run famsite import-gedcom tree.ged     # preview: counts and warnings
+uv run famsite import-gedcom tree.ged -a  # write the files
+uv run famsite check
+uv run famsite search ashby              # find ids
+uv run famsite edit mark-deceased ashby-greta -a
+uv run famsite serve                      # http://127.0.0.1:8000/
 ```
 
 ## Commands
 
+Every command that works on a famsite folder takes `--dir DIR` (`-C DIR`), before or after the subcommand.
+If it is omitted, `$FAMSITE_DIR` is used, and failing that the current directory. Every command that writes
+files previews by default and needs `--apply` (`-a`).
+
 | Command | What it does |
 |---|---|
-| `init [DIR]` | Create `site.yml` (with a random `id_salt`), `people/`, `archive/`. |
-| `check [DIR] [--format json] [--strict]` | Report problems. Exit 1 on errors (and on warnings with `--strict`). |
-| `fix [DIR] [--apply] [--force]` | Rename files to match ids, pin missing ids, normalise formatting, resolve filename collisions, rewrite references. Dry run unless `--apply`; refuses a dirty git tree unless `--force`. |
-| `import-gedcom FILE [--into DIR] [--apply]` | One-time GEDCOM import; archives the original file. |
-| `build [DIR] [--out DIR] [--force]` | Run `check`, then generate the static site. |
-| `serve [DIR] [--port N]` | Build and serve locally. |
-| `schema` | Print a JSON Schema for the frontmatter (for agents and editors). |
-| `search QUERY... [--dir DIR] [--limit N] [--format json]` | Fuzzy-find people and print their ids (name, id, years, places; typo- and accent-tolerant). `*` marks people the privacy rules treat as living. Exit 1 when nothing matches. |
-| `edit mark-deceased ID... [--dir DIR] [--dry-run]` | Write `living: false` for the named people. Targeted text edit; all ids are validated first. |
-| `edit mark-living ID... [--dir DIR] [--dry-run]` | Write `living: true` for the named people. |
+| `init` | Create `site.yml` (with a random `id_salt`), `people/`, `archive/`. |
+| `check [--format json] [--strict]` | Report problems. Exit 1 on errors (and on warnings with `--strict`). |
+| `search WORD... [--limit N] [--format json]` | Fuzzy-find people and print their ids (name, id, years, places; typo- and accent-tolerant). `*` marks people the privacy rules treat as living. Exit 1 when nothing matches. |
+| `fix [-a] [--allow-dirty]` | Rename files to match ids, pin missing ids, normalise formatting, resolve filename collisions, rewrite references. Refuses a dirty git tree unless `--allow-dirty`. |
+| `import-gedcom FILE [-a]` | One-time GEDCOM import; archives the original file. |
+| `edit mark-deceased ID... [-a]` | Write `living: false` for the named people. Targeted text edit; all ids are validated first. |
+| `edit mark-living ID... [-a]` | Write `living: true` for the named people. |
+| `build [--out OUT] [--ignore-errors]` | Run `check`, then generate the static site (default `OUT` is `<dir>/out`). |
+| `serve [--out OUT] [--port N] [--ignore-errors]` | Build and serve locally. |
+| `schema` | Print a JSON Schema for the frontmatter (for agents and editors). Needs no folder. |
 
 `edit` holds every command that changes a person file by hand-picked id, so it stays separate from the
 read-only utilities. There is deliberately no bulk form.

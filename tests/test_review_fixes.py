@@ -205,8 +205,8 @@ def test_dangling_chil_is_reported_preserved_and_does_not_hide_the_couple():
 
 
 def test_build_prints_warnings(tmp_path, write, capsys):
-    main(["init", str(tmp_path)])
+    main(["init", "--dir", str(tmp_path)])
     write(tmp_path, "people/bob.md", "---\nid: bob\nname: Bob\nbirth: sometime\n---\n")
     capsys.readouterr()
-    assert main(["build", str(tmp_path), "--out", str(tmp_path / "out")]) == 0
+    assert main(["build", "--dir", str(tmp_path), "--out", str(tmp_path / "out")]) == 0
     assert "W-DATE-UNPARSED" in capsys.readouterr().out
