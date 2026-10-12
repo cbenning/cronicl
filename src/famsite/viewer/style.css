@@ -24,6 +24,14 @@ main { flex: 1; display: flex; min-height: 0; }
 #timeline-head h2 { margin: 0; font-size: 1.05rem; }
 #timeline-head .hint { opacity: .65; font-size: .85rem; }
 #timeline-svg { flex: 1; width: 100%; touch-action: none; cursor: grab; }
+#timeline-svg:active { cursor: grabbing; }
+.tl-controls { display: inline-flex; align-items: center; gap: .3rem; margin-left: auto; }
+.tl-controls button { min-width: 2rem; padding: .2rem .5rem; border: 1px solid var(--node-line); border-radius: 6px; background: var(--node); color: inherit; font: inherit; cursor: pointer; }
+.tl-controls button:hover { border-color: var(--sel); color: var(--sel); }
+.tl-controls .hint { margin-left: .6rem; white-space: nowrap; }
+#timeline-scroll { position: relative; height: 14px; margin: 0 1rem .4rem; background: var(--node); border: 1px solid var(--node-line); border-radius: 7px; cursor: pointer; }
+#timeline-scroll[hidden] { display: none; }
+#timeline-scroll .thumb { position: absolute; top: 1px; bottom: 1px; border-radius: 6px; background: var(--sel); opacity: .55; min-width: 12px; }
 #undated { padding: .4rem 1rem; border-top: 1px solid var(--node-line); max-height: 9rem; overflow: auto; }
 .axis-bg { fill: var(--node); }
 .tick { stroke: var(--edge); stroke-width: 1; opacity: .35; }

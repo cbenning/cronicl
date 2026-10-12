@@ -203,6 +203,18 @@
     return { edges: edges, people: people, unions: unions };
   }
 
+  function visibleRange(tx, pxPerYear, originYear, width) {
+    return { from: originYear + (0 - tx) / pxPerYear, to: originYear + (width - tx) / pxPerYear };
+  }
+
+  // Scrollbar thumb as fractions of the track: where the visible years sit within all years.
+  function thumbGeometry(total, visible) {
+    var span = Math.max(total.max - total.min, 1e-6);
+    var width = Math.min(1, Math.max(0.03, (visible.to - visible.from) / span));
+    var left = Math.min(1 - width, Math.max(0, (visible.from - total.min) / span));
+    return { left: left, width: width };
+  }
+
   var GLYPH = { birth: '●', marriage: '⚭', death: '✝' };
 
   // ------------------------------------------------------------------ browser app
@@ -692,6 +704,59 @@
           });
           eventLayer.appendChild(g);
         });
+        updateControls();
+      }
+
+      // ---- movement: every way of panning/zooming goes through these two
+      function totalRange() {
+        if (!items.length) return { min: originYear, max: originYear + 1 };
+        var years = items.map(function (it) { return it.ev.year; });
+        return { min: Math.min.apply(null, years) - 1, max: Math.max.apply(null, years) + 2 };
+      }
+
+      function viewWidth() { return tlSvg.getBoundingClientRect().width; }
+
+      function panBy(dx) {
+        tx += dx;
+        render();
+      }
+
+      function zoomBy(factor, anchorX) {
+        var anchor = anchorX === undefined ? viewWidth() / 2 : anchorX;
+        var yearAt = (anchor - tx) / pxPerYear + originYear;
+        pxPerYear = Math.min(200, Math.max(1, pxPerYear * factor));
+        tx = anchor - (yearAt - originYear) * pxPerYear;
+        layoutLanes();
+        render();
+      }
+
+      function centerOnYear(year) {
+        tx = viewWidth() / 2 - (year - originYear) * pxPerYear;
+        render();
+      }
+
+      function updateControls() {
+        var readout = $('tl-range');
+        var scroll = $('timeline-scroll');
+        if (!readout || !scroll || !items.length) return;
+        var vis = visibleRange(tx, pxPerYear, originYear, viewWidth());
+        readout.textContent = Math.round(vis.from) + ' – ' + Math.round(vis.to) +
+          '  ·  ' + Math.round(vis.to - vis.from) + ' years in view';
+        var geo = thumbGeometry(totalRange(), vis);
+        var thumb = scroll.firstChild;
+        thumb.style.left = (geo.left * 100) + '%';
+        thumb.style.width = (geo.width * 100) + '%';
+      }
+
+      function button(id, label, title, handler) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.id = id;
+        b.textContent = label;
+        b.title = title;
+        b.setAttribute('aria-label', title);
+        b.addEventListener('click', handler);
+        return b;
       }
 
       function fit() {
@@ -700,7 +765,9 @@
         var min = Math.min.apply(null, years), max = Math.max.apply(null, years);
         originYear = min - 1;
         var span = Math.max(max - min + 2, 2);
-        pxPerYear = Math.min(60, Math.max(3, (r.width - 40 - 280) / span));
+        // leave room for the widest label among the latest events, not a fixed guess
+        var tail = items.reduce(function (w, it) { return it.ev.year >= max - 1 ? Math.max(w, it.width) : w; }, 0);
+        pxPerYear = Math.min(60, Math.max(3, (r.width - 40 - tail - 24) / span));
         tx = 40;
         ty = 0;
       }
@@ -718,11 +785,23 @@
         } else {
           h.textContent = 'Family timeline';
           tlHead.appendChild(h);
-          var note = document.createElement('span');
-          note.className = 'hint';
-          note.textContent = 'Scroll to zoom, drag to pan. Click an event for details.';
-          tlHead.appendChild(note);
         }
+        var controls = document.createElement('span');
+        controls.className = 'tl-controls';
+        controls.appendChild(button('tl-left', '◀', 'Earlier (←)', function () { panBy(viewWidth() * 0.25); }));
+        controls.appendChild(button('tl-right', '▶', 'Later (→)', function () { panBy(-viewWidth() * 0.25); }));
+        controls.appendChild(button('tl-zoom-out', '−', 'Zoom out (-)', function () { zoomBy(1 / 1.4); }));
+        controls.appendChild(button('tl-zoom-in', '+', 'Zoom in (+)', function () { zoomBy(1.4); }));
+        controls.appendChild(button('tl-fit', 'Fit', 'Fit everything (Home)', function () {
+          fit();
+          layoutLanes();
+          render();
+        }));
+        var readout = document.createElement('span');
+        readout.id = 'tl-range';
+        readout.className = 'hint';
+        controls.appendChild(readout);
+        tlHead.appendChild(controls);
         undated.hidden = !!focus || !state.timeline.undated.length;
         if (!undated.hidden) {
           undated.textContent = '';
@@ -767,6 +846,7 @@
           return;
         }
         header();
+        $('timeline-scroll').hidden = false;
         buildItems();
         if (!items.length) {
           tlHead.appendChild(document.createTextNode(' No dated events to show.'));
@@ -792,19 +872,61 @@
         ty = Math.min(0, drag.ty + dy);
         render();
       });
+      function endDrag() {
+        drag = null;
+        setTimeout(function () { moved = false; }, 0);
+      }
+      window.addEventListener('pointerup', endDrag);
+      window.addEventListener('pointercancel', endDrag);
       tlSvg.addEventListener('click', function () {
         if (!moved && !panel.hidden) closePanel();
       });
       tlSvg.addEventListener('wheel', function (e) {
         e.preventDefault();
-        var r = tlSvg.getBoundingClientRect();
-        var px = e.clientX - r.left;
-        var yearAtCursor = (px - tx) / pxPerYear + originYear;
-        pxPerYear = Math.min(200, Math.max(1, pxPerYear * Math.exp(-e.deltaY * 0.0015)));
-        tx = px - (yearAtCursor - originYear) * pxPerYear;
-        layoutLanes();
-        render();
+        var px = e.clientX - tlSvg.getBoundingClientRect().left;
+        if (e.ctrlKey || e.metaKey) {
+          zoomBy(Math.exp(-e.deltaY * 0.01), px); // pinch / Ctrl+wheel
+        } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+          panBy(-(e.deltaX || e.deltaY)); // sideways swipe / Shift+wheel
+        } else {
+          zoomBy(Math.exp(-e.deltaY * 0.0015), px);
+        }
       }, { passive: false });
+
+      document.addEventListener('keydown', function (e) {
+        if (state.view !== 'timeline' || e.altKey || e.ctrlKey || e.metaKey) return;
+        var tag = e.target && e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        var handled = true;
+        if (e.key === 'ArrowLeft') panBy(viewWidth() * 0.2);
+        else if (e.key === 'ArrowRight') panBy(-viewWidth() * 0.2);
+        else if (e.key === '+' || e.key === '=') zoomBy(1.4);
+        else if (e.key === '-' || e.key === '_') zoomBy(1 / 1.4);
+        else if (e.key === 'Home') {
+          var t = totalRange();
+          centerOnYear(t.min + (viewWidth() / 2) / pxPerYear);
+        } else if (e.key === 'End') {
+          var t2 = totalRange();
+          centerOnYear(t2.max - (viewWidth() / 2) / pxPerYear);
+        } else handled = false;
+        if (handled) e.preventDefault();
+      });
+
+      // scrollbar: click or drag the track to move along the timeline
+      var scrollEl = $('timeline-scroll');
+      var scrollDrag = false;
+      function scrollTo(e) {
+        var rect = scrollEl.getBoundingClientRect();
+        var frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+        var t = totalRange();
+        centerOnYear(t.min + frac * (t.max - t.min));
+      }
+      scrollEl.addEventListener('pointerdown', function (e) {
+        scrollDrag = true;
+        scrollTo(e);
+      });
+      window.addEventListener('pointermove', function (e) { if (scrollDrag) scrollTo(e); });
+      window.addEventListener('pointerup', function () { scrollDrag = false; });
       window.addEventListener('resize', function () { refresh(); });
 
       return { show: show, refresh: refresh };
@@ -851,6 +973,8 @@
     wrapName: wrapName,
     packLanes: packLanes,
     parseRoute: parseRoute,
+    visibleRange: visibleRange,
+    thumbGeometry: thumbGeometry,
     routeHash: routeHash,
     yearPosition: yearPosition,
     personTimelineEvents: personTimelineEvents,

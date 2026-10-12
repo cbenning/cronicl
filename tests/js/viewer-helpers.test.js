@@ -155,3 +155,24 @@ test('relatedFor of an unconnected person highlights nothing', () => {
   assert.strictEqual(r.edges.size, 0);
   assert.strictEqual(r.people.size, 0);
 });
+
+test('visibleRange converts the pan/zoom state to a year span', () => {
+  // 10 px per year, year 1900 at x=40, 1000px wide
+  const r = v.visibleRange(40, 10, 1900, 1000);
+  assert.strictEqual(r.from, 1896);
+  assert.strictEqual(r.to, 1996);
+});
+
+test('thumbGeometry sizes and places the scrollbar thumb', () => {
+  const g = v.thumbGeometry({ min: 1900, max: 2000 }, { from: 1950, to: 1975 });
+  assert.strictEqual(g.left, 0.5);
+  assert.strictEqual(g.width, 0.25);
+});
+
+test('thumbGeometry clamps to the track and keeps a grabbable minimum', () => {
+  const wide = v.thumbGeometry({ min: 1900, max: 2000 }, { from: 1800, to: 2100 });
+  assert.deepStrictEqual(wide, { left: 0, width: 1 });
+  const tiny = v.thumbGeometry({ min: 1900, max: 2000 }, { from: 1990, to: 1990.1 });
+  assert.ok(tiny.width >= 0.03);
+  assert.ok(tiny.left + tiny.width <= 1);
+});
