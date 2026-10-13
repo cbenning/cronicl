@@ -178,3 +178,42 @@ test('thumbGeometry clamps to the track and keeps a grabbable minimum', () => {
   assert.ok(tiny.width >= 0.03);
   assert.ok(tiny.left + tiny.width <= 1);
 });
+
+const divorced = {
+  events: [
+    { id: 'marriage:a+b', type: 'marriage', kind: 'marriage', year: 1950, month: null, day: null, people: ['a', 'b'] },
+    { id: 'divorce:a+b', type: 'divorce', kind: 'marriage', reason: 'divorce', year: 1960, month: null, day: null, people: ['a', 'b'] },
+    { id: 'divorce:p+q', type: 'divorce', kind: 'marriage', reason: 'divorce', year: 1980, month: null, day: null, people: ['p', 'q'] },
+    { id: 'partnership:p+q', type: 'partnership', kind: 'engagement', year: 1970, month: null, day: null, people: ['p', 'q'] },
+    { id: 'marriage:s+t', type: 'marriage', kind: 'marriage', year: 1985, month: null, day: null, people: ['s', 't'] },
+  ],
+  people: {
+    a: { name: 'Ann', parents: ['p'], spouses: ['b'], children: [], siblings: ['s'] },
+    b: { name: 'Bo', parents: [], spouses: ['a'], children: [], siblings: [] },
+    p: { name: 'Pat', parents: [], spouses: ['q'], children: ['a', 's'], siblings: [] },
+    q: { name: 'Quinn', parents: [], spouses: ['p'], children: ['a', 's'], siblings: [] },
+    s: { name: 'Sam', parents: ['p', 'q'], spouses: ['t'], children: [], siblings: ['a'] },
+    t: { name: 'Tess', parents: [], spouses: ['s'], children: [], siblings: [] },
+  },
+};
+
+test('personTimelineEvents shows own divorce, parents start but not their divorce, and no sibling marriages', () => {
+  const rows = v.personTimelineEvents(divorced, 'a').map((r) => r.event.id + ':' + r.role).sort();
+  assert.deepStrictEqual(rows, ['divorce:a+b:self', 'marriage:a+b:self', 'partnership:p+q:parent']);
+});
+
+test('eventText words partnership starts and ends from either point of view', () => {
+  const ev = Object.fromEntries(divorced.events.map((e) => [e.id, e]));
+  const people = divorced.people;
+  assert.strictEqual(v.eventText(ev['divorce:a+b'], people, 'a'), 'divorced Bo');
+  assert.strictEqual(v.eventText(ev['divorce:a+b'], people, null), 'Ann & Bo divorced');
+  assert.strictEqual(v.eventText(ev['partnership:p+q'], people, 'p'), 'engaged to Quinn');
+  assert.strictEqual(v.eventText(ev['partnership:p+q'], people, null), 'Pat & Quinn engaged');
+  const annulled = { ...ev['divorce:a+b'], reason: 'annulment' };
+  assert.strictEqual(v.eventText(annulled, people, 'a'), 'marriage to Bo annulled');
+  assert.strictEqual(v.eventText(annulled, people, null), 'Marriage of Ann & Bo annulled');
+  const ended = { ...ev['divorce:a+b'], reason: '' };
+  assert.strictEqual(v.eventText(ended, people, null), 'Marriage of Ann & Bo ended');
+  const partnersEnded = { ...ev['divorce:a+b'], kind: 'partnership', reason: 'separation' };
+  assert.strictEqual(v.eventText(partnersEnded, people, 'a'), 'separated from Bo');
+});

@@ -144,10 +144,10 @@
       ev.people.forEach(function (p) { if (!role && roleOf[p]) role = roleOf[p]; });
       if (!role) return;
       var include = false;
-      if (role === 'parent') include = ev.type === 'death' || ev.type === 'marriage';
+      if (role === 'parent') include = ev.type === 'death' || ev.type === 'marriage' || ev.type === 'partnership';
       else if (role === 'spouse') include = ev.type === 'death';
       else if (role === 'child') include = true;
-      else if (role === 'sibling') include = ev.type !== 'marriage';
+      else if (role === 'sibling') include = ev.type === 'birth' || ev.type === 'death';
       if (include) out.push({ event: ev, role: role });
     });
     return out;
@@ -156,11 +156,23 @@
   function eventText(ev, people, focusId) {
     function nameOf(p) { return people[p] ? people[p].name : p; }
     var names = ev.people.map(nameOf);
-    if (ev.type === 'marriage') {
-      if (focusId && ev.people.indexOf(focusId) !== -1) {
-        return 'married ' + ev.people.filter(function (p) { return p !== focusId; }).map(nameOf).join(' & ');
-      }
-      return names.join(' & ') + ' married';
+    var joined = names.join(' & ');
+    var self = !!focusId && ev.people.indexOf(focusId) !== -1;
+    var others = ev.people.filter(function (p) { return p !== focusId; }).map(nameOf).join(' & ');
+    if (ev.type === 'marriage') return self ? 'married ' + others : joined + ' married';
+    if (ev.type === 'partnership') {
+      if (ev.kind === 'engagement') return self ? 'engaged to ' + others : joined + ' engaged';
+      if (ev.kind === 'civil-union') return self ? 'entered a civil union with ' + others : joined + ' entered a civil union';
+      return self ? 'became partners with ' + others : joined + ' became partners';
+    }
+    if (ev.type === 'divorce') {
+      var noun = ev.kind === 'marriage' ? 'Marriage' : 'Partnership';
+      if (ev.reason === 'divorce') return self ? 'divorced ' + others : joined + ' divorced';
+      if (ev.reason === 'separation') return self ? 'separated from ' + others : joined + ' separated';
+      if (ev.reason === 'annulment') return self ? 'marriage to ' + others + ' annulled' : 'Marriage of ' + joined + ' annulled';
+      return self
+        ? noun.toLowerCase() + (ev.kind === 'marriage' ? ' to ' : ' with ') + others + ' ended'
+        : noun + ' of ' + joined + ' ended';
     }
     var verb = ev.type === 'birth' ? 'born' : 'died';
     if (focusId && ev.people[0] === focusId) return verb;
@@ -217,7 +229,7 @@
     return { left: left, width: width };
   }
 
-  var GLYPH = { birth: '●', marriage: '⚭', death: '✝' };
+  var GLYPH = { birth: '●', marriage: '⚭', partnership: '⚭', divorce: '⚮', death: '✝' };
 
   // ------------------------------------------------------------------ browser app
 
@@ -316,6 +328,13 @@
       list.forEach(function (rel) {
         var li = document.createElement('li');
         li.appendChild(link(routeHash(view, rel.id), rel.name));
+        (rel.partnerships || []).forEach(function (part) {
+          if (!part.text) return;
+          var note = document.createElement('div');
+          note.className = 'partnership';
+          note.textContent = part.text;
+          li.appendChild(note);
+        });
         ul.appendChild(li);
       });
       wrap.appendChild(h);
@@ -406,6 +425,7 @@
       var nodes = new Map();
       var live = new Map();
       var unionIndex = new Map();
+      var endedUnions = new Set();
       var tx = 0, ty = 0, scale = 1;
       var drag = null;
       var moved = false;
@@ -462,7 +482,7 @@
           var u = unionIndex.get(ref);
           var dot = svgEl('circle', {
             cx: u.x, cy: u.y, r: 3,
-            'class': 'union' + (hl ? (hl.unions.has(ref) ? ' hi' : ' dim') : '')
+            'class': 'union' + (endedUnions.has(ref) ? ' ended' : '') + (hl ? (hl.unions.has(ref) ? ' hi' : ' dim') : '')
           });
           nodeLayer.appendChild(dot);
           return dot;
@@ -471,7 +491,7 @@
         var lit = hl && hl.edges.has(Number(ref));
         var line = svgEl('polyline', {
           points: edge.points.map(function (p) { return p.join(','); }).join(' '),
-          'class': 'edge ' + edge.kind + (hl ? (lit ? ' hi' : ' dim') : ''),
+          'class': 'edge ' + edge.kind + (edge.kind === 'spouse' && endedUnions.has(edge.to) ? ' ended' : '') + (hl ? (lit ? ' hi' : ' dim') : ''),
           fill: 'none'
         });
         (lit ? hiLayer : edgeLayer).appendChild(line);
@@ -549,6 +569,7 @@
         state.layout = layout;
         nodes = new Map();
         unionIndex = new Map();
+        endedUnions = new Set();
         var boxes = [];
         layout.nodes.forEach(function (n) {
           nodes.set(n.id, n);
@@ -556,6 +577,7 @@
         });
         layout.unions.forEach(function (u) {
           unionIndex.set(u.id, u);
+          if (u.ended) endedUnions.add(u.id);
           boxes.push({ id: 'u:' + u.id, x: u.x - 4, y: u.y - 4, w: 8, h: 8 });
         });
         layout.edges.forEach(function (e, i) {

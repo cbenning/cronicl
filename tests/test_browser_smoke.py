@@ -44,6 +44,12 @@ def test_viewer_in_a_real_browser(tmp_path, sample_ged):
         "birth: 1925\ndeath: 1990\nparents: [smith-john, brown-mary]\n---\n",
         encoding="utf-8",
     )
+    (data / "people" / "wife-first.md").write_text(
+        "---\nid: wife-first\nname:\n  given: Ex\n  surname: Wife\n"
+        "partnerships:\n  - with: smith-john\n    type: marriage\n    start: 1940\n    end: 1945\n"
+        "    end_reason: divorce\n---\n",
+        encoding="utf-8",
+    )
     assert main(["build", "--dir", str(data), "--out", str(out)]) == 0
 
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(out))

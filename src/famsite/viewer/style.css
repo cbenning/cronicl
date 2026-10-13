@@ -67,3 +67,9 @@ main { flex: 1; display: flex; min-height: 0; }
 .error { padding: 1rem; color: #b91c1c; }
 .person-page main { display: block; max-width: 44rem; margin: 2rem auto; padding: 0 1rem; }
 .plain-list { padding: 1rem 2rem; }
+.edge.ended { stroke-dasharray: 6 4; }
+.union.ended { fill: var(--node); stroke: var(--edge); stroke-width: 1.5; }
+.union.ended.hi { stroke: var(--sel); }
+.partnership { font-size: .85rem; opacity: .75; }
+.ev.partnership rect { stroke: #9333ea; }
+.ev.divorce rect { stroke: #dc2626; }

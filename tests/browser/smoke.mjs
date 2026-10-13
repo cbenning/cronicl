@@ -58,6 +58,8 @@ async function main() {
   check('no node text comes within 4px of its box edge', overflow.length === 0, overflow.join('; '));
   const sameRow = await ev(`(() => { const y = (id) => document.querySelector('.node[data-id="' + id + '"] rect')?.getAttribute('y'); return [y('smith-bob'), y('ellsworth-maude')]; })()`);
   check('siblings share a row', sameRow[0] && sameRow[0] === sameRow[1], JSON.stringify(sameRow));
+  check('ended partnership draws a dashed spouse line', (await ev(`document.querySelectorAll('.edge.spouse.ended').length`)) >= 1);
+  check('ended partnership has a hollow dot', (await ev(`document.querySelectorAll('.union.ended').length`)) >= 1);
 
   // ---- panel open / close / deselect
   await click('.node[data-id="smith-bob"]');
@@ -86,6 +88,12 @@ async function main() {
   await click('#tree');
   await sleep(200);
   check('clicking empty canvas closes the panel', (await ev(`document.getElementById('panel').hidden`)) === true);
+
+  await goto('#/tree/smith-john');
+  await sleep(300);
+  check('panel shows when the marriage ended', /divorced 1945/.test(await ev(`document.getElementById('panel').textContent`)));
+  await click('#panel .close');
+  await sleep(200);
 
   // ---- focused tree
   await goto('#/focus/smith-amy');
@@ -129,6 +137,7 @@ async function main() {
   check('timeline tab is marked current', (await ev(`document.querySelector('#tabs a[data-view="timeline"]').getAttribute('aria-current')`)) === 'page');
   const evCount = await ev(`document.querySelectorAll('#timeline-svg .ev').length`);
   check('timeline renders events', evCount >= 5, evCount);
+  check('timeline shows the divorce', (await ev(`document.querySelectorAll('#timeline-svg .ev.divorce').length`)) >= 1);
   check('timeline header says family', (await ev(`document.querySelector('#timeline-head h2')?.textContent`)) === 'Family timeline');
   await shot('timeline-family');
 
