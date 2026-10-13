@@ -10,6 +10,7 @@ import jinja2
 from markdown_it import MarkdownIt
 
 from .dates import format_years
+from .focus import focus_tree
 from .layout import compute_layout
 from .model import Event, Tree
 from .privacy import redact
@@ -82,7 +83,7 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-_GENERATED_DIRS = ("data", "p")
+_GENERATED_DIRS = ("data", "p", "focus")
 _GENERATED_FILES = ("index.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css")
 
 
@@ -128,6 +129,10 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     put("timeline.json", dumps(build_timeline(visible, relations)))
     put("index.html", env.get_template("index.html").render(title=title, people=index))
     person_template = env.get_template("person.html")
+    for pid in sorted(visible.people):
+        focused = compute_layout(focus_tree(visible, relations, pid))
+        focused["focus"] = pid
+        put(f"focus/{pid}.json", dumps(focused))
     for pid, payload in payloads.items():
         put(f"data/people/{pid}.json", dumps(payload))
         put(f"p/{pid}/index.html", person_template.render(title=title, person=payload))

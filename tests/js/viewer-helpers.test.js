@@ -58,6 +58,8 @@ test('parseRoute understands views, ids and the legacy bare id', () => {
   assert.deepStrictEqual(v.parseRoute('#/timeline'), { view: 'timeline', id: null });
   assert.deepStrictEqual(v.parseRoute('#/timeline/smith-bob'), { view: 'timeline', id: 'smith-bob' });
   assert.deepStrictEqual(v.parseRoute('#/smith-bob'), { view: 'tree', id: 'smith-bob' });
+  assert.deepStrictEqual(v.parseRoute('#/focus/smith-bob'), { view: 'focus', id: 'smith-bob' });
+  assert.deepStrictEqual(v.parseRoute('#/focus'), { view: 'focus', id: null });
 });
 
 test('routeHash round-trips', () => {

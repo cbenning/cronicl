@@ -59,6 +59,10 @@ main { flex: 1; display: flex; min-height: 0; }
 .union.hi { fill: var(--sel); }
 .union.dim { opacity: .12; }
 .node.dim { opacity: .35; }
+.node.focus rect { stroke: #d97706; stroke-width: 3; }
+#focus-bar { display: flex; align-items: baseline; gap: 1rem; padding: .4rem 1rem; border-bottom: 1px solid var(--node-line); background: var(--node); }
+#focus-bar[hidden] { display: none; }
+#focus-bar .back { margin-left: auto; }
 .node.related rect { stroke: var(--sel); stroke-width: 2; }
 .error { padding: 1rem; color: #b91c1c; }
 .person-page main { display: block; max-width: 44rem; margin: 2rem auto; padding: 0 1rem; }

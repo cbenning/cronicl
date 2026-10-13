@@ -87,6 +87,41 @@ async function main() {
   await sleep(200);
   check('clicking empty canvas closes the panel', (await ev(`document.getElementById('panel').hidden`)) === true);
 
+  // ---- focused tree
+  await goto('#/focus/smith-amy');
+  await sleep(500);
+  const focusIds = await ev(`[...document.querySelectorAll('.node')].map((n) => n.dataset.id).sort()`);
+  check('focused tree shows only the line above and below', JSON.stringify(focusIds) === JSON.stringify(['brown-mary', 'jones-jane', 'smith-amy', 'smith-bob', 'smith-john']), JSON.stringify(focusIds));
+  check('focused tree leaves siblings out', !focusIds.includes('smith-tom'));
+  check('focus bar names the person', /Focused on Amy Smith/.test(await ev(`document.getElementById('focus-bar').textContent`)));
+  check('focus person is marked', (await ev(`document.querySelectorAll('.node.focus').length`)) === 1);
+  check('tree tab stays current in focus', (await ev(`document.querySelector('#tabs a[data-view="tree"]').getAttribute('aria-current')`)) === 'page');
+  await shot('tree-focus');
+  await click('.node[data-id="smith-bob"]');
+  await sleep(500);
+  check('selecting inside the focus keeps the focus url', (await ev(`location.hash`)) === '#/focus/smith-amy');
+  check('selecting inside the focus highlights', (await ev(`document.querySelectorAll('.edge.hi').length`)) >= 1);
+  await click('#panel .close');
+  await sleep(200);
+  check('closing the panel keeps the focus', (await ev(`location.hash`)) === '#/focus/smith-amy' && (await ev(`!document.getElementById('focus-bar').hidden`)));
+  await ev(`(() => { const s = document.getElementById('search'); s.value = 'tom'; s.dispatchEvent(new Event('input')); })()`);
+  await sleep(200);
+  await ev(`document.querySelector('#results button').click()`);
+  await sleep(600);
+  check('searching for someone outside the focus refocuses', (await ev(`location.hash`)) === '#/focus/smith-tom');
+  await ev(`document.querySelector('#focus-bar a.back').click()`);
+  await sleep(600);
+  check('"Show full tree" returns to the full tree on that person', (await ev(`location.hash`)) === '#/tree/smith-tom');
+  check('full tree is back and the bar is gone', (await ev(`document.querySelectorAll('.node').length`)) > 5 && (await ev(`document.getElementById('focus-bar').hidden`)) === true);
+  await goto('#/tree');
+  await click('.node[data-id="smith-bob"]');
+  await sleep(600);
+  await ev(`document.querySelector('#panel a[href="#/focus/smith-bob"]').click()`);
+  await sleep(600);
+  check('panel "Focus tree" action focuses the person', (await ev(`location.hash`)) === '#/focus/smith-bob' && (await ev(`document.querySelectorAll('.node.focus').length`)) === 1);
+  await ev(`document.querySelector('#focus-bar a.back').click()`);
+  await sleep(400);
+
   // ---- timeline
   await ev(`document.querySelector('#tabs a[data-view="timeline"]').click()`);
   await sleep(800);

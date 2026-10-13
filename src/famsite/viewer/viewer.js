@@ -110,7 +110,9 @@
   function parseRoute(hash) {
     var parts = String(hash || '').replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
     if (!parts.length) return { view: 'tree', id: null };
-    if (parts[0] === 'tree' || parts[0] === 'timeline') return { view: parts[0], id: parts[1] || null };
+    if (parts[0] === 'tree' || parts[0] === 'timeline' || parts[0] === 'focus') {
+      return { view: parts[0], id: parts[1] || null };
+    }
     return { view: 'tree', id: parts[0] };
   }
 
@@ -231,6 +233,7 @@
     var search = $('search');
     var results = $('results');
     var tabs = Array.prototype.slice.call(document.querySelectorAll('#tabs a'));
+    var focusBar = $('focus-bar');
 
     var canvas = document.createElement('canvas').getContext('2d');
     function measureWith(font) {
@@ -268,10 +271,12 @@
 
     function showView(view) {
       state.view = view;
-      setHidden(treeSvg, view !== 'tree');
+      var treeLike = view === 'tree' || view === 'focus';
+      setHidden(treeSvg, !treeLike);
       setHidden(tlSection, view !== 'timeline');
+      if (!treeLike || view !== 'focus') setHidden(focusBar, true);
       tabs.forEach(function (a) {
-        var active = a.getAttribute('data-view') === view;
+        var active = a.getAttribute('data-view') === (treeLike ? 'tree' : view);
         if (active) a.setAttribute('aria-current', 'page');
         else a.removeAttribute('aria-current');
       });
@@ -280,8 +285,12 @@
     function route() {
       var r = parseRoute(location.hash);
       showView(r.view);
-      if (r.view === 'tree') {
+      if (r.view === 'focus' && r.id) {
         tree.ensure();
+        tree.showFocus(r.id);
+      } else if (r.view === 'tree' || r.view === 'focus') {
+        tree.ensure();
+        tree.showFull();
         if (r.id) tree.select(r.id, true, true);
         else tree.clearSelection();
       } else {
@@ -359,6 +368,8 @@
           actions.className = 'actions';
           actions.appendChild(link(routeHash('tree', id), 'Show in tree'));
           actions.appendChild(document.createTextNode(' · '));
+          actions.appendChild(link(routeHash('focus', id), 'Focus tree'));
+          actions.appendChild(document.createTextNode(' · '));
           actions.appendChild(link(routeHash('timeline', id), 'Their timeline'));
           body.appendChild(actions);
           if (p.bodyHtml) {
@@ -400,6 +411,9 @@
       var moved = false;
       var loading = null;
       var hl = null;
+      var fullLayout = null;
+      var focusId = null;
+      var focusCache = {};
       var hiLayer = svgEl('g');
       viewport.insertBefore(hiLayer, nodeLayer);
 
@@ -409,6 +423,7 @@
         var mark = '';
         if (id === state.selected) mark = ' selected';
         else if (hl) mark = hl.people.has(id) ? ' related' : ' dim';
+        if (id === focusId) mark += ' focus';
         var g = svgEl('g', { 'class': 'node' + mark, 'data-id': id });
         g.appendChild(svgEl('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 6 }));
         var wrapped = wrapName(info.name, n.w - 2 * NODE_PAD, measureName, 2);
@@ -513,7 +528,7 @@
       function select(id, center, fromRoute) {
         if (!nodes.has(id)) return;
         state.selected = id;
-        if (!fromRoute) {
+        if (!fromRoute && !focusId) {
           var target = routeHash('tree', id);
           if (location.hash !== target) history.replaceState(null, '', target);
         }
@@ -529,6 +544,81 @@
         rebuild();
       }
 
+      // Swap the drawn layout (the full tree or one person's focused tree) and rebuild the spatial index.
+      function useLayout(layout) {
+        state.layout = layout;
+        nodes = new Map();
+        unionIndex = new Map();
+        var boxes = [];
+        layout.nodes.forEach(function (n) {
+          nodes.set(n.id, n);
+          boxes.push({ id: 'n:' + n.id, x: n.x, y: n.y, w: n.w, h: n.h });
+        });
+        layout.unions.forEach(function (u) {
+          unionIndex.set(u.id, u);
+          boxes.push({ id: 'u:' + u.id, x: u.x - 4, y: u.y - 4, w: 8, h: 8 });
+        });
+        layout.edges.forEach(function (e, i) {
+          var b = boundsOf(e.points);
+          boxes.push({ id: 'e:' + i, x: b.x, y: b.y, w: b.w, h: b.h });
+        });
+        grid = buildGrid(boxes, CELL);
+        fit();
+        rebuild();
+      }
+
+      function showFull() {
+        focusId = null;
+        setHidden(focusBar, true);
+        if (fullLayout && state.layout !== fullLayout) {
+          state.selected = null;
+          useLayout(fullLayout);
+        }
+      }
+
+      function showFocusBar(id) {
+        focusBar.textContent = '';
+        var text = document.createElement('span');
+        var who = people.get(id);
+        text.textContent = 'Focused on ' + (who ? who.name : id) + ' — ancestors and descendants only';
+        var back = link(routeHash('tree', id), 'Show full tree');
+        back.className = 'back';
+        focusBar.appendChild(text);
+        focusBar.appendChild(back);
+        setHidden(focusBar, false);
+      }
+
+      function showFocus(id) {
+        if (!fullLayout) return; // ensure() will call route() again once the data is loaded
+        focusId = id;
+        function apply(layout) {
+          if (focusId !== id) return;
+          state.selected = null;
+          panel.hidden = true;
+          useLayout(layout);
+          showFocusBar(id);
+        }
+        if (focusCache[id]) {
+          apply(focusCache[id]);
+          return;
+        }
+        fetch('focus/' + encodeURIComponent(id) + '.json')
+          .then(function (r) {
+            if (!r.ok) throw new Error('missing');
+            return r.json();
+          })
+          .then(function (layout) {
+            focusCache[id] = layout;
+            apply(layout);
+          })
+          .catch(function () {
+            focusId = null;
+            go('tree', null);
+          });
+      }
+
+      function has(id) { return nodes.has(id); }
+
       function ensure() {
         if (state.layout) {
           rebuild();
@@ -539,24 +629,10 @@
           fetch('layout.json').then(function (r) { return r.json(); }),
           fetch('index.json').then(function (r) { return r.json(); })
         ]).then(function (loaded) {
-          state.layout = loaded[0];
+          fullLayout = loaded[0];
           state.index = loaded[1];
           state.index.forEach(function (p) { people.set(p.id, p); });
-          var boxes = [];
-          state.layout.nodes.forEach(function (n) {
-            nodes.set(n.id, n);
-            boxes.push({ id: 'n:' + n.id, x: n.x, y: n.y, w: n.w, h: n.h });
-          });
-          state.layout.unions.forEach(function (u) {
-            unionIndex.set(u.id, u);
-            boxes.push({ id: 'u:' + u.id, x: u.x - 4, y: u.y - 4, w: 8, h: 8 });
-          });
-          state.layout.edges.forEach(function (e, i) {
-            var b = boundsOf(e.points);
-            boxes.push({ id: 'e:' + i, x: b.x, y: b.y, w: b.w, h: b.h });
-          });
-          grid = buildGrid(boxes, CELL);
-          fit();
+          useLayout(fullLayout);
           route();
         }).catch(function () {
           treeSvg.insertAdjacentHTML('afterend', '<p class="error">Could not load the tree data.</p>');
@@ -592,9 +668,17 @@
         scale = next;
         render();
       }, { passive: false });
-      window.addEventListener('resize', function () { if (state.view === 'tree') render(); });
+      window.addEventListener('resize', function () { if (state.view === 'tree' || state.view === 'focus') render(); });
 
-      return { ensure: ensure, select: select, clearSelection: clearSelection, refresh: function () { rebuild(); } };
+      return {
+        ensure: ensure,
+        select: select,
+        clearSelection: clearSelection,
+        showFocus: showFocus,
+        showFull: showFull,
+        has: has,
+        refresh: function () { rebuild(); }
+      };
     })();
 
     // ---------------------------------------------------------------- timeline view
@@ -949,7 +1033,8 @@
         b.addEventListener('click', function () {
           results.hidden = true;
           search.value = '';
-          go(state.view, p.id);
+          if (state.view === 'focus' && tree.has(p.id)) tree.select(p.id, true, false);
+          else go(state.view, p.id);
         });
         li.appendChild(b);
         results.appendChild(li);
