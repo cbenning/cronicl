@@ -101,17 +101,64 @@ def test_chil_without_famc_sets_parents_and_warns():
     assert "W-CHIL-WITHOUT-FAMC" in [i.code for i in result.issues]
 
 
-def test_childless_unmarried_family_becomes_a_spouse_entry_and_keeps_fam_extras():
-    result = from_text(
-        "0 @I1@ INDI\n1 NAME A /X/\n0 @I2@ INDI\n1 NAME B /Y/\n"
-        "0 @F1@ FAM\n1 HUSB @I1@\n1 WIFE @I2@\n1 DIV Y\n0 TRLR\n"
-    )
-    people = by_gedcom_id(result.people)
-    owner = people["I1"]  # smallest id: x-a < y-b
+FAM_HEAD = "0 @I1@ INDI\n1 NAME A /X/\n0 @I2@ INDI\n1 NAME B /Y/\n0 @F1@ FAM\n1 HUSB @I1@\n1 WIFE @I2@\n"
+
+
+def owner_of(text):
+    return by_gedcom_id(from_text(text).people)["I1"]
+
+
+def test_childless_family_with_only_a_divorce_is_a_marriage_that_ended():
+    owner = owner_of(FAM_HEAD + "1 DIV Y\n0 TRLR\n")
     assert owner.id == "x-a"
+    assert owner.partnerships == [Partnership("y-b", type="marriage", end="unknown", end_reason="divorce")]
+    assert owner.spouse == []
+    assert not owner.gedcom_extra
+
+
+def test_div_date_becomes_end_on_the_marriage_partnership():
+    owner = owner_of(
+        FAM_HEAD + "1 MARR\n2 DATE 1 JAN 1950\n2 PLAC Reno\n1 DIV\n2 DATE 5 MAR 1960\n0 TRLR\n"
+    )
+    assert owner.partnerships == [
+        Partnership("y-b", type="marriage", start="1950-01-01", end="1960-03-05", end_reason="divorce", place="Reno")
+    ]
+    assert owner.spouse == []
+
+
+def test_div_without_a_date_is_an_unknown_end_and_keeps_other_lines():
+    owner = owner_of(FAM_HEAD + "1 DIV Y\n2 PLAC Elko\n0 TRLR\n")
+    assert owner.partnerships == [Partnership("y-b", type="marriage", end="unknown", end_reason="divorce")]
+    assert "2 PLAC Elko" in owner.gedcom_extra
+
+
+def test_div_n_is_not_a_divorce():
+    owner = owner_of(FAM_HEAD + "1 DIV N\n0 TRLR\n")
+    assert owner.partnerships == []
     assert owner.spouse == ["y-b"]
-    assert "0 @F1@ FAM" in owner.gedcom_extra
-    assert "1 DIV Y" in owner.gedcom_extra
+    assert "1 DIV N" in owner.gedcom_extra
+
+
+def test_annulment_and_engagement():
+    annulled = owner_of(FAM_HEAD + "1 MARR\n2 DATE 1950\n1 ANUL\n2 DATE 1951\n0 TRLR\n")
+    assert annulled.partnerships == [
+        Partnership("y-b", type="marriage", start="1950", end="1951", end_reason="annulment")
+    ]
+    engaged = owner_of(FAM_HEAD + "1 ENGA\n2 DATE 1949\n0 TRLR\n")
+    assert engaged.partnerships == [Partnership("y-b", type="engagement", start="1949")]
+
+
+def test_enga_next_to_marr_stays_in_extra():
+    owner = owner_of(FAM_HEAD + "1 MARR\n2 DATE 1950\n1 ENGA\n2 DATE 1949\n0 TRLR\n")
+    assert [(p.type, p.start) for p in owner.partnerships] == [("marriage", "1950")]
+    assert "1 ENGA" in owner.gedcom_extra and "2 DATE 1949" in owner.gedcom_extra
+
+
+def test_bare_marr_invents_nothing_but_marr_y_is_a_marriage():
+    bare = owner_of(FAM_HEAD + "1 MARR\n0 TRLR\n")
+    assert bare.partnerships == [] and bare.spouse == ["y-b"]
+    asserted = owner_of(FAM_HEAD + "1 MARR Y\n0 TRLR\n")
+    assert asserted.partnerships == [Partnership("y-b", type="marriage")]
 
 
 def test_marriage_data_with_one_partner_is_preserved_as_extra():

@@ -150,6 +150,40 @@ def _event(node: Node, label: str, owner: str, extra: list[Node], issues: list[I
     return Event(date=date, place=place)
 
 
+def _end_date(node: Node, label: str, owner: str, extra: list[Node], issues: list[Issue]) -> str:
+    """DIV/ANUL: the DATE becomes the partnership `end` (or "unknown"); PLAC and anything else is kept as passthrough."""
+    date = None
+    leftovers: list[Node] = []
+    for child in node.children:
+        if child.tag == "DATE" and date is None:
+            value, ok = from_gedcom(child.value)
+            date = value or None
+            if value and not ok:
+                issues.append(Issue("W-DATE-UNPARSED", f"{owner}: {label} date {value!r} kept as text"))
+            if child.children:
+                leftovers.append(child)
+        else:
+            leftovers.append(child)
+    if leftovers:
+        extra.append(Node(node.level, node.tag, "", None, leftovers))
+    return date or "unknown"
+
+
+def _fam_partnership(rel: dict, other: str) -> Partnership | None:
+    if "marr" in rel or "div" in rel or "anul" in rel:
+        start = rel.get("marr")
+        entry = Partnership(other, "marriage", start.date if start else None, place=start.place if start else None)
+        if "div" in rel:
+            entry.end, entry.end_reason = rel["div"], "divorce"
+        elif "anul" in rel:
+            entry.end, entry.end_reason = rel["anul"], "annulment"
+        return entry
+    if "enga" in rel:
+        engaged = rel["enga"]
+        return Partnership(other, "engagement", engaged.date, place=engaged.place)
+    return None
+
+
 def _parse_name(node: Node, extra: list[Node]) -> tuple[str | None, str | None]:
     match = _NAME.match(node.value)
     given_part, surname, suffix = (match.group(1) or "").strip(), match.group(2), match.group(3)
@@ -267,14 +301,14 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
     fam_order: list[str] = []
     fam_partners: dict[str, list[str]] = {}
     fam_children: dict[str, list[str]] = {}
-    fam_marriage: dict[str, Event | None] = {}
+    fam_rel: dict[str, dict] = {}
     fam_extra: dict[str, list[Node]] = {}
     for node in fam_nodes:
         xref = node.xref.strip("@")
         extra: list[Node] = []
         partners: list[str] = []
         chil: list[str] = []
-        marr_nodes: list[Node] = []
+        rel_nodes: dict[str, list[Node]] = {}
         for child in node.children:
             tag = child.tag
             if tag in ("HUSB", "WIFE"):
@@ -292,20 +326,41 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
                 else:
                     issues.append(Issue("W-DANGLING-CHILD", f"{xref}: CHIL {child.value!r} is not a known person"))
                     extra.append(child)
-            elif tag == "MARR":
-                marr_nodes.append(child)
+            elif tag in ("MARR", "ENGA", "DIV", "ANUL"):
+                rel_nodes.setdefault(tag, []).append(child)
             else:
                 extra.append(child)
-        marriage = None
-        for index, marr in enumerate(marr_nodes):
-            if index == 0 and len(partners) >= 2:
-                marriage = _event(marr, "marriage", xref, extra, issues)
-            else:
-                extra.append(marr)
+        rel: dict = {}
+        for tag in ("MARR", "ENGA", "DIV", "ANUL"):
+            for index, found in enumerate(rel_nodes.get(tag, [])):
+                payload = found.value.strip().upper()
+                if index > 0 or len(partners) < 2:
+                    extra.append(found)  # repeats, and facts about a family with fewer than two partners
+                elif tag == "MARR":
+                    event = _event(found, "marriage", xref, extra, issues)
+                    if not event.is_empty() or payload == "Y":
+                        rel["marr"] = event
+                elif tag == "ENGA":
+                    if "marr" in rel:
+                        extra.append(found)
+                    else:
+                        event = _event(found, "engagement", xref, extra, issues)
+                        if not event.is_empty() or payload == "Y":
+                            rel["enga"] = event
+                elif tag == "DIV":
+                    if payload == "N":
+                        extra.append(found)
+                    else:
+                        rel["div"] = _end_date(found, "divorce", xref, extra, issues)
+                else:  # ANUL
+                    if "div" in rel or payload == "N":
+                        extra.append(found)
+                    else:
+                        rel["anul"] = _end_date(found, "annulment", xref, extra, issues)
         fam_order.append(xref)
         fam_partners[xref] = partners
         fam_children[xref] = chil
-        fam_marriage[xref] = marriage
+        fam_rel[xref] = rel
         fam_extra[xref] = extra
 
     for person in people:
@@ -343,13 +398,11 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
     for xref in fam_order:
         partners = fam_partners[xref]
         owner = person_by_id[min(partners)] if partners else None
-        marriage = fam_marriage[xref]
-        if len(partners) >= 2 and owner is not None:
-            other = max(partners)
-            if marriage is not None and not marriage.is_empty():
-                owner.partnerships.append(Partnership(other, "marriage", marriage.date, place=marriage.place))
-            elif not fam_children[xref]:
-                owner.spouse.append(other)
+        partnership = _fam_partnership(fam_rel[xref], max(partners)) if len(partners) >= 2 else None
+        if partnership is not None and owner is not None:
+            owner.partnerships.append(partnership)
+        elif len(partners) >= 2 and owner is not None and not fam_children[xref]:
+            owner.spouse.append(max(partners))
         extra_nodes = fam_extra[xref]
         if extra_nodes:
             block = _lines([Node(0, "FAM", "", f"@{xref}@", extra_nodes)])
