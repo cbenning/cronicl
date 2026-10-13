@@ -9,7 +9,7 @@ from famsite.cli import main
 from famsite.fix import FixPlan, apply_plan, plan_fix
 from famsite.gedcom import import_nodes, parse_nodes
 from famsite.layout import LayoutError, compute_layout
-from famsite.model import Event, Marriage
+from famsite.model import Event, Partnership
 from famsite.render import build_site
 from famsite.store import load_tree
 
@@ -97,7 +97,7 @@ def test_fix_keeps_nested_unknown_keys_and_partnerless_marriages(tmp_path, write
         "people/smith-bob.md",
         "---\nid: smith-bob\nname:\n  given: Bob\n  surname: Smith\n  nickname: Bobby\n"
         "birth:\n  date: 1950\n  note: hospital birth\n"
-        "marriages:\n  - with: x\n    date: 1975\n    end: 1980\n  - date: 1990\n    place: Reno\n---\n",
+        "marriages:\n  - with: x\n    date: 1975\n    witness: Pat\n  - date: 1990\n    place: Reno\n---\n",
     )
     write(tmp_path, "people/x.md", "---\nid: x\nname: X\n---\n")
     apply_plan(plan_fix(tmp_path))
@@ -106,14 +106,14 @@ def test_fix_keeps_nested_unknown_keys_and_partnerless_marriages(tmp_path, write
     bob = tree.people["smith-bob"]
     assert bob.name_extra == {"nickname": "Bobby"}
     assert bob.birth.extra == {"note": "hospital birth"}
-    assert bob.marriages[0].with_id == "x" and bob.marriages[0].extra == {"end": "1980"}
-    assert len(bob.marriages) == 2
-    assert bob.marriages[1].with_id == "" and bob.marriages[1].date == "1990" and bob.marriages[1].place == "Reno"
+    assert bob.partnerships[0].with_id == "x" and bob.partnerships[0].extra == {"witness": "Pat"}
+    assert len(bob.partnerships) == 2
+    assert bob.partnerships[1].with_id == "" and bob.partnerships[1].start == "1990" and bob.partnerships[1].place == "Reno"
 
 
 def test_partnerless_marriage_is_a_warning_not_a_dangling_reference(make_tree):
-    tree = make_tree([{"id": "a", "given": "A", "marriages": [Marriage("", "1990", "Reno")]}])
-    assert codes(check_tree(tree)) == ["W-MARRIAGE-NO-PARTNER"]
+    tree = make_tree([{"id": "a", "given": "A", "partnerships": [Partnership("", type="marriage", start="1990", place="Reno")]}])
+    assert codes(check_tree(tree)) == ["W-PARTNERSHIP-NO-PARTNER"]
 
 
 # I3: duplicate invalid pinned ids must not be guessed ---------------------------------------------

@@ -9,7 +9,7 @@ from famsite.gedcom import (
     parse_nodes,
     write_import,
 )
-from famsite.model import Marriage
+from famsite.model import Partnership
 from famsite.relations import build_relations
 from famsite.store import load_tree
 
@@ -64,8 +64,10 @@ def test_person_fields_are_mapped(sample_ged):
 def test_marriage_goes_on_the_partner_with_the_smallest_id(sample_ged):
     result, _ = load_result(sample_ged)
     people = by_gedcom_id(result.people)
-    assert people["I2"].marriages == [Marriage("smith-bob", "1975-06-20", "Surrey, BC")]
-    assert people["I1"].marriages == []
+    assert people["I2"].partnerships == [
+        Partnership("smith-bob", type="marriage", start="1975-06-20", place="Surrey, BC")
+    ]
+    assert people["I1"].partnerships == []
     assert people["I1"].spouse == [] and people["I2"].spouse == []
 
 
@@ -117,7 +119,7 @@ def test_marriage_data_with_one_partner_is_preserved_as_extra():
         "0 @I1@ INDI\n1 NAME A /X/\n0 @F1@ FAM\n1 HUSB @I1@\n1 MARR\n2 DATE 1900\n0 TRLR\n"
     )
     person = result.people[0]
-    assert person.marriages == []
+    assert person.partnerships == []
     assert "1 MARR" in person.gedcom_extra and "2 DATE 1900" in person.gedcom_extra
 
 

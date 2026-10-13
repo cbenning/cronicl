@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .dates import from_gedcom
 from .issues import Issue
-from .model import Event, Marriage, Person
+from .model import Event, Partnership, Person
 from .slug import natural_key, person_slug, slugify, unique_id
 from .store import load_tree, person_path, write_person
 
@@ -347,7 +347,7 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
         if len(partners) >= 2 and owner is not None:
             other = max(partners)
             if marriage is not None and not marriage.is_empty():
-                owner.marriages.append(Marriage(other, marriage.date, marriage.place))
+                owner.partnerships.append(Partnership(other, "marriage", marriage.date, place=marriage.place))
             elif not fam_children[xref]:
                 owner.spouse.append(other)
         extra_nodes = fam_extra[xref]

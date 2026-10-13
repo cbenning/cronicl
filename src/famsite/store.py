@@ -6,14 +6,14 @@ from pathlib import Path
 import yaml
 
 from .issues import Issue
-from .model import Event, Marriage, Person, Tree
+from .model import Event, Partnership, Person, Tree
 from .slug import FALLBACK_SLUG, slugify
 
 _FRONTMATTER = re.compile(r"\A---[ \t]*\n(?:(.*?)\n)?---[ \t]*(?:\n|\Z)(.*)\Z", re.S)
 _DATE_LIKE = re.compile(r"^~?\d{4}(-\d{2}(-\d{2})?)?$")
 PERSON_KEYS = (
     "id", "name", "sex", "birth", "death", "living",
-    "parents", "spouse", "children", "marriages",
+    "parents", "spouse", "children", "marriages", "partnerships",
     "gedcom_id", "gedcom_extra",
 )
 
@@ -94,23 +94,34 @@ def _as_list(value) -> list[str]:
     return []
 
 
-def _parse_marriages(value) -> list[Marriage]:
+_PARTNERSHIP_KEYS = ("with", "type", "start", "end", "end_reason", "place", "note", "date")
+
+
+def _partnership_items(value) -> list[dict]:
     if isinstance(value, dict):
         value = [value]
-    out: list[Marriage] = []
     if not isinstance(value, list):
-        return out
-    for item in value:
-        if not isinstance(item, dict) or not item:
-            continue
-        out.append(
-            Marriage(
-                _opt(item.get("with")) or "",
-                _opt(item.get("date")),
-                _opt(item.get("place")),
-                {k: v for k, v in item.items() if k not in ("with", "date", "place")},
+        return []
+    return [item for item in value if isinstance(item, dict) and item]
+
+
+def _parse_partnerships(data: dict) -> list[Partnership]:
+    """`partnerships:` entries, then legacy `marriages:` entries (which are marriages unless they say otherwise)."""
+    out: list[Partnership] = []
+    for key, default_type in (("partnerships", None), ("marriages", "marriage")):
+        for item in _partnership_items(data.get(key)):
+            out.append(
+                Partnership(
+                    with_id=_opt(item.get("with")) or "",
+                    type=_opt(item.get("type")) or default_type,
+                    start=_opt(item.get("start")) or _opt(item.get("date")),
+                    end=_opt(item.get("end")),
+                    end_reason=_opt(item.get("end_reason")),
+                    place=_opt(item.get("place")),
+                    note=_opt(item.get("note")),
+                    extra={k: v for k, v in item.items() if k not in _PARTNERSHIP_KEYS},
+                )
             )
-        )
     return out
 
 
@@ -144,17 +155,18 @@ def _validate_shapes(data: dict) -> None:
     _require_mapping_of_text(data.get("death"), "death", ("date", "place"))
     for key in ("parents", "spouse", "children"):
         _require_text_list(data.get(key), key)
-    marriages = data.get("marriages")
-    if marriages is not None and not isinstance(marriages, (str, dict, list)):
-        raise ValueError("marriages must be a list of mappings")
-    if isinstance(marriages, dict):
-        marriages = [marriages]
-    if isinstance(marriages, list):
-        for item in marriages:
-            if not isinstance(item, dict):
-                raise ValueError("marriages entries must be mappings")
-            for key in ("with", "date", "place"):
-                _require_text(item.get(key), f"marriages.{key}")
+    for key in ("partnerships", "marriages"):
+        entries = data.get(key)
+        if entries is not None and not isinstance(entries, (str, dict, list)):
+            raise ValueError(f"{key} must be a list of mappings")
+        if isinstance(entries, dict):
+            entries = [entries]
+        if isinstance(entries, list):
+            for item in entries:
+                if not isinstance(item, dict):
+                    raise ValueError(f"{key} entries must be mappings")
+                for field_name in _PARTNERSHIP_KEYS:
+                    _require_text(item.get(field_name), f"{key}.{field_name}")
 
 
 def _make_person(data: dict, body: str, path: Path) -> Person:
@@ -172,7 +184,7 @@ def _make_person(data: dict, body: str, path: Path) -> Person:
         parents=_as_list(data.get("parents")),
         spouse=_as_list(data.get("spouse")),
         children=_as_list(data.get("children")),
-        marriages=_parse_marriages(data.get("marriages")),
+        partnerships=_parse_partnerships(data),
         gedcom_id=_opt(data.get("gedcom_id")),
         gedcom_extra=_opt(data.get("gedcom_extra")),
         body=body,
@@ -274,23 +286,21 @@ def _list_lines(key: str, values: list[str]) -> list[str]:
     return [f"{key}:"] + [f"  - {_scalar(value)}" for value in values]
 
 
-def _marriage_lines(marriages: list[Marriage]) -> list[str]:
-    if not marriages:
+def _partnership_lines(partnerships: list[Partnership]) -> list[str]:
+    if not partnerships:
         return []
-    lines = ["marriages:"]
-    for marriage in marriages:
-        entry: list[str] = []
-        if marriage.with_id:
-            entry.append(f"with: {_scalar(marriage.with_id)}")
-        if marriage.date:
-            entry.append(f"date: {_scalar(marriage.date)}")
-        if marriage.place:
-            entry.append(f"place: {_scalar(marriage.place)}")
-        entry += _extra_lines(marriage.extra, 0)
-        if not entry:
+    lines = ["partnerships:"]
+    for entry in partnerships:
+        fields = (
+            ("with", entry.with_id), ("type", entry.type), ("start", entry.start), ("end", entry.end),
+            ("end_reason", entry.end_reason), ("place", entry.place), ("note", entry.note),
+        )
+        block = [f"{key}: {_scalar(value)}" for key, value in fields if value]
+        block += _extra_lines(entry.extra, 0)
+        if not block:
             continue
-        lines.append(f"  - {entry[0]}")
-        lines += [f"    {line}" for line in entry[1:]]
+        lines.append(f"  - {block[0]}")
+        lines += [f"    {line}" for line in block[1:]]
     return lines
 
 
@@ -325,7 +335,7 @@ def dump_person(person: Person) -> str:
     lines += _list_lines("parents", person.parents)
     lines += _list_lines("spouse", person.spouse)
     lines += _list_lines("children", person.children)
-    lines += _marriage_lines(person.marriages)
+    lines += _partnership_lines(person.partnerships)
     if person.gedcom_id:
         lines.append(f"gedcom_id: {_scalar(person.gedcom_id)}")
     if person.gedcom_extra:

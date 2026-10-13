@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .issues import Issue
-from .model import Marriage
 from .slug import FALLBACK_SLUG, is_valid_id, natural_key, slugify, unique_id
 from .store import dump_person, read_records
 
@@ -90,8 +89,8 @@ def plan_fix(data_dir: Path) -> FixPlan:
             parents=[ref(x) for x in person.parents],
             spouse=[ref(x) for x in person.spouse],
             children=[ref(x) for x in person.children],
-            marriages=[
-                Marriage(ref(m.with_id) if m.with_id else "", m.date, m.place, m.extra) for m in person.marriages
+            partnerships=[
+                dataclasses.replace(m, with_id=ref(m.with_id) if m.with_id else "") for m in person.partnerships
             ],
             id_pinned=True,
         )

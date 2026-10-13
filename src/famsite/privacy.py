@@ -5,7 +5,7 @@ import hashlib
 from datetime import date
 
 from .dates import parse_date
-from .model import Marriage, Person, Tree
+from .model import Partnership, Person, Tree
 
 MODES = ("hidden", "placeholder", "full")
 
@@ -65,27 +65,23 @@ def redact(
                 parents=remap(person.parents),
                 spouse=remap(person.spouse),
                 children=remap(person.children),
-                marriages=[Marriage(id_of[m.with_id]) for m in person.marriages if m.with_id in id_of],
+                partnerships=[Partnership(id_of[p.with_id]) for p in person.partnerships if p.with_id in id_of],
             )
         else:
-            marriages = []
-            for marriage in person.marriages:
-                if marriage.with_id not in id_of:
+            partnerships = []
+            for entry in person.partnerships:
+                if entry.with_id not in id_of:
                     continue
-                private = marriage.with_id in living
-                marriages.append(
-                    Marriage(
-                        id_of[marriage.with_id],
-                        None if private else marriage.date,
-                        None if private else marriage.place,
-                    )
-                )
+                if entry.with_id in living:
+                    partnerships.append(Partnership(id_of[entry.with_id]))  # the link survives, the details do not
+                else:
+                    partnerships.append(dataclasses.replace(entry, with_id=id_of[entry.with_id]))
             out.people[pid] = dataclasses.replace(
                 person,
                 parents=remap(person.parents),
                 spouse=remap(person.spouse),
                 children=remap(person.children),
-                marriages=marriages,
+                partnerships=partnerships,
                 path=None,
             )
     return out

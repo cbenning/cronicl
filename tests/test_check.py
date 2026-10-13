@@ -2,7 +2,7 @@ from pathlib import Path
 
 from famsite.check import check_tree, has_errors
 from famsite.issues import Issue
-from famsite.model import Event, Marriage
+from famsite.model import Event, Partnership
 
 
 def codes(issues):
@@ -24,7 +24,7 @@ def test_dangling_parent(make_tree):
 
 
 def test_dangling_spouse_and_marriage(make_tree):
-    tree = make_tree([named("a", spouse=["ghost"], marriages=[Marriage("phantom")])])
+    tree = make_tree([named("a", spouse=["ghost"], partnerships=[Partnership("phantom")])])
     assert codes(check_tree(tree)) == ["E-DANGLING-REF", "E-DANGLING-REF"]
 
 
@@ -53,7 +53,7 @@ def test_missing_name_is_a_warning(make_tree):
 def test_unparsable_dates_are_warnings(make_tree):
     tree = make_tree(
         [
-            named("a", birth=Event(date="BET 1900 AND 1910"), marriages=[Marriage("b", "sometime")]),
+            named("a", birth=Event(date="BET 1900 AND 1910"), partnerships=[Partnership("b", type="marriage", start="sometime")]),
             named("b"),
         ]
     )

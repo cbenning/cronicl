@@ -14,11 +14,19 @@ class Event:
         return not (self.date or self.place or self.extra)
 
 
+PARTNERSHIP_TYPES = ("marriage", "civil-union", "partnership", "engagement", "unknown")
+END_REASONS = ("divorce", "annulment", "separation")
+
+
 @dataclass
-class Marriage:
+class Partnership:
     with_id: str  # "" for an entry that names no partner
-    date: str | None = None
+    type: str | None = None  # one of PARTNERSHIP_TYPES; None when the file does not say
+    start: str | None = None
+    end: str | None = None  # a date, or the word "unknown"
+    end_reason: str | None = None
     place: str | None = None
+    note: str | None = None
     extra: dict = field(default_factory=dict)
 
 
@@ -35,7 +43,7 @@ class Person:
     parents: list[str] = field(default_factory=list)
     spouse: list[str] = field(default_factory=list)
     children: list[str] = field(default_factory=list)
-    marriages: list[Marriage] = field(default_factory=list)
+    partnerships: list[Partnership] = field(default_factory=list)
     gedcom_id: str | None = None
     gedcom_extra: str | None = None
     body: str = ""

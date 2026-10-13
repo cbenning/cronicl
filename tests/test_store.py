@@ -1,4 +1,4 @@
-from famsite.model import Event, Marriage, Person
+from famsite.model import Event, Partnership, Person
 from famsite.store import dump_person, load_tree, split_frontmatter
 
 
@@ -10,7 +10,7 @@ def test_loads_person_with_defaults(tmp_path, write):
     assert person.body == "Hello there"
     assert person.id_pinned is False
     assert person.sex == "U"
-    assert person.parents == [] and person.spouse == [] and person.children == [] and person.marriages == []
+    assert person.parents == [] and person.spouse == [] and person.children == [] and person.partnerships == []
 
 
 def test_explicit_id_is_kept_and_pinned(tmp_path, write):
@@ -38,7 +38,7 @@ def test_relationship_fields_accept_flow_block_and_scalar_forms(tmp_path, write)
     assert person.parents == ["a", "b"]
     assert person.spouse == ["c"]
     assert person.children == ["d", "e"]
-    assert person.marriages == [Marriage("c", "1975-06-20", "Surrey, BC")]
+    assert person.partnerships == [Partnership("c", type="marriage", start="1975-06-20", place="Surrey, BC")]
 
 
 def test_roundtrip_tricky_values(tmp_path, write):
@@ -52,7 +52,7 @@ def test_roundtrip_tricky_values(tmp_path, write):
         parents=["a-b", "c-d"],
         spouse=["e-f"],
         children=["g-h"],
-        marriages=[Marriage("e-f", "~1900", "Halifax, Nova Scotia: Canada")],
+        partnerships=[Partnership("e-f", type="marriage", start="~1900", place="Halifax, Nova Scotia: Canada")],
         body="First paragraph.\n\nSecond paragraph.",
         extra={"media": ["a.jpg", "b.jpg"]},
         gedcom_id="I12",
@@ -67,7 +67,7 @@ def test_roundtrip_tricky_values(tmp_path, write):
     assert loaded.parents == ["a-b", "c-d"]
     assert loaded.spouse == ["e-f"]
     assert loaded.children == ["g-h"]
-    assert loaded.marriages == [Marriage("e-f", "~1900", "Halifax, Nova Scotia: Canada")]
+    assert loaded.partnerships == person.partnerships
     assert loaded.body == person.body
     assert loaded.extra == {"media": ["a.jpg", "b.jpg"]}
     assert loaded.gedcom_extra == person.gedcom_extra
@@ -145,3 +145,69 @@ def test_dump_is_stable_and_readable():
     assert front["parents"] == ["smith-john", "brown-mary"]
     assert dump_person(person) == first
     assert "parents:\n  - smith-john\n  - brown-mary\n" in first
+
+
+def test_legacy_marriages_load_as_marriage_partnerships(tmp_path, write):
+    write(
+        tmp_path,
+        "people/x.md",
+        "---\nname: X\nmarriages:\n  - with: c\n    date: 1975-06-20\n    place: Surrey, BC\n---\n",
+    )
+    tree, _ = load_tree(tmp_path)
+    assert tree.people["x"].partnerships == [
+        Partnership("c", type="marriage", start="1975-06-20", place="Surrey, BC")
+    ]
+
+
+def test_partnerships_read_every_field(tmp_path, write):
+    write(
+        tmp_path,
+        "people/x.md",
+        "---\nname: X\npartnerships:\n  - with: c\n    type: marriage\n    start: 1955\n    end: 1971\n"
+        "    end_reason: divorce\n    place: Reno\n    note: Second marriage\n    witness: Pat\n---\n",
+    )
+    tree, _ = load_tree(tmp_path)
+    assert tree.people["x"].partnerships == [
+        Partnership(
+            "c", type="marriage", start="1955", end="1971", end_reason="divorce",
+            place="Reno", note="Second marriage", extra={"witness": "Pat"},
+        )
+    ]
+
+
+def test_start_wins_over_legacy_date_and_both_lists_load(tmp_path, write):
+    write(
+        tmp_path,
+        "people/x.md",
+        "---\nname: X\npartnerships:\n  - with: c\n    date: 1950\n    start: 1951\n"
+        "marriages:\n  - with: d\n    date: 1960\n---\n",
+    )
+    tree, _ = load_tree(tmp_path)
+    got = tree.people["x"].partnerships
+    assert [(p.with_id, p.start) for p in got] == [("c", "1951"), ("d", "1960")]
+    assert got[1].type == "marriage"
+    assert got[0].type is None
+
+
+def test_partnerships_are_written_in_block_style_and_roundtrip(tmp_path, write):
+    person = Person(
+        id="x",
+        given="X",
+        partnerships=[
+            Partnership("c", type="marriage", start="1955", end="unknown", end_reason="divorce", place="Reno, NV: USA"),
+            Partnership("d", note="no dates"),
+        ],
+    )
+    text = dump_person(person)
+    assert "marriages:" not in text and "{" not in text and "[" not in text
+    assert "  - with: c\n    type: marriage\n    start: 1955\n    end: unknown\n    end_reason: divorce\n" in text
+    write(tmp_path, "people/x.md", text)
+    tree, _ = load_tree(tmp_path)
+    assert tree.people["x"].partnerships == person.partnerships
+
+
+def test_bad_partnership_shape_is_a_frontmatter_error(tmp_path, write):
+    write(tmp_path, "people/x.md", "---\nname: X\npartnerships:\n  - with: [a, b]\n---\n")
+    tree, issues = load_tree(tmp_path)
+    assert [i.code for i in issues if i.severity == "error"] == ["E-BAD-FRONTMATTER"]
+    assert tree.people == {}

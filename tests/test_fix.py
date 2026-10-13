@@ -50,8 +50,8 @@ def test_invalid_explicit_id_is_normalized_and_every_reference_kind_rewritten(tm
     assert amy.parents == ["smith-bob"]
     assert amy.spouse == ["smith-bob"]
     assert amy.children == ["smith-bob"]
-    assert [m.with_id for m in amy.marriages] == ["smith-bob"]
-    assert amy.marriages[0].date == "1990"
+    assert [m.with_id for m in amy.partnerships] == ["smith-bob"]
+    assert amy.partnerships[0].start == "1990"
 
 
 def test_references_to_a_collision_renamed_file_follow_the_stem_alias(tmp_path, write):

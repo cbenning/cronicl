@@ -1,4 +1,4 @@
-from famsite.model import Event, Marriage
+from famsite.model import Event, Partnership
 from famsite.relations import build_relations, couple_id
 
 
@@ -67,7 +67,7 @@ def test_spouse_on_either_side_makes_a_childless_couple(make_tree):
 
 
 def test_marriage_declared_on_one_side_applies_to_the_couple(make_tree):
-    tree = make_tree([named("a", marriages=[Marriage("b", "1975", "Surrey, BC")]), named("b")])
+    tree = make_tree([named("a", partnerships=[Partnership("b", type="marriage", start="1975", place="Surrey, BC")]), named("b")])
     rel = build_relations(tree)
     assert rel.couples["a+b"].marriage == Event(date="1975", place="Surrey, BC")
     assert rel.issues == []
@@ -76,8 +76,8 @@ def test_marriage_declared_on_one_side_applies_to_the_couple(make_tree):
 def test_identical_marriages_on_both_sides_merge(make_tree):
     tree = make_tree(
         [
-            named("a", marriages=[Marriage("b", "1975", "Surrey")]),
-            named("b", marriages=[Marriage("a", "1975", "Surrey")]),
+            named("a", partnerships=[Partnership("b", type="marriage", start="1975", place="Surrey")]),
+            named("b", partnerships=[Partnership("a", type="marriage", start="1975", place="Surrey")]),
         ]
     )
     rel = build_relations(tree)
@@ -88,8 +88,8 @@ def test_identical_marriages_on_both_sides_merge(make_tree):
 def test_conflicting_marriages_warn_and_smallest_owner_wins(make_tree):
     tree = make_tree(
         [
-            named("a", marriages=[Marriage("b", "1975")]),
-            named("b", marriages=[Marriage("a", "1976")]),
+            named("a", partnerships=[Partnership("b", start="1975")]),
+            named("b", partnerships=[Partnership("a", start="1976")]),
         ]
     )
     rel = build_relations(tree)
@@ -114,7 +114,7 @@ def test_dangling_references_are_reported_and_ignored(make_tree):
     tree = make_tree(
         [
             named("a", parents=["ghost"], spouse=["phantom"], children=["nobody"],
-                  marriages=[Marriage("spectre", "1900")]),
+                  partnerships=[Partnership("spectre", type="marriage", start="1900")]),
         ]
     )
     rel = build_relations(tree)

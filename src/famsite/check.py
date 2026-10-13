@@ -62,8 +62,8 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
             _check_date(person.birth.date, "birth", person, issues)
         if person.death:
             _check_date(person.death.date, "death", person, issues)
-        for marriage in person.marriages:
-            _check_date(marriage.date, "marriage", person, issues)
+        for entry in person.partnerships:
+            _check_date(entry.start, "partnership start", person, issues)
 
     cycle_members = _cycle_members(relations.parents)
     for pid in sorted(cycle_members):

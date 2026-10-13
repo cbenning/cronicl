@@ -69,12 +69,12 @@ def _fields(person: Person) -> list[tuple[float, list[str]]]:
             years += tokenize(event.date)
         if event.place:
             places += tokenize(event.place)
-    for marriage in person.marriages:
-        year = date_year(marriage.date)
+    for entry in person.partnerships:
+        year = date_year(entry.start)
         if year is not None:
             years.append(str(year))
-        if marriage.place:
-            places += tokenize(marriage.place)
+        if entry.place:
+            places += tokenize(entry.place)
     names = tokenize(" ".join(part for part in (person.given, person.surname) if part))
     return [
         (_W_NAME, names),

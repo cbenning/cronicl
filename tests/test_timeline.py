@@ -1,7 +1,7 @@
 import json
 from datetime import date
 
-from famsite.model import Event, Marriage
+from famsite.model import Event, Partnership
 from famsite.relations import build_relations
 from famsite.render import build_site
 from famsite.timeline import build_timeline
@@ -19,7 +19,7 @@ def sample(make_tree):
             p("smith-john", "John", "Smith", birth=Event(date="1920-05-01", place="Halifax, NS"),
               death=Event(date="1990")),
             p("brown-mary", "Mary", "Brown", birth=Event(date="~1925"), death=Event(date="2001-02-03"),
-              marriages=[Marriage("smith-john", "1948-06-20", "Halifax, NS")]),
+              partnerships=[Partnership("smith-john", type="marriage", start="1948-06-20", place="Halifax, NS")]),
             p("smith-bob", "Bob", "Smith", birth=Event(date="1950", place="Vancouver, BC"),
               parents=["smith-john", "brown-mary"]),
             p("nodates", "No", "Dates"),

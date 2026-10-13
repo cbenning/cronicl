@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from famsite.model import Event, Marriage, Person
+from famsite.model import Event, Partnership, Person
 from famsite.privacy import is_living, redact
 from famsite.relations import build_relations
 
@@ -19,7 +19,7 @@ def family(make_tree):
             p("smith-john", "John", "Smith", birth=Event(date="1920"), death=Event(date="1990")),
             p("brown-mary", "Mary", "Brown", birth=Event(date="1925"), death=Event(date="2001")),
             p("smith-bob", "Bob", "Smith", birth=Event(date="1975"), parents=["smith-john", "brown-mary"],
-              body="Bob bio", marriages=[Marriage("zzjones-jane", "2001", "Elsewhere")]),
+              body="Bob bio", partnerships=[Partnership("zzjones-jane", type="marriage", start="2001", place="Elsewhere")]),
             p("zzjones-jane", "Jane", "Zzjones", birth=Event(date="1980")),
             p("smith-amy", "Amy", "Smith", birth=Event(date="2005"), parents=["smith-bob", "zzjones-jane"], body="Amy bio"),
         ]
@@ -76,14 +76,14 @@ def test_marriage_with_a_living_spouse_loses_its_details(make_tree):
     tree = make_tree(
         [
             p("old-x", "X", "Old", birth=Event(date="1900"), death=Event(date="1970"),
-              marriages=[Marriage("young-y", "1960", "Somewhere")]),
+              partnerships=[Partnership("young-y", type="marriage", start="1960", place="Somewhere")]),
             p("young-y", "Y", "Young", birth=Event(date="1990")),
         ]
     )
     out = redact(tree, mode="placeholder", today=TODAY, salt="s")
-    marriage = out.people["old-x"].marriages[0]
+    marriage = out.people["old-x"].partnerships[0]
     assert marriage.with_id.startswith("living-")
-    assert marriage.date is None and marriage.place is None
+    assert marriage.start is None and marriage.place is None and marriage.type is None
 
 
 def test_hidden_mode_removes_living_people_and_every_reference(make_tree):
@@ -92,7 +92,7 @@ def test_hidden_mode_removes_living_people_and_every_reference(make_tree):
     for person in out.people.values():
         for ref in person.parents + person.spouse + person.children:
             assert ref in out.people
-        for marriage in person.marriages:
+        for marriage in person.partnerships:
             assert marriage.with_id in out.people
 
 
