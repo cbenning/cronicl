@@ -227,7 +227,7 @@ def load_site(data_dir: Path) -> tuple[dict, list[Issue]]:
     if not isinstance(data, dict):
         return {}, [Issue("E-BAD-SITE-YML", "site.yml must be a mapping", "site.yml")]
     issues: list[Issue] = []
-    if data.get("schema_version") not in (None, 1):
+    if data.get("schema_version") not in (None, 1, 2):
         issues.append(Issue("E-SCHEMA-VERSION", f"unsupported schema_version {data.get('schema_version')!r}", "site.yml"))
     return data, issues
 

@@ -101,3 +101,15 @@ def test_broken_frontmatter_is_reported_not_rewritten(tmp_path, write):
     plan = plan_fix(tmp_path)
     assert plan.empty
     assert [i.code for i in plan.unresolved] == ["E-BAD-FRONTMATTER"]
+
+
+def test_fix_migrates_marriages_to_partnerships_and_bumps_schema_version(tmp_path, write):
+    write(tmp_path, "site.yml", "title: T\nschema_version: 1\n")
+    write(tmp_path, "people/a.md", "---\nid: a\nname: A\nmarriages:\n  - with: b\n    date: 1975\n---\n")
+    write(tmp_path, "people/b.md", "---\nid: b\nname: B\n---\n")
+    apply_plan(plan_fix(tmp_path))
+    text = (tmp_path / "people" / "a.md").read_text(encoding="utf-8")
+    assert "partnerships:" in text and "marriages:" not in text
+    assert "type: marriage" in text and "start: 1975" in text and "date:" not in text
+    assert "schema_version: 2" in (tmp_path / "site.yml").read_text(encoding="utf-8")
+    assert plan_fix(tmp_path).empty  # idempotent

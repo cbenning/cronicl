@@ -3,7 +3,7 @@ from __future__ import annotations
 from .dates import parse_date
 from .issues import Issue
 from .layout import generation_conflict
-from .model import Person, Tree
+from .model import END_REASONS, PARTNERSHIP_TYPES, Person, Tree
 from .relations import build_relations
 from .slug import is_valid_id
 
@@ -64,6 +64,36 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
             _check_date(person.death.date, "death", person, issues)
         for entry in person.partnerships:
             _check_date(entry.start, "partnership start", person, issues)
+            if entry.end != "unknown":
+                _check_date(entry.end, "partnership end", person, issues)
+            if entry.type and entry.type not in PARTNERSHIP_TYPES:
+                issues.append(
+                    Issue(
+                        "W-PARTNERSHIP-TYPE-UNKNOWN",
+                        f"{person.id}: partnership type {entry.type!r} is not one of {', '.join(PARTNERSHIP_TYPES)}",
+                        where,
+                    )
+                )
+            if entry.end_reason and entry.end_reason not in END_REASONS:
+                issues.append(
+                    Issue(
+                        "W-END-REASON-UNKNOWN",
+                        f"{person.id}: end_reason {entry.end_reason!r} is not one of {', '.join(END_REASONS)}",
+                        where,
+                    )
+                )
+
+    for cid, couple in sorted(relations.couples.items()):
+        for entry in couple.partnerships:
+            start, end = parse_date(entry.start), parse_date(entry.end)
+            if start and end and (end.year, end.month or 0, end.day or 0) < (start.year, start.month or 0, start.day or 0):
+                issues.append(
+                    Issue(
+                        "W-END-BEFORE-START",
+                        f"{cid}: partnership ends ({entry.end}) before it starts ({entry.start})",
+                        tree.people[couple.partners[0]].location,
+                    )
+                )
 
     cycle_members = _cycle_members(relations.parents)
     for pid in sorted(cycle_members):

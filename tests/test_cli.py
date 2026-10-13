@@ -16,7 +16,7 @@ def tree_files(root: Path):
 def test_init_creates_a_data_repo_and_refuses_to_overwrite(tmp_path):
     assert run("init", "--dir", tmp_path) == 0
     site = (tmp_path / "site.yml").read_text(encoding="utf-8")
-    assert "schema_version: 1" in site
+    assert "schema_version: 2" in site
     assert re.search(r"id_salt: [0-9a-f]{16}", site)
     assert "living: full" in site  # redaction is opt-in
     assert (tmp_path / "people").is_dir() and (tmp_path / "archive").is_dir()
@@ -125,7 +125,7 @@ def test_schema_prints_valid_json(capsys):
     schema = json.loads(capsys.readouterr().out)
     assert set(schema) == {"person"}
     props = schema["person"]["properties"]
-    assert {"parents", "spouse", "children", "marriages"} <= set(props)
+    assert {"parents", "spouse", "children", "partnerships"} <= set(props)
 
 
 def test_build_does_not_redact_unless_asked(tmp_path, sample_ged):

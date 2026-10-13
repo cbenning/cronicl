@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -9,6 +10,9 @@ from pathlib import Path
 from .issues import Issue
 from .slug import FALLBACK_SLUG, is_valid_id, natural_key, slugify, unique_id
 from .store import dump_person, read_records
+
+
+_SCHEMA_V1 = re.compile(r"^schema_version:[ \t]*1[ \t]*$", re.M)
 
 
 @dataclass
@@ -104,6 +108,12 @@ def plan_fix(data_dir: Path) -> FixPlan:
         elif old_path.read_text(encoding="utf-8") != content:
             plan.writes[old_path] = content
             plan.notes.append(f"normalize {_rel(old_path, data_dir)}")
+    site_path = data_dir / "site.yml"
+    if site_path.exists():
+        text = site_path.read_text(encoding="utf-8")
+        if _SCHEMA_V1.search(text):
+            plan.writes[site_path] = _SCHEMA_V1.sub("schema_version: 2", text)
+            plan.notes.append("site.yml: schema_version 1 -> 2")
     return plan
 
 

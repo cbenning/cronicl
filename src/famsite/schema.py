@@ -13,7 +13,7 @@ _ID = {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64}
 
 PERSON_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "famsite person frontmatter (schema_version 1)",
+    "title": "famsite person frontmatter (schema_version 2)",
     "type": "object",
     "properties": {
         "id": _ID,
@@ -36,15 +36,34 @@ PERSON_SCHEMA = {
         "spouse": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "ids of spouses; needed only for a couple with no children and no marriages entry",
+            "description": "ids of spouses; needed only for a couple with no children and no partnerships entry",
         },
         "children": {
             "type": "array",
             "items": {"type": "string"},
             "description": "ids of children (down-reference, merged into each child's parents)",
         },
+        "partnerships": {
+            "type": "array",
+            "description": "relationships with another person; may be declared on either partner and are merged",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "with": {"type": "string"},
+                    "type": {"enum": ["marriage", "civil-union", "partnership", "engagement", "unknown"]},
+                    "start": {"type": "string", "description": "date the partnership began"},
+                    "end": {"type": "string", "description": "date it ended, or the word unknown"},
+                    "end_reason": {"enum": ["divorce", "annulment", "separation"]},
+                    "place": {"type": "string"},
+                    "note": {"type": "string"},
+                },
+                "required": ["with"],
+            },
+        },
         "marriages": {
             "type": "array",
+            "deprecated": True,
+            "description": "legacy: read as partnerships of type marriage; fix --apply migrates it",
             "items": {
                 "type": "object",
                 "properties": {

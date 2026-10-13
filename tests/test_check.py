@@ -88,3 +88,39 @@ def test_load_issues_are_included_and_errors_detected(make_tree):
     issues = check_tree(tree, [Issue("E-BAD-FRONTMATTER", "boom", "people/x.md")])
     assert has_errors(issues)
     assert codes(issues) == ["E-BAD-FRONTMATTER"]
+
+
+def test_partnership_dates_are_checked(make_tree):
+    tree = make_tree(
+        [named("a", partnerships=[Partnership("b", type="marriage", start="sometime", end="later")]), named("b")]
+    )
+    assert codes(check_tree(tree)) == ["W-DATE-UNPARSED", "W-DATE-UNPARSED"]
+
+
+def test_end_unknown_is_not_a_date_problem(make_tree):
+    tree = make_tree([named("a", partnerships=[Partnership("b", type="marriage", end="unknown")]), named("b")])
+    assert codes(check_tree(tree)) == []
+
+
+def test_end_before_start_warns(make_tree):
+    tree = make_tree(
+        [named("a", partnerships=[Partnership("b", type="marriage", start="1990", end="1980")]), named("b")]
+    )
+    assert codes(check_tree(tree)) == ["W-END-BEFORE-START"]
+
+
+def test_end_before_start_is_found_across_both_files(make_tree):
+    tree = make_tree(
+        [
+            named("a", partnerships=[Partnership("b", type="marriage", start="1990")]),
+            named("b", partnerships=[Partnership("a", end="1980")]),
+        ]
+    )
+    assert codes(check_tree(tree)) == ["W-END-BEFORE-START"]
+
+
+def test_unknown_type_and_reason_warn_but_are_kept(make_tree):
+    tree = make_tree(
+        [named("a", partnerships=[Partnership("b", type="handfasting", end="1990", end_reason="drifted")]), named("b")]
+    )
+    assert codes(check_tree(tree)) == ["W-END-REASON-UNKNOWN", "W-PARTNERSHIP-TYPE-UNKNOWN"]

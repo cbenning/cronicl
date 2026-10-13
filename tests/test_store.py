@@ -122,7 +122,7 @@ def test_missing_site_yml_is_a_warning(tmp_path):
 
 
 def test_site_yml_schema_version_is_checked(tmp_path, write):
-    write(tmp_path, "site.yml", "schema_version: 2\n")
+    write(tmp_path, "site.yml", "schema_version: 3\n")
     _, issues = load_tree(tmp_path)
     assert "E-SCHEMA-VERSION" in [i.code for i in issues]
 

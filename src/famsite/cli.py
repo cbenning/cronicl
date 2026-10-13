@@ -24,7 +24,7 @@ from .store import load_tree
 
 SITE_YML = """\
 title: Family Tree
-schema_version: 1
+schema_version: 2
 privacy:
   living: full          # full (default: nothing hidden) | placeholder | hidden -- redaction is opt-in
   cutoff_years: 100
