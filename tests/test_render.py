@@ -119,3 +119,38 @@ def test_no_privacy_setting_means_no_redaction(tmp_path, make_tree):
     build_site(tree, tmp_path, today=TODAY)
     payload = json.loads((tmp_path / "data/people/a.json").read_text(encoding="utf-8"))
     assert payload["name"] == "Al Living"
+
+
+def test_spouse_payload_carries_partnership_text(make_tree):
+    from famsite.model import Partnership
+
+    tree = make_tree(
+        [
+            {"id": "a", "given": "A", "partnerships": [
+                Partnership("b", type="marriage", start="1975", end="1990", end_reason="divorce", place="Surrey, BC")
+            ]},
+            {"id": "b", "given": "B"},
+        ]
+    )
+    spouse = person_payload(tree, "a")["spouses"][0]
+    assert spouse["id"] == "b" and "marriage" not in spouse
+    assert spouse["partnerships"] == [
+        {
+            "type": "marriage", "start": "1975", "end": "1990", "end_reason": "divorce", "place": "Surrey, BC",
+            "note": None, "text": "Married 1975 – divorced 1990 (Surrey, BC)",
+        }
+    ]
+
+
+def test_partnership_text_wording():
+    from famsite.render import partnership_text
+
+    assert partnership_text("marriage", "1975", None, None, None) == "Married 1975"
+    assert partnership_text("marriage", "1975", "1990", None, None) == "Married 1975 – ended 1990"
+    assert partnership_text("marriage", None, "unknown", "divorce", None) == "Married – divorced"
+    assert partnership_text("partnership", "1990", "2001", None, None) == "Partners 1990 – ended 2001"
+    assert partnership_text("engagement", "1974", None, None, None) == "Engaged 1974"
+    assert partnership_text("civil-union", "2005", "2010", "separation", None) == "Civil union 2005 – separated 2010"
+    assert partnership_text("marriage", "1950", "1951", "annulment", None) == "Married 1950 – annulled 1951"
+    assert partnership_text("unknown", None, None, None, None) == ""
+    assert partnership_text(None, None, None, None, "Reno") == "Partners (Reno)"

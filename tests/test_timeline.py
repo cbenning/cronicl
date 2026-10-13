@@ -102,3 +102,46 @@ def test_build_writes_timeline_json_and_respects_redaction(tmp_path, make_tree):
     data = json.loads(text)
     assert [e["year"] for e in data["events"]] == [1900, 1970]
     assert "2012" not in text and "Secrettown" not in text and "Young" not in text and "young-y" not in text
+
+
+def test_partnership_start_and_end_become_events(make_tree):
+    tree = make_tree(
+        [
+            p("a", "A", "X", partnerships=[
+                Partnership("b", type="marriage", start="1950-06-01", end="1960", end_reason="divorce", place="Reno")
+            ]),
+            p("b", "B", "Y"),
+        ]
+    )
+    events = build_timeline(tree, build_relations(tree))["events"]
+    by_id = {e["id"]: e for e in events}
+    assert by_id["marriage:a+b"]["year"] == 1950 and by_id["marriage:a+b"]["kind"] == "marriage"
+    end = by_id["divorce:a+b"]
+    assert (end["year"], end["reason"], end["kind"], end["people"], end["place"]) == (
+        1960, "divorce", "marriage", ["a", "b"], "",
+    )
+
+
+def test_non_marriage_start_is_a_partnership_event_and_unknown_end_has_no_event(make_tree):
+    tree = make_tree(
+        [
+            p("a", "A", "X", partnerships=[Partnership("b", type="engagement", start="1949", end="unknown")]),
+            p("b", "B", "Y"),
+        ]
+    )
+    ids = [e["id"] for e in build_timeline(tree, build_relations(tree))["events"]]
+    assert ids == ["partnership:a+b"]
+
+
+def test_later_partnerships_get_numbered_ids_and_same_year_end_sorts_before_death(make_tree):
+    tree = make_tree(
+        [
+            p("a", "A", "X", death=Event(date="1960"), partnerships=[
+                Partnership("b", type="marriage", start="1950", end="1960", end_reason="divorce"),
+                Partnership("b", type="marriage", start="1970"),
+            ]),
+            p("b", "B", "Y"),
+        ]
+    )
+    ids = [e["id"] for e in build_timeline(tree, build_relations(tree))["events"]]
+    assert ids == ["marriage:a+b", "divorce:a+b", "death:a", "marriage:a+b:1"]

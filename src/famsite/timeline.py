@@ -4,7 +4,7 @@ from .dates import parse_date
 from .model import Tree
 from .relations import Relations
 
-_TYPE_ORDER = {"birth": 0, "marriage": 1, "death": 2}
+_TYPE_ORDER = {"birth": 0, "marriage": 1, "partnership": 1, "divorce": 2, "death": 3}
 
 
 def _event(event_id: str, kind: str, date_text: str | None, place: str | None, people: list[str]) -> dict | None:
@@ -39,11 +39,20 @@ def build_timeline(tree: Tree, relations: Relations) -> dict:
                 events.append(e)
     for cid in sorted(relations.couples):
         couple = relations.couples[cid]
-        if couple.marriage is None or len(couple.partners) < 2:
+        if len(couple.partners) < 2:
             continue
-        e = _event(f"marriage:{cid}", "marriage", couple.marriage.date, couple.marriage.place, list(couple.partners))
-        if e:
-            events.append(e)
+        for index, entry in enumerate(couple.partnerships):
+            suffix = f":{index}" if index else ""
+            kind = "marriage" if entry.type == "marriage" else "partnership"
+            start = _event(f"{kind}:{cid}{suffix}", kind, entry.start, entry.place, list(couple.partners))
+            if start:
+                start["kind"] = entry.type or "unknown"
+                events.append(start)
+            end = _event(f"divorce:{cid}{suffix}", "divorce", entry.end, None, list(couple.partners))
+            if end:
+                end["kind"] = entry.type or "unknown"
+                end["reason"] = entry.end_reason or ""
+                events.append(end)
 
     events.sort(
         key=lambda e: (e["year"], e["month"] or 0, e["day"] or 0, _TYPE_ORDER[e["type"]], e["id"]),

@@ -22,7 +22,7 @@
   {% if group %}
   <h2>{{ label }}</h2>
   <ul>
-    {% for rel in group %}<li><a href="../{{ rel.id }}/">{{ rel.name }}</a></li>{% endfor %}
+    {% for rel in group %}<li><a href="../{{ rel.id }}/">{{ rel.name }}</a>{% for part in rel.partnerships or [] %}{% if part.text %} <span class="partnership">{{ part.text }}</span>{% endif %}{% endfor %}</li>{% endfor %}
   </ul>
   {% endif %}
   {% endfor %}

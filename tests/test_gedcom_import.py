@@ -205,7 +205,7 @@ def test_write_import_creates_files_and_archive(tmp_path, sample_ged):
     tree, issues = load_tree(tmp_path)
     rel = build_relations(tree)
     assert rel.kids["jones-jane+smith-bob"] == ["smith-amy", "smith-tom"]
-    assert rel.couples["jones-jane+smith-bob"].marriage.date == "1975-06-20"
+    assert rel.couples["jones-jane+smith-bob"].partnerships[0].start == "1975-06-20"
     assert [i for i in issues + rel.issues if i.severity == "error"] == []
 
 

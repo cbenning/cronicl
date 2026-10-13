@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .issues import Issue
-from .model import Event, Partnership, Tree
+from .model import Partnership, Tree
 
 
 @dataclass
@@ -27,14 +27,6 @@ class Couple:
     @property
     def ended(self) -> bool:
         return bool(self.partnerships) and self.partnerships[-1].end is not None
-
-    @property
-    def marriage(self) -> Event | None:
-        """Transitional: the first marriage with a date or place. Removed once timeline/render read partnerships."""
-        for entry in self.partnerships:
-            if entry.type == "marriage" and (entry.start or entry.place):
-                return Event(date=entry.start, place=entry.place)
-        return None
 
 
 @dataclass

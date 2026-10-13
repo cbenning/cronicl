@@ -49,6 +49,37 @@ def _ref(tree: Tree, pid: str) -> dict:
     return {"id": pid, "name": tree.people[pid].display_name}
 
 
+_TYPE_WORD = {
+    "marriage": "Married", "civil-union": "Civil union", "partnership": "Partners",
+    "engagement": "Engaged", "unknown": "Partners",
+}
+_END_WORD = {"divorce": "divorced", "annulment": "annulled", "separation": "separated"}
+
+
+def partnership_text(type_, start, end, end_reason, place) -> str:
+    """One readable line for a partnership, e.g. "Married 1975 – divorced 1990 (Surrey, BC)"."""
+    if not (start or end or place) and type_ in (None, "unknown"):
+        return ""
+    text = _TYPE_WORD.get(type_ or "unknown", "Partners")
+    if start:
+        text += f" {start}"
+    if end:
+        text += " – " + _END_WORD.get(end_reason, "ended")
+        if end != "unknown":
+            text += f" {end}"
+    if place:
+        text += f" ({place})"
+    return text
+
+
+def _partnership(entry) -> dict:
+    return {
+        "type": entry.type, "start": entry.start, "end": entry.end, "end_reason": entry.end_reason,
+        "place": entry.place, "note": entry.note,
+        "text": partnership_text(entry.type, entry.start, entry.end, entry.end_reason, entry.place),
+    }
+
+
 def person_payload(tree: Tree, pid: str, relations: Relations | None = None) -> dict:
     rel = relations or build_relations(tree)
     person = tree.people[pid]
@@ -59,7 +90,7 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None) -> 
         couple = rel.couples[cid]
         for other in couple.partners:
             if other != pid:
-                spouses.append({**_ref(tree, other), "marriage": _event(couple.marriage)})
+                spouses.append({**_ref(tree, other), "partnerships": [_partnership(p) for p in couple.partnerships]})
         children += [_ref(tree, c) for c in rel.kids.get(cid, [])]
     children.sort(key=lambda r: (r["name"].lower(), r["id"]))
     birth_date = person.birth.date if person.birth else None
