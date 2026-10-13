@@ -1,5 +1,5 @@
 from famsite.model import Event, Partnership
-from famsite.relations import build_relations, couple_id
+from famsite.relations import CouplePartnership, build_relations, couple_id
 
 
 def named(pid, **kw):
@@ -66,14 +66,18 @@ def test_spouse_on_either_side_makes_a_childless_couple(make_tree):
     assert rel.couples_of["b"] == ["a+b"]
 
 
-def test_marriage_declared_on_one_side_applies_to_the_couple(make_tree):
-    tree = make_tree([named("a", partnerships=[Partnership("b", type="marriage", start="1975", place="Surrey, BC")]), named("b")])
+def test_partnership_declared_on_one_side_applies_to_the_couple(make_tree):
+    tree = make_tree(
+        [named("a", partnerships=[Partnership("b", type="marriage", start="1975", place="Surrey, BC")]), named("b")]
+    )
     rel = build_relations(tree)
-    assert rel.couples["a+b"].marriage == Event(date="1975", place="Surrey, BC")
+    assert rel.couples["a+b"].partnerships == [
+        CouplePartnership(type="marriage", start="1975", place="Surrey, BC")
+    ]
     assert rel.issues == []
 
 
-def test_identical_marriages_on_both_sides_merge(make_tree):
+def test_identical_partnerships_on_both_sides_merge(make_tree):
     tree = make_tree(
         [
             named("a", partnerships=[Partnership("b", type="marriage", start="1975", place="Surrey")]),
@@ -81,20 +85,80 @@ def test_identical_marriages_on_both_sides_merge(make_tree):
         ]
     )
     rel = build_relations(tree)
-    assert rel.couples["a+b"].marriage == Event(date="1975", place="Surrey")
+    assert len(rel.couples["a+b"].partnerships) == 1
     assert rel.issues == []
 
 
-def test_conflicting_marriages_warn_and_smallest_owner_wins(make_tree):
+def test_start_on_one_file_and_end_on_the_other_are_one_partnership(make_tree):
     tree = make_tree(
         [
-            named("a", partnerships=[Partnership("b", start="1975")]),
-            named("b", partnerships=[Partnership("a", start="1976")]),
+            named("a", partnerships=[Partnership("b", type="marriage", start="1955")]),
+            named("b", partnerships=[Partnership("a", end="1971", end_reason="divorce")]),
         ]
     )
     rel = build_relations(tree)
-    assert rel.couples["a+b"].marriage == Event(date="1975")
-    assert codes(rel) == ["W-MARRIAGE-CONFLICT"]
+    assert rel.couples["a+b"].partnerships == [
+        CouplePartnership(type="marriage", start="1955", end="1971", end_reason="divorce")
+    ]
+    assert rel.couples["a+b"].ended is True
+    assert rel.issues == []
+
+
+def test_differing_place_warns_and_smallest_owner_wins(make_tree):
+    tree = make_tree(
+        [
+            named("a", partnerships=[Partnership("b", type="marriage", start="1975", place="Surrey")]),
+            named("b", partnerships=[Partnership("a", type="marriage", start="1975", place="Delta")]),
+        ]
+    )
+    rel = build_relations(tree)
+    assert rel.couples["a+b"].partnerships[0].place == "Surrey"
+    assert codes(rel) == ["W-PARTNERSHIP-CONFLICT"]
+
+
+def test_remarriage_to_the_same_person_is_two_partnerships(make_tree):
+    tree = make_tree(
+        [
+            named(
+                "a",
+                partnerships=[
+                    Partnership("b", type="marriage", start="1970"),
+                    Partnership("b", type="marriage", start="1950", end="1960", end_reason="divorce"),
+                ],
+            ),
+            named("b"),
+        ]
+    )
+    rel = build_relations(tree)
+    got = rel.couples["a+b"].partnerships
+    assert [(p.start, p.end) for p in got] == [("1950", "1960"), ("1970", None)]
+    assert rel.couples["a+b"].ended is False  # the latest partnership is still going
+    assert rel.issues == []
+
+
+def test_different_types_with_different_starts_stay_separate_and_unknown_merges(make_tree):
+    tree = make_tree(
+        [
+            named(
+                "a",
+                partnerships=[
+                    Partnership("b", type="engagement", start="1949"),
+                    Partnership("b", type="marriage", start="1950"),
+                ],
+            ),
+            named("b", partnerships=[Partnership("a")]),
+        ]
+    )
+    rel = build_relations(tree)
+    assert [p.type for p in rel.couples["a+b"].partnerships] == ["engagement", "marriage"]
+    assert rel.issues == []
+
+
+def test_spouse_shorthand_has_no_partnership_data(make_tree):
+    tree = make_tree([named("a", spouse=["b"]), named("b")])
+    rel = build_relations(tree)
+    assert rel.couples["a+b"].partnerships == []
+    assert rel.couples["a+b"].ended is False
 
 
 def test_more_than_two_parents_warns_and_truncates(make_tree):

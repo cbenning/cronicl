@@ -3,14 +3,38 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .issues import Issue
-from .model import Event, Tree
+from .model import Event, Partnership, Tree
+
+
+@dataclass
+class CouplePartnership:
+    """One merged partnership of a couple, as declared across both partners' files."""
+
+    type: str = "unknown"
+    start: str | None = None
+    end: str | None = None
+    end_reason: str | None = None
+    place: str | None = None
+    note: str | None = None
 
 
 @dataclass
 class Couple:
     id: str
     partners: list[str]
-    marriage: Event | None = None
+    partnerships: list[CouplePartnership] = field(default_factory=list)
+
+    @property
+    def ended(self) -> bool:
+        return bool(self.partnerships) and self.partnerships[-1].end is not None
+
+    @property
+    def marriage(self) -> Event | None:
+        """Transitional: the first marriage with a date or place. Removed once timeline/render read partnerships."""
+        for entry in self.partnerships:
+            if entry.type == "marriage" and (entry.start or entry.place):
+                return Event(date=entry.start, place=entry.place)
+        return None
 
 
 @dataclass
@@ -26,6 +50,39 @@ class Relations:
 def couple_id(partners: list[str]) -> str:
     ordered = sorted(partners)
     return "+".join(ordered) if len(ordered) > 1 else f"{ordered[0]}+"
+
+
+_VAGUE_TYPES = (None, "unknown")
+_MERGED_FIELDS = ("start", "end", "end_reason", "place", "note")
+
+
+def _same_partnership(group: CouplePartnership, entry: Partnership) -> bool:
+    types_agree = group.type == "unknown" or entry.type in _VAGUE_TYPES or group.type == entry.type
+    starts_agree = group.start is None or entry.start is None or group.start == entry.start
+    return types_agree and starts_agree
+
+
+def _merge(group: CouplePartnership, entry: Partnership, pair: tuple[str, ...], issues: list[Issue]) -> None:
+    if group.type == "unknown" and entry.type not in _VAGUE_TYPES:
+        group.type = entry.type
+    for name in _MERGED_FIELDS:
+        value = getattr(entry, name)
+        if value is None:
+            continue
+        current = getattr(group, name)
+        if current is None:
+            setattr(group, name, value)
+        elif current != value:
+            issues.append(
+                Issue(
+                    "W-PARTNERSHIP-CONFLICT",
+                    f"{' and '.join(pair)}: differing {name} ({current!r} vs {value!r}); using the first",
+                )
+            )
+
+
+def _start_key(group: CouplePartnership) -> tuple[bool, str]:
+    return (group.start is None, (group.start or "").lstrip("~"))
 
 
 def build_relations(tree: Tree) -> Relations:
@@ -64,7 +121,7 @@ def build_relations(tree: Tree) -> Relations:
 
     # Spouse and marriage pairs, declared on either end.
     pairs: set[tuple[str, ...]] = set()
-    marriage_entries: dict[tuple[str, ...], list[Event]] = {}
+    merged: dict[tuple[str, ...], list[CouplePartnership]] = {}
     for pid in sorted(people):
         person = people[pid]
         for other in person.spouse:
@@ -87,10 +144,22 @@ def build_relations(tree: Tree) -> Relations:
             else:
                 key = tuple(sorted((pid, other)))
                 pairs.add(key)
-                event = Event(date=marriage.start, place=marriage.place)
-                entries = marriage_entries.setdefault(key, [])
-                if event not in entries:
-                    entries.append(event)
+                groups = merged.setdefault(key, [])
+                for group in groups:
+                    if _same_partnership(group, marriage):
+                        _merge(group, marriage, key, issues)
+                        break
+                else:
+                    groups.append(
+                        CouplePartnership(
+                            type=marriage.type or "unknown",
+                            start=marriage.start,
+                            end=marriage.end,
+                            end_reason=marriage.end_reason,
+                            place=marriage.place,
+                            note=marriage.note,
+                        )
+                    )
 
     couples: dict[str, Couple] = {}
     birth_couple: dict[str, str] = {}
@@ -103,13 +172,8 @@ def build_relations(tree: Tree) -> Relations:
     for key in sorted(pairs):
         cid = couple_id(list(key))
         couples.setdefault(cid, Couple(cid, list(key)))
-    for key, events in sorted(marriage_entries.items()):
-        cid = couple_id(list(key))
-        couples[cid].marriage = events[0]
-        if len(events) > 1:
-            issues.append(
-                Issue("W-MARRIAGE-CONFLICT", f"{' and '.join(key)}: differing marriage entries; using the first")
-            )
+    for key, groups in sorted(merged.items()):
+        couples[couple_id(list(key))].partnerships = sorted(groups, key=_start_key)
 
     kids: dict[str, list[str]] = {cid: [] for cid in couples}
     for child, cid in birth_couple.items():
