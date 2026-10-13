@@ -214,3 +214,30 @@ def test_write_import_refuses_when_already_imported(tmp_path, sample_ged):
     write_import(result, tmp_path, data, "sample.ged")
     with pytest.raises(ImportRefused):
         write_import(result, tmp_path, data, "sample.ged")
+
+
+def test_engagement_next_to_a_divorce_without_marriage_is_not_lost():
+    owner = owner_of(FAM_HEAD + "1 ENGA\n2 DATE 1949\n2 PLAC Paris\n1 DIV\n2 DATE 1960\n0 TRLR\n")
+    assert owner.partnerships == [Partnership("y-b", type="marriage", end="1960", end_reason="divorce")]
+    assert "1 ENGA" in owner.gedcom_extra
+    assert "2 DATE 1949" in owner.gedcom_extra and "2 PLAC Paris" in owner.gedcom_extra
+
+
+def test_bare_or_note_only_div_asserts_nothing():
+    for body in ("1 DIV\n", "1 DIV\n2 NOTE maybe\n"):
+        owner = owner_of(FAM_HEAD + body + "0 TRLR\n")
+        assert owner.partnerships == [], body
+        assert owner.spouse == ["y-b"], body
+        assert "1 DIV" in owner.gedcom_extra, body
+
+
+def test_a_real_divorce_after_div_n_is_still_mapped():
+    owner = owner_of(FAM_HEAD + "1 DIV N\n1 DIV\n2 DATE 1960\n0 TRLR\n")
+    assert owner.partnerships == [Partnership("y-b", type="marriage", end="1960", end_reason="divorce")]
+    assert "1 DIV N" in owner.gedcom_extra
+
+
+def test_n_payload_wins_over_a_date_child():
+    owner = owner_of(FAM_HEAD + "1 DIV N\n2 DATE 1960\n0 TRLR\n")
+    assert owner.partnerships == []
+    assert "1 DIV N" in owner.gedcom_extra

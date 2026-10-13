@@ -113,6 +113,31 @@ def test_living_people_never_appear_in_any_output_file(tmp_path, make_tree):
     assert (tmp_path / "data/people/smith-bob.json").exists()
 
 
+def test_ended_partnership_details_of_a_living_person_reach_no_output_file(tmp_path, make_tree):
+    from famsite.model import Partnership
+
+    tree = make_tree(
+        [
+            p("smith-bob", "Bob", "Smith", birth=Event(date="1950"), death=Event(date="2020"),
+              partnerships=[
+                  Partnership(
+                      "zzcurtis-jane", type="marriage", start="1971-02-03", end="1983-04-05",
+                      end_reason="divorce", place="Qqplace", note="Qqnote",
+                  )
+              ]),
+            p("zzcurtis-jane", "Jane", "Zzcurtis", birth=Event(date="1952")),
+        ]
+    )
+    tree.site = {"privacy": {"living": "placeholder", "id_salt": "s"}}
+    build_site(tree, tmp_path, today=TODAY)
+    for rel, data in read_all(tmp_path).items():
+        if rel in ("viewer.js", "style.css"):
+            continue  # static assets contain the words "divorce" and "divorced" themselves
+        text = data.decode("utf-8", errors="ignore")
+        for secret in ("Qqplace", "Qqnote", "1971", "1983", "divorce", "divorced"):
+            assert secret not in text, (rel, secret)
+
+
 def test_no_privacy_setting_means_no_redaction(tmp_path, make_tree):
     tree = make_tree([p("a", "Al", "Living", birth=Event(date="2000"))])
     tree.site = {}

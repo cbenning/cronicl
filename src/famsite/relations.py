@@ -50,8 +50,15 @@ _MERGED_FIELDS = ("start", "end", "end_reason", "place", "note")
 
 def _same_partnership(group: CouplePartnership, entry: Partnership) -> bool:
     types_agree = group.type == "unknown" or entry.type in _VAGUE_TYPES or group.type == entry.type
-    starts_agree = group.start is None or entry.start is None or group.start == entry.start
-    return types_agree and starts_agree
+    return types_agree and _starts_agree(group.start, entry.start)
+
+
+def _starts_agree(a: str | None, b: str | None) -> bool:
+    """Missing agrees with anything; a less precise date agrees with a more precise one that starts with it."""
+    if a is None or b is None:
+        return True
+    a, b = a.lstrip("~"), b.lstrip("~")
+    return a.startswith(b) or b.startswith(a)
 
 
 def _merge(group: CouplePartnership, entry: Partnership, pair: tuple[str, ...], issues: list[Issue]) -> None:
@@ -62,6 +69,11 @@ def _merge(group: CouplePartnership, entry: Partnership, pair: tuple[str, ...], 
         if value is None:
             continue
         current = getattr(group, name)
+        if name == "start" and current is not None:
+            # _same_partnership already established that the two starts agree: keep the more precise one.
+            if len(value.lstrip("~")) > len(current.lstrip("~")):
+                group.start = value
+            continue
         if current is None:
             setattr(group, name, value)
         elif current != value:

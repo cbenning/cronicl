@@ -198,3 +198,34 @@ def test_self_parent_is_kept_so_check_can_report_the_cycle(make_tree):
     tree = make_tree([named("a", parents=["a"])])
     rel = build_relations(tree)
     assert rel.parents["a"] == ["a"]
+
+
+def test_same_marriage_at_different_date_precision_is_one_partnership(make_tree):
+    tree = make_tree(
+        [
+            named("a", partnerships=[Partnership("b", type="marriage", start="1975")]),
+            named("b", partnerships=[Partnership("a", type="marriage", start="1975-06-20", end="1990")]),
+        ]
+    )
+    rel = build_relations(tree)
+    assert rel.couples["a+b"].partnerships == [
+        CouplePartnership(type="marriage", start="1975-06-20", end="1990")
+    ]
+    assert rel.issues == []
+
+
+def test_approximate_year_and_exact_date_are_one_partnership_but_other_months_are_not(make_tree):
+    same = make_tree(
+        [
+            named("a", partnerships=[Partnership("b", type="marriage", start="~1975")]),
+            named("b", partnerships=[Partnership("a", type="marriage", start="1975-06-20")]),
+        ]
+    )
+    assert len(build_relations(same).couples["a+b"].partnerships) == 1
+    apart = make_tree(
+        [
+            named("a", partnerships=[Partnership("b", type="marriage", start="1975-06")]),
+            named("b", partnerships=[Partnership("a", type="marriage", start="1975-07")]),
+        ]
+    )
+    assert len(build_relations(apart).couples["a+b"].partnerships) == 2

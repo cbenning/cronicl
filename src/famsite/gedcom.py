@@ -150,6 +150,16 @@ def _event(node: Node, label: str, owner: str, extra: list[Node], issues: list[I
     return Event(date=date, place=place)
 
 
+def _asserts_event(node: Node) -> bool:
+    """A family event node says the event happened only with payload Y, a DATE or a PLAC (never with N)."""
+    payload = node.value.strip().upper()
+    if payload == "N":
+        return False
+    if payload == "Y":
+        return True
+    return any(child.tag in ("DATE", "PLAC") and child.value.strip() for child in node.children)
+
+
 def _end_date(node: Node, label: str, owner: str, extra: list[Node], issues: list[Issue]) -> str:
     """DIV/ANUL: the DATE becomes the partnership `end` (or "unknown"); PLAC and anything else is kept as passthrough."""
     date = None
@@ -331,32 +341,31 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
             else:
                 extra.append(child)
         rel: dict = {}
-        for tag in ("MARR", "ENGA", "DIV", "ANUL"):
-            for index, found in enumerate(rel_nodes.get(tag, [])):
-                payload = found.value.strip().upper()
-                if index > 0 or len(partners) < 2:
-                    extra.append(found)  # repeats, and facts about a family with fewer than two partners
+        for tag in ("MARR", "DIV", "ANUL", "ENGA"):
+            # Only a node that asserts the event (payload Y, a DATE or a PLAC) can become a partnership field;
+            # a bare tag, `N` and a NOTE-only node stay verbatim in `extra`. The first asserting node of a kind wins.
+            asserting = []
+            for found in rel_nodes.get(tag, []):
+                if len(partners) >= 2 and _asserts_event(found):
+                    asserting.append(found)
+                else:
+                    extra.append(found)
+            for index, found in enumerate(asserting):
+                if index > 0:
+                    extra.append(found)  # repeats
                 elif tag == "MARR":
-                    event = _event(found, "marriage", xref, extra, issues)
-                    if not event.is_empty() or payload == "Y":
-                        rel["marr"] = event
-                elif tag == "ENGA":
-                    if "marr" in rel:
-                        extra.append(found)
-                    else:
-                        event = _event(found, "engagement", xref, extra, issues)
-                        if not event.is_empty() or payload == "Y":
-                            rel["enga"] = event
+                    rel["marr"] = _event(found, "marriage", xref, extra, issues)
                 elif tag == "DIV":
-                    if payload == "N":
-                        extra.append(found)
-                    else:
-                        rel["div"] = _end_date(found, "divorce", xref, extra, issues)
-                else:  # ANUL
-                    if "div" in rel or payload == "N":
+                    rel["div"] = _end_date(found, "divorce", xref, extra, issues)
+                elif tag == "ANUL":
+                    if "div" in rel:
                         extra.append(found)
                     else:
                         rel["anul"] = _end_date(found, "annulment", xref, extra, issues)
+                elif "marr" in rel or "div" in rel or "anul" in rel:  # ENGA: only when it becomes the result
+                    extra.append(found)
+                else:
+                    rel["enga"] = _event(found, "engagement", xref, extra, issues)
         fam_order.append(xref)
         fam_partners[xref] = partners
         fam_children[xref] = chil
