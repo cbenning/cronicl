@@ -56,7 +56,7 @@ def focus_tree(tree: Tree, relations: Relations, pid: str) -> Tree:
             parents=[p for p in relations.parents.get(person_id, []) if p in keep],
             spouse=spouses,
             children=[],
-            partnerships=[],
+            partnerships=[dataclasses.replace(p) for p in person.partnerships if p.with_id in keep],
             path=None,
         )
     return Tree(people=people, site=dict(tree.site))

@@ -232,3 +232,22 @@ def test_unions_list_their_members_so_the_viewer_can_highlight_a_family(make_tre
     assert layout["unions"][0]["members"] == ["a", "b"]
     solo = compute_layout(make_tree([person("a"), person("c", parents=["a"])]))
     assert solo["unions"][0]["members"] == ["a"]
+
+
+def test_ended_partnership_is_flagged_on_the_union(make_tree):
+    from famsite.model import Partnership
+
+    tree = make_tree(
+        [
+            person("a", partnerships=[Partnership("b", type="marriage", start="1955", end="1971", end_reason="divorce")]),
+            person("b"),
+            person("c", spouse=["d"]),
+            person("d"),
+        ]
+    )
+    unions = {u["id"]: u for u in compute_layout(tree)["unions"]}
+    assert unions["a+b"]["ended"] is True
+    assert unions["a+b"]["partnerships"] == [
+        {"type": "marriage", "start": "1955", "end": "1971", "end_reason": "divorce"}
+    ]
+    assert "ended" not in unions["c+d"] and "partnerships" not in unions["c+d"]

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+
 from .model import Tree
 from .relations import build_relations
 
@@ -295,7 +297,15 @@ def compute_layout(tree: Tree) -> dict:
         g = gen[members[0]]
         multi = len(members) >= 2
         jy = row_y(g) + (NODE_H / 2 if multi else NODE_H)
-        out_unions.append({"id": uid, "x": _num(jx), "y": _num(jy), "members": list(members)})
+        union = {"id": uid, "x": _num(jx), "y": _num(jy), "members": list(members)}
+        couple = relations.couples[uid]
+        if couple.partnerships:
+            union["partnerships"] = [
+                {k: v for k, v in dataclasses.asdict(p).items() if v is not None} for p in couple.partnerships
+            ]
+        if couple.ended:
+            union["ended"] = True
+        out_unions.append(union)
         if multi:
             for pid in members:
                 c = center(pid)

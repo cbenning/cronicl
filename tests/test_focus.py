@@ -108,3 +108,19 @@ def test_rebuild_removes_stale_focus_files(tmp_path, make_tree):
     assert (tmp_path / "focus" / "b.json").exists()
     build_site(make_tree([person("a")]), tmp_path, today=TODAY)
     assert not (tmp_path / "focus" / "b.json").exists()
+
+
+def test_focus_layout_keeps_the_ended_flag_of_the_parents(make_tree):
+    from famsite.model import Partnership
+
+    tree = make_tree(
+        [
+            person("mum", partnerships=[Partnership("dad", type="marriage", start="1960", end="1975")]),
+            person("dad"),
+            person("kid", parents=["mum", "dad"]),
+        ]
+    )
+    rel = build_relations(tree)
+    layout = compute_layout(focus_tree(tree, rel, "kid"))
+    unions = {u["id"]: u for u in layout["unions"]}
+    assert unions["dad+mum"]["ended"] is True

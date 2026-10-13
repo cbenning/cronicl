@@ -100,3 +100,19 @@ def test_cli_text_json_and_exit_codes(tmp_path, write, capsys):
     assert main(["search", "bob", "--format", "json", "--dir", str(tmp_path)]) == 0
     data = json.loads(capsys.readouterr().out)
     assert data[0]["id"] == "smith-bob" and {"name", "years", "place", "parents", "living"} <= set(data[0])
+
+
+def test_partnership_years_and_places_are_searchable(make_tree):
+    from famsite.model import Partnership
+
+    tree = make_tree(
+        [
+            {"id": "a", "given": "Anna", "partnerships": [
+                Partnership("b", type="marriage", start="1955", end="1971", place="Reno")
+            ]},
+            {"id": "b", "given": "Bert"},
+        ]
+    )
+    for query in ("1971", "Reno"):
+        found = [h.id for h in search_people(tree, query, today=date(2026, 10, 13))]
+        assert "a" in found, query

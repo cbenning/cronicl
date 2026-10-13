@@ -107,3 +107,19 @@ def test_same_salt_gives_same_anonymous_ids(make_tree):
 def test_unknown_mode_is_rejected(make_tree):
     with pytest.raises(ValueError):
         redact(family(make_tree), mode="nope", today=TODAY)
+
+
+def test_ended_partnership_with_a_living_partner_loses_type_dates_and_note(make_tree):
+    tree = make_tree(
+        [
+            p("old-x", "X", "Old", birth=Event(date="1900"), death=Event(date="1980"),
+              partnerships=[
+                  Partnership("young-y", type="marriage", start="1960", end="1970", end_reason="divorce", note="secret")
+              ]),
+            p("young-y", "Y", "Young", birth=Event(date="2000")),
+        ]
+    )
+    out = redact(tree, mode="placeholder", today=TODAY, salt="s")
+    entry = out.people["old-x"].partnerships[0]
+    assert entry.with_id.startswith("living-")
+    assert (entry.type, entry.start, entry.end, entry.end_reason, entry.note) == (None, None, None, None, None)
