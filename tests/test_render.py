@@ -80,7 +80,7 @@ def test_static_person_page_links_relatives_and_back(tmp_path, make_tree):
     build_site(sample(make_tree), tmp_path, today=TODAY)
     page = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
     assert 'href="../smith-john/"' in page
-    assert 'href="../../index.html#/smith-bob"' in page
+    assert 'href="../../index.html#/tree/smith-bob"' in page  # canonical route; bare #/<id> still works
 
 
 def test_build_is_deterministic(tmp_path, make_tree):
@@ -179,3 +179,58 @@ def test_partnership_text_wording():
     assert partnership_text("marriage", "1950", "1951", "annulment", None) == "Married 1950 – annulled 1951"
     assert partnership_text("unknown", None, None, None, None) == ""
     assert partnership_text(None, None, None, None, "Reno") == "Partners (Reno)"
+
+
+def test_person_page_has_hero_facts_events_and_family(tmp_path, make_tree):
+    tree = make_tree(
+        [
+            p("smith-john", "John", "Smith", birth=Event(date="1920-05-01", place="Halifax, NS"),
+              death=Event(date="1990-02-03", place="Toronto, ON"), body="Teacher & friend."),
+            p("brown-mary", "Mary", "Brown", birth=Event(date="1925")),
+            p("smith-bob", "Bob", "Smith", birth=Event(date="1950"), parents=["smith-john", "brown-mary"]),
+            p("smith-sue", "Sue", "Smith", birth=Event(date="1952"), parents=["smith-john"]),
+        ]
+    )
+    tree.site = {"title": "Fam"}
+    build_site(tree, tmp_path, today=TODAY)
+    html = (tmp_path / "p/smith-john/index.html").read_text(encoding="utf-8")
+    assert "<h1>John Smith</h1>" in html
+    assert 'class="avatar avatar-lg"' in html and ">JS<" in html
+    assert "Halifax, NS" in html and "Toronto, ON" in html
+    assert "Age" in html and "69" in html
+    assert "Bob Smith born" in html
+    assert 'data-slot="gallery"' not in html  # nothing configured yet
+    assert "../smith-bob/" in html
+
+
+def test_person_with_nothing_known_has_no_dangling_labels(tmp_path, make_tree):
+    tree = make_tree([{"id": "unknown-i1"}])
+    build_site(tree, tmp_path, today=TODAY)
+    html = (tmp_path / "p/unknown-i1/index.html").read_text(encoding="utf-8")
+    assert ">?<" in html
+    for label in ("Born", "Died", "Age", "Life events", "Parents", "Siblings", "Partners", "Children"):
+        assert label not in html, label
+
+
+def test_person_page_escapes_names_and_places(tmp_path, make_tree):
+    tree = make_tree([p("a", "Al", "O'Neil <b>", birth=Event(date="1900", place='"Quote" & <i>Town</i>'))])
+    build_site(tree, tmp_path, today=TODAY)
+    html = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
+    assert "<b>" not in html and "<i>" not in html
+    assert "&lt;b&gt;" in html and "&amp;" in html
+
+
+def test_living_relatives_stay_hidden_on_the_page_end_to_end(tmp_path, make_tree):
+    tree = make_tree(
+        [
+            p("old", "Olga", "Zzold", birth=Event(date="1900"), death=Event(date="1970")),
+            p("me", "Moe", "Qqme", birth=Event(date="1990"), parents=["old"]),
+            p("sib", "Sid", "Wwsib", birth=Event(date="1992"), parents=["old"]),
+        ]
+    )
+    tree.site = {"privacy": {"living": "placeholder", "id_salt": "s"}}
+    build_site(tree, tmp_path, today=TODAY)
+    for rel, data in read_all(tmp_path).items():
+        text = data.decode("utf-8", errors="ignore")
+        assert "Qqme" not in text and "Wwsib" not in text, rel
+    assert (tmp_path / "p/old/index.html").exists()

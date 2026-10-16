@@ -7,25 +7,77 @@
 <link rel="stylesheet" href="../../style.css">
 </head>
 <body class="person-page">
-<main>
-  <p><a href="../../index.html#/{{ person.id }}">← Show in tree</a></p>
-  <h1>{{ person.name }}</h1>
-  {% if person.years %}<p class="years">{{ person.years }}</p>{% endif %}
-  {% if person.birth and (person.birth.date or person.birth.place) %}
-  <p>Born {{ person.birth.date or "" }}{% if person.birth.place %} in {{ person.birth.place }}{% endif %}</p>
-  {% endif %}
-  {% if person.death and (person.death.date or person.death.place) %}
-  <p>Died {{ person.death.date or "" }}{% if person.death.place %} in {{ person.death.place }}{% endif %}</p>
-  {% endif %}
-  {{ person.bodyHtml | safe }}
-  {% for label, group in [("Parents", person.parents), ("Spouses", person.spouses), ("Children", person.children)] %}
-  {% if group %}
-  <h2>{{ label }}</h2>
-  <ul>
-    {% for rel in group %}<li><a href="../{{ rel.id }}/">{{ rel.name }}</a>{% for part in rel.partnerships or [] %}{% if part.text %} <span class="partnership">{{ part.text }}</span>{% endif %}{% endfor %}</li>{% endfor %}
-  </ul>
-  {% endif %}
-  {% endfor %}
+<header class="page-bar">
+  <a class="site-title" href="../../index.html">{{ title }}</a>
+  <nav aria-label="Views">
+    <a class="pill" href="../../index.html#/tree/{{ person.id }}">Family tree</a>
+    <a class="pill" href="../../index.html#/focus/{{ person.id }}">Focus tree</a>
+    <a class="pill" href="../../index.html#/timeline/{{ person.id }}">Timeline</a>
+  </nav>
+</header>
+<main class="person">
+  <section class="hero">
+    <div class="avatar avatar-lg" aria-hidden="true">{{ person.initials }}</div>
+    <div class="hero-text">
+      <h1>{{ person.name }}</h1>
+      {% if person.years %}<p class="years">{{ person.years }}</p>{% endif %}
+      {% set born = person.birth and (person.birth.date or person.birth.place) %}
+      {% set died = person.death and (person.death.date or person.death.place) %}
+      {% if born or died or person.age_at_death is not none %}
+      <dl class="facts">
+        {% if born %}<dt>Born</dt><dd>{{ person.birth.date or "" }}{% if person.birth.place %}{% if person.birth.date %}, {% endif %}{{ person.birth.place }}{% endif %}</dd>{% endif %}
+        {% if died %}<dt>Died</dt><dd>{{ person.death.date or "" }}{% if person.death.place %}{% if person.death.date %}, {% endif %}{{ person.death.place }}{% endif %}</dd>{% endif %}
+        {% if person.age_at_death is not none %}<dt>Age</dt><dd>{% if person.age_at_death_approx %}~{% endif %}{{ person.age_at_death }}</dd>{% endif %}
+      </dl>
+      {% endif %}
+    </div>
+  </section>
+  <div class="columns">
+    <div class="main-col">
+      {% if person.bodyHtml %}<section class="card bio-full">{{ person.bodyHtml | safe }}</section>{% endif %}
+      {% if person.events %}
+      <section class="card">
+        <h2>Life events</h2>
+        <ol class="events">
+          {% for e in person.events %}
+          <li class="{{ 'own' if e.role == 'self' else 'rel' }}">
+            <span class="when">{{ e.date }}</span>
+            <span class="what">{{ e.text }}{% if e.place %} in {{ e.place }}{% endif %}{% if e.age is not none %} <span class="age">(age {% if e.age_approx %}~{% endif %}{{ e.age }})</span>{% endif %}</span>
+          </li>
+          {% endfor %}
+        </ol>
+      </section>
+      {% endif %}
+      {% if lifeline_svg %}<section class="card"><h2>Lifeline</h2>{{ lifeline_svg | safe }}</section>{% endif %}
+      {% if tree_svg %}
+      <section class="card">
+        <h2>Family tree</h2>
+        <div class="mini-tree-scroll">{{ tree_svg | safe }}</div>
+        <p><a href="../../index.html#/focus/{{ person.id }}">Open in full tree</a></p>
+      </section>
+      {% endif %}
+      {% if gallery %}<section class="card" data-slot="gallery"></section>{% endif %}
+    </div>
+    <aside class="side-col">
+      {% for label, group in [("Parents", person.parents), ("Siblings", person.siblings), ("Partners", person.spouses), ("Children", person.children)] %}
+      {% if group %}
+      <section class="card rel-group">
+        <h2>{{ label }}</h2>
+        <ul class="chips">
+          {% for rel in group %}
+          <li><a class="chip" href="../{{ rel.id }}/">
+            <span class="chip-name">{{ rel.name }}</span>
+            {% if rel.years %}<span class="chip-years">{{ rel.years }}</span>{% endif %}
+            {% if rel.type == "half" %}<span class="chip-note">half-sibling{% if rel.via %} via {{ rel.via | map(attribute="name") | join(" & ") }}{% endif %}</span>{% endif %}
+            {% for part in rel.partnerships or [] %}{% if part.text %}<span class="partnership">{{ part.text }}</span>{% endif %}{% endfor %}
+          </a></li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+      {% endfor %}
+    </aside>
+  </div>
 </main>
 </body>
 </html>

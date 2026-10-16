@@ -217,6 +217,16 @@ async function main() {
   check('search lists matches', (await ev(`document.querySelectorAll('#results li').length`)) >= 1);
 
   check('no script errors', errors.length === 0, errors.join(' | '));
+
+  // ---- full person page (static, no JS)
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 800, deviceScaleFactor: 1, mobile: false });
+  await send('Page.navigate', { url: base + '/p/smith-bob/' });
+  await sleep(800);
+  check('person page has the name and avatar', (await ev(`document.querySelector('.hero h1')?.textContent`)) === 'Bob Smith' && (await ev(`document.querySelector('.hero .avatar')?.textContent`)) === 'BS');
+  check('person page lists life events', (await ev(`document.querySelectorAll('.events li').length`)) >= 2);
+  check('person page has no horizontal overflow at 390px', (await ev(`document.documentElement.scrollWidth <= window.innerWidth`)) === true);
+  await send('Emulation.clearDeviceMetricsOverride');
+  check('relative chips link to their pages', (await ev(`[...document.querySelectorAll('.chip')].every((a) => /^\\.\\.\\/[a-z0-9-]+\\/$/.test(a.getAttribute('href')))`)) === true);
   ws.close();
 }
 

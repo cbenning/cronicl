@@ -79,3 +79,12 @@ def test_placeholder_redaction_gives_l_and_hides_names_in_siblings_via(make_tree
     assert payload["initials"] == "L"
     assert payload["name"] == "Living"
     assert all("Qqme" not in str(v) and "Wwsib" not in str(v) for v in payload.values())
+
+
+def test_payload_events_are_dated_rows_with_text_and_age(make_tree):
+    payload = person_payload(family(make_tree), "dad")
+    ev = {e["id"]: e for e in payload["events"]}
+    assert ev["birth:dad"]["text"] == "born" and ev["birth:dad"]["role"] == "self"
+    assert ev["death:dad"]["age"] == 69 and ev["death:dad"]["year"] == 1990
+    assert ev["birth:kid"]["role"] == "child" and ev["birth:kid"]["text"] == "Kay Roe born"
+    assert [e["year"] for e in payload["events"]] == sorted(e["year"] for e in payload["events"])

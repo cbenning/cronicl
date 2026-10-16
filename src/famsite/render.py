@@ -112,8 +112,9 @@ def _partnership(entry) -> dict:
     }
 
 
-def person_payload(tree: Tree, pid: str, relations: Relations | None = None) -> dict:
+def person_payload(tree: Tree, pid: str, relations: Relations | None = None, timeline: dict | None = None) -> dict:
     rel = relations or build_relations(tree)
+    timeline = timeline if timeline is not None else build_timeline(tree, rel)
     person = tree.people[pid]
     parents = [_ref(tree, x) for x in rel.parents.get(pid, [])]
     spouses: list[dict] = []
@@ -130,6 +131,16 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None) -> 
     born = parse_date(birth_date)
     died = parse_date(death_date)
     age = age_between(born, died) if born and died else None
+    by_id = {e["id"]: e for e in timeline["events"]}
+    events = []
+    for row in timeline["people"][pid]["events"]:
+        source = by_id[row["id"]]
+        entry = {k: source[k] for k in ("id", "type", "year", "month", "day", "date", "place")}
+        for optional in ("kind", "reason"):
+            if source.get(optional):
+                entry[optional] = source[optional]
+        entry.update(role=row["role"], text=row["text"], age=row["age"], age_approx=row["age_approx"])
+        events.append(entry)
     return {
         "id": pid,
         "name": person.display_name,
@@ -143,6 +154,7 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None) -> 
         "age_at_death": age,
         "age_at_death_approx": bool(age is not None and (born.approx or died.approx)),
         "siblings": _siblings(tree, rel, pid),
+        "events": events,
         "parents": parents,
         "spouses": spouses,
         "children": children,
@@ -181,7 +193,8 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     layout = compute_layout(visible)
     title = str(tree.site.get("title", "Family Tree"))
 
-    payloads = {pid: person_payload(visible, pid, relations) for pid in sorted(visible.people)}
+    timeline = build_timeline(visible, relations)
+    payloads = {pid: person_payload(visible, pid, relations, timeline) for pid in sorted(visible.people)}
     index = sorted(
         ({"id": pid, "name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()),
         key=lambda e: (e["name"].lower(), e["id"]),
@@ -197,7 +210,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     env = _env()
     put("layout.json", dumps(layout))
     put("index.json", dumps(index))
-    put("timeline.json", dumps(build_timeline(visible, relations)))
+    put("timeline.json", dumps(timeline))
     put("index.html", env.get_template("index.html").render(title=title, people=index))
     person_template = env.get_template("person.html")
     for pid in sorted(visible.people):
@@ -206,7 +219,10 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
         put(f"focus/{pid}.json", dumps(focused))
     for pid, payload in payloads.items():
         put(f"data/people/{pid}.json", dumps(payload))
-        put(f"p/{pid}/index.html", person_template.render(title=title, person=payload))
+        put(
+            f"p/{pid}/index.html",
+            person_template.render(title=title, person=payload, gallery=None, tree_svg="", lifeline_svg=""),
+        )
 
     for asset in ("viewer.js", "style.css"):
         source = _PACKAGE / "viewer" / asset
