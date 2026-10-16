@@ -125,60 +125,6 @@
     return ev.year + 0.5;
   }
 
-  // Events that belong in one person's timeline, tagged with the relative's role.
-  function personTimelineEvents(timeline, id) {
-    var person = timeline.people[id];
-    if (!person) return null;
-    var roleOf = {};
-    person.siblings.forEach(function (p) { roleOf[p] = 'sibling'; });
-    person.children.forEach(function (p) { roleOf[p] = 'child'; });
-    person.spouses.forEach(function (p) { roleOf[p] = 'spouse'; });
-    person.parents.forEach(function (p) { roleOf[p] = 'parent'; });
-    var out = [];
-    timeline.events.forEach(function (ev) {
-      if (ev.people.indexOf(id) !== -1) {
-        out.push({ event: ev, role: 'self' });
-        return;
-      }
-      var role = null;
-      ev.people.forEach(function (p) { if (!role && roleOf[p]) role = roleOf[p]; });
-      if (!role) return;
-      var include = false;
-      if (role === 'parent') include = ev.type === 'death' || ev.type === 'marriage' || ev.type === 'partnership';
-      else if (role === 'spouse') include = ev.type === 'death';
-      else if (role === 'child') include = true;
-      else if (role === 'sibling') include = ev.type === 'birth' || ev.type === 'death';
-      if (include) out.push({ event: ev, role: role });
-    });
-    return out;
-  }
-
-  function eventText(ev, people, focusId) {
-    function nameOf(p) { return people[p] ? people[p].name : p; }
-    var names = ev.people.map(nameOf);
-    var joined = names.join(' & ');
-    var self = !!focusId && ev.people.indexOf(focusId) !== -1;
-    var others = ev.people.filter(function (p) { return p !== focusId; }).map(nameOf).join(' & ');
-    if (ev.type === 'marriage') return self ? 'married ' + others : joined + ' married';
-    if (ev.type === 'partnership') {
-      if (ev.kind === 'engagement') return self ? 'engaged to ' + others : joined + ' engaged';
-      if (ev.kind === 'civil-union') return self ? 'entered a civil union with ' + others : joined + ' entered a civil union';
-      return self ? 'became partners with ' + others : joined + ' became partners';
-    }
-    if (ev.type === 'divorce') {
-      var noun = ev.kind === 'marriage' ? 'Marriage' : 'Partnership';
-      if (ev.reason === 'divorce') return self ? 'divorced ' + others : joined + ' divorced';
-      if (ev.reason === 'separation') return self ? 'separated from ' + others : joined + ' separated';
-      if (ev.reason === 'annulment') return self ? 'marriage to ' + others + ' annulled' : 'Marriage of ' + joined + ' annulled';
-      return self
-        ? noun.toLowerCase() + (ev.kind === 'marriage' ? ' to ' : ' with ') + others + ' ended'
-        : noun + ' of ' + joined + ' ended';
-    }
-    var verb = ev.type === 'birth' ? 'born' : 'died';
-    if (focusId && ev.people[0] === focusId) return verb;
-    return names[0] + ' ' + verb;
-  }
-
   // What to light up when `id` is selected: their parents' line, their own couples and those couples' children.
   // Siblings' connectors are deliberately left out so one family can be traced through a dense tree.
   function relatedFor(layout, id) {
@@ -770,19 +716,20 @@
 
       function buildItems() {
         var data = state.timeline;
+        var byId = {};
+        data.events.forEach(function (ev) { byId[ev.id] = ev; });
         var rows;
-        if (focus) rows = personTimelineEvents(data, focus) || [];
-        else rows = data.events.map(function (ev) { return { event: ev, role: null }; });
-        var self = focus;
+        if (focus) {
+          rows = ((data.people[focus] || {}).events || []).map(function (r) {
+            return { event: byId[r.id], role: r.role, text: r.text, age: r.age, approx: r.age_approx };
+          });
+        } else {
+          rows = data.events.map(function (ev) { return { event: ev, role: null, text: ev.text }; });
+        }
         items = rows.map(function (row) {
           var ev = row.event;
-          var text = eventText(ev, data.people, self);
-          if (row.role === 'self' && ev.type !== 'birth') {
-            var born = data.people[self] && data.events.filter(function (e) {
-              return e.id === 'birth:' + self;
-            })[0];
-            if (born && ev.year >= born.year) text += ' (age ' + (ev.year - born.year) + ')';
-          }
+          var text = row.text;
+          if (row.age !== null && row.age !== undefined) text += ' (age ' + (row.approx ? '~' : '') + row.age + ')';
           var label = GLYPH[ev.type] + ' ' + text;
           if (row.role && row.role !== 'self') label = label + ' · ' + row.role;
           var measure = row.role === 'self' ? measureLabelBold : measureLabel;
@@ -1124,9 +1071,7 @@
     thumbGeometry: thumbGeometry,
     routeHash: routeHash,
     yearPosition: yearPosition,
-    personTimelineEvents: personTimelineEvents,
     relatedFor: relatedFor,
-    eventText: eventText,
     relationNote: relationNote
   };
   if (typeof module !== 'undefined' && module.exports) {

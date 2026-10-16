@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .dates import parse_date
+from .dates import ParsedDate, age_between, parse_date
 from .model import Tree
 from .relations import Relations
 
@@ -22,6 +22,70 @@ def _event(event_id: str, kind: str, date_text: str | None, place: str | None, p
         "place": place or "",
         "people": people,
     }
+
+
+def event_text(event: dict, names: dict[str, str], focus: str | None = None) -> str:
+    """Wording of one event; `focus` is the person whose point of view it is told from, or None for the family view."""
+    people = event["people"]
+    shown = [names.get(p, p) for p in people]
+    joined = " & ".join(shown)
+    own = focus is not None and focus in people
+    others = " & ".join(names.get(p, p) for p in people if p != focus)
+    kind, reason, etype = event.get("kind"), event.get("reason"), event["type"]
+    if etype == "marriage":
+        return f"married {others}" if own else f"{joined} married"
+    if etype == "partnership":
+        if kind == "engagement":
+            return f"engaged to {others}" if own else f"{joined} engaged"
+        if kind == "civil-union":
+            return f"entered a civil union with {others}" if own else f"{joined} entered a civil union"
+        return f"became partners with {others}" if own else f"{joined} became partners"
+    if etype == "divorce":
+        noun = "Marriage" if kind == "marriage" else "Partnership"
+        if reason == "divorce":
+            return f"divorced {others}" if own else f"{joined} divorced"
+        if reason == "separation":
+            return f"separated from {others}" if own else f"{joined} separated"
+        if reason == "annulment":
+            return f"marriage to {others} annulled" if own else f"Marriage of {joined} annulled"
+        if own:
+            return f"{noun.lower()} {'to' if kind == 'marriage' else 'with'} {others} ended"
+        return f"{noun} of {joined} ended"
+    verb = "born" if etype == "birth" else "died"
+    if focus is not None and people[0] == focus:
+        return verb
+    return f"{shown[0]} {verb}"
+
+
+_ROLE_KEYS = (("siblings", "sibling"), ("children", "child"), ("spouses", "spouse"), ("parents", "parent"))
+
+
+def _person_rows(events: list[dict], info: dict, pid: str) -> list[tuple[dict, str]]:
+    """Events that belong on one person's timeline, each with the relative's role."""
+    roles: dict[str, str] = {}
+    for key, role in _ROLE_KEYS:
+        for other in info[key]:
+            roles[other] = role
+    rows: list[tuple[dict, str]] = []
+    for event in events:
+        if pid in event["people"]:
+            rows.append((event, "self"))
+            continue
+        role = next((roles[p] for p in event["people"] if p in roles), None)
+        if role is None:
+            continue
+        etype = event["type"]
+        if role == "parent":
+            include = etype in ("death", "marriage", "partnership")
+        elif role == "spouse":
+            include = etype == "death"
+        elif role == "child":
+            include = True
+        else:
+            include = etype in ("birth", "death")
+        if include:
+            rows.append((event, role))
+    return rows
 
 
 def build_timeline(tree: Tree, relations: Relations) -> dict:
@@ -83,6 +147,24 @@ def build_timeline(tree: Tree, relations: Relations) -> dict:
             "children": sorted(set(children)),
             "siblings": siblings,
         }
+
+    names = {pid: tree.people[pid].display_name for pid in tree.people}
+    for event in events:
+        event["text"] = event_text(event, names, None)
+    for pid in sorted(tree.people):
+        birth = tree.people[pid].birth
+        born = parse_date(birth.date) if birth else None
+        rows = []
+        for event, role in _person_rows(events, people[pid], pid):
+            age, approx = None, False
+            if role == "self" and event["type"] != "birth" and born is not None:
+                at = ParsedDate(event["year"], event["month"], event["day"], event["approx"])
+                age = age_between(born, at)
+                approx = age is not None and (born.approx or at.approx)
+            rows.append(
+                {"id": event["id"], "role": role, "text": event_text(event, names, pid), "age": age, "age_approx": approx}
+            )
+        people[pid]["events"] = rows
 
     years = [e["year"] for e in events]
     return {

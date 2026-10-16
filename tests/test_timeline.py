@@ -145,3 +145,110 @@ def test_later_partnerships_get_numbered_ids_and_same_year_end_sorts_before_deat
     )
     ids = [e["id"] for e in build_timeline(tree, build_relations(tree))["events"]]
     assert ids == ["marriage:a+b", "divorce:a+b", "death:a", "marriage:a+b:1"]
+
+
+from famsite.timeline import event_text  # noqa: E402
+
+NAMES = {"a": "Ann", "b": "Bo", "p": "Pat", "q": "Quinn", "s": "Sam", "x": "Xi"}
+
+
+def ev(etype, people, **kw):
+    return {"id": f"{etype}:{'+'.join(people)}", "type": etype, "people": people, **kw}
+
+
+def test_event_text_for_births_deaths_and_marriages():
+    born = ev("birth", ["a"])
+    assert event_text(born, NAMES, "a") == "born"
+    assert event_text(born, NAMES, None) == "Ann born"
+    assert event_text(ev("death", ["s"]), NAMES, "a") == "Sam died"
+    marriage = ev("marriage", ["a", "b"], kind="marriage")
+    assert event_text(marriage, NAMES, "a") == "married Bo"
+    assert event_text(marriage, NAMES, None) == "Ann & Bo married"
+
+
+def test_event_text_for_partnership_starts():
+    engaged = ev("partnership", ["p", "q"], kind="engagement")
+    assert event_text(engaged, NAMES, "p") == "engaged to Quinn"
+    assert event_text(engaged, NAMES, None) == "Pat & Quinn engaged"
+    assert event_text(ev("partnership", ["p", "q"], kind="civil-union"), NAMES, "p") == "entered a civil union with Quinn"
+    assert event_text(ev("partnership", ["p", "q"], kind="unknown"), NAMES, None) == "Pat & Quinn became partners"
+
+
+def test_event_text_for_partnership_ends():
+    divorce = ev("divorce", ["a", "b"], kind="marriage", reason="divorce")
+    assert event_text(divorce, NAMES, "a") == "divorced Bo"
+    assert event_text(divorce, NAMES, None) == "Ann & Bo divorced"
+    annulled = {**divorce, "reason": "annulment"}
+    assert event_text(annulled, NAMES, "a") == "marriage to Bo annulled"
+    assert event_text(annulled, NAMES, None) == "Marriage of Ann & Bo annulled"
+    ended = {**divorce, "reason": ""}
+    assert event_text(ended, NAMES, None) == "Marriage of Ann & Bo ended"
+    assert event_text(ended, NAMES, "a") == "marriage to Bo ended"
+    split = {**divorce, "kind": "partnership", "reason": "separation"}
+    assert event_text(split, NAMES, "a") == "separated from Bo"
+    assert event_text({**divorce, "kind": "partnership", "reason": ""}, NAMES, "a") == "partnership with Bo ended"
+
+
+def life(make_tree):
+    return make_tree(
+        [
+            p("par", "Par", "Ent", birth=Event(date="1890"), death=Event(date="1970")),
+            p("me", "Me", "Self", birth=Event(date="1920-05-01"), death=Event(date="1990"), parents=["par"],
+              partnerships=[Partnership("sp", type="marriage", start="1948-06-20", end="1960", end_reason="divorce")]),
+            p("sp", "Sp", "Ouse", birth=Event(date="1925"), death=Event(date="1995")),
+            p("sib", "Sib", "Ling", birth=Event(date="1922"), death=Event(date="1950"), parents=["par"]),
+            p("kid", "Kid", "Self", birth=Event(date="1950-04-30"), parents=["me", "sp"]),
+            p("stranger", "Str", "Anger", birth=Event(date="1960")),
+        ]
+    )
+
+
+def test_person_events_apply_the_role_rules_and_wording(make_tree):
+    tree = life(make_tree)
+    data = build_timeline(tree, build_relations(tree))
+    rows = [(r["id"], r["role"], r["text"]) for r in data["people"]["me"]["events"]]
+    assert rows == [
+        ("birth:me", "self", "born"),
+        ("birth:sib", "sibling", "Sib Ling born"),
+        ("marriage:me+sp", "self", "married Sp Ouse"),
+        ("death:sib", "sibling", "Sib Ling died"),
+        ("birth:kid", "child", "Kid Self born"),
+        ("divorce:me+sp", "self", "divorced Sp Ouse"),
+        ("death:par", "parent", "Par Ent died"),
+        ("death:me", "self", "died"),
+        ("death:sp", "spouse", "Sp Ouse died"),
+    ]
+    assert not any(r["id"] == "birth:stranger" for r in data["people"]["me"]["events"])
+
+
+def test_person_event_ages_are_exact_and_only_on_own_non_birth_events(make_tree):
+    tree = life(make_tree)
+    rows = {r["id"]: r for r in build_timeline(tree, build_relations(tree))["people"]["me"]["events"]}
+    assert rows["birth:me"]["age"] is None
+    assert rows["marriage:me+sp"]["age"] == 28
+    assert rows["death:me"]["age"] == 70  # death has only a year: the finest shared precision is the year
+    assert rows["death:par"]["age"] is None
+    assert rows["divorce:me+sp"]["age"] == 40
+
+
+def test_age_is_flagged_approximate_and_null_before_birth(make_tree):
+    tree = make_tree(
+        [
+            p("a", "A", "X", birth=Event(date="~1900"), death=Event(date="1950")),
+            p("b", "B", "Y", birth=Event(date="1950"),
+              partnerships=[Partnership("c", type="marriage", start="1940")]),
+            p("c", "C", "Z"),
+        ]
+    )
+    data = build_timeline(tree, build_relations(tree))
+    death = next(r for r in data["people"]["a"]["events"] if r["id"] == "death:a")
+    assert (death["age"], death["age_approx"]) == (50, True)
+    before = next(r for r in data["people"]["b"]["events"] if r["id"] == "marriage:b+c")
+    assert before["age"] is None
+
+
+def test_family_events_carry_text(make_tree):
+    tree = life(make_tree)
+    by_id = {e["id"]: e for e in build_timeline(tree, build_relations(tree))["events"]}
+    assert by_id["marriage:me+sp"]["text"] == "Me Self & Sp Ouse married"
+    assert by_id["death:par"]["text"] == "Par Ent died"
