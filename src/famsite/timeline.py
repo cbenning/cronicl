@@ -76,7 +76,7 @@ def _person_rows(events: list[dict], info: dict, pid: str) -> list[tuple[dict, s
             continue
         etype = event["type"]
         if role == "parent":
-            include = etype in ("death", "marriage", "partnership")
+            include = etype == "death"  # their wedding predates and is not about this person
         elif role == "spouse":
             include = etype == "death"
         elif role == "child":
