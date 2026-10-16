@@ -99,7 +99,7 @@ def tree_svg(
     ended = {u["id"] for u in layout["unions"] if u.get("ended")}
     width, height = layout["bounds"]["w"], layout["bounds"]["h"]
     parts = [
-        f'<svg class="mini-tree" role="img" aria-label="{_esc(label)}" viewBox="0 0 {width} {height}" '
+        f'<svg class="mini-tree" role="group" aria-label="{_esc(label)}" viewBox="0 0 {width} {height}" '
         f'width="{width}" height="{height}">'
     ]
     for edge in layout["edges"]:

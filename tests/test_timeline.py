@@ -252,3 +252,31 @@ def test_family_events_carry_text(make_tree):
     by_id = {e["id"]: e for e in build_timeline(tree, build_relations(tree))["events"]}
     assert by_id["marriage:me+sp"]["text"] == "Me Self & Sp Ouse married"
     assert by_id["death:par"]["text"] == "Par Ent died"
+
+
+def test_person_event_roles_for_partnerships_of_relatives(make_tree):
+    tree = make_tree(
+        [
+            p("grand", "Gran", "D"),
+            p("dad", "Dad", "D", parents=["grand"]),
+            p("mum", "Mum", "D", partnerships=[
+                Partnership("dad", type="marriage", start="1948", end="1960", end_reason="divorce")
+            ]),
+            p("me", "Me", "D", parents=["dad", "mum"], birth=Event(date="1950"),
+              partnerships=[Partnership("wife", type="marriage", start="1975", end="1985", end_reason="divorce")]),
+            p("wife", "Wi", "Fe"),
+            p("sib", "Sib", "D", parents=["dad", "mum"], birth=Event(date="1952"),
+              partnerships=[Partnership("sibwife", type="marriage", start="1978")]),
+            p("sibwife", "Sw", "Ife"),
+            p("kid", "Kid", "D", parents=["me", "wife"], birth=Event(date="1980"),
+              partnerships=[Partnership("kidwife", type="marriage", start="2005", end="2010", end_reason="divorce")]),
+            p("kidwife", "Kw", "Ife"),
+        ]
+    )
+    rows = {(r["id"], r["role"]) for r in build_timeline(tree, build_relations(tree))["people"]["me"]["events"]}
+    assert ("marriage:dad+mum", "parent") in rows          # a parent's marriage start is shown
+    assert ("divorce:dad+mum", "parent") not in rows       # a parent's divorce is not
+    assert ("marriage:me+wife", "self") in rows and ("divorce:me+wife", "self") in rows
+    assert ("marriage:sib+sibwife", "sibling") not in rows  # a sibling's marriage is not
+    assert ("marriage:kid+kidwife", "child") in rows        # every event of a child is
+    assert ("divorce:kid+kidwife", "child") in rows

@@ -77,3 +77,9 @@ def test_no_name_line_exceeds_the_character_budget(make_tree):
     svg = tree_svg(compute_layout(tree), people_of(tree), "a", lambda pid: pid, "t")
     texts = re.findall(r"<tspan[^>]*>([^<]*)</tspan>", svg)
     assert texts and all(len(t) <= 20 for t in texts)
+
+
+def test_tree_svg_is_a_group_so_its_links_stay_in_the_accessibility_tree(make_tree):
+    tree = make_tree([{"id": "a", "given": "Ann"}, {"id": "b", "given": "Bo", "parents": ["a"]}])
+    svg = tree_svg(compute_layout(tree), people_of(tree), "a", lambda pid: pid, "Tree")
+    assert 'role="group"' in svg and 'role="img"' not in svg
