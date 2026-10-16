@@ -48,3 +48,34 @@ def test_from_gedcom_converts(gedcom, expected):
 @pytest.mark.parametrize("gedcom", ["BET 1900 AND 1910", "32 MAR 1950", "@#DJULIAN@ 12 MAR 1750", "1750/51", "12 1950"])
 def test_from_gedcom_keeps_unparsable_text(gedcom):
     assert from_gedcom(gedcom) == (gedcom, False)
+
+
+from famsite.dates import age_between  # noqa: E402
+
+
+def age(born, at):
+    return age_between(parse_date(born), parse_date(at))
+
+
+def test_age_from_years_only():
+    assert age("1950", "1990") == 40
+
+
+def test_age_by_month_when_both_have_a_month():
+    assert age("1950-06", "1990-05") == 39
+    assert age("1950-06", "1990-06") == 40
+    assert age("1950-12", "1951-01") == 0
+
+
+def test_age_by_day_when_both_have_a_day():
+    assert age("1950-06-15", "1990-06-14") == 39
+    assert age("1950-06-15", "1990-06-15") == 40
+
+
+def test_age_falls_back_to_the_finest_precision_both_share():
+    assert age("1950-06-15", "1990-06") == 40
+    assert age("1950", "1990-05-01") == 40
+
+
+def test_age_is_none_before_birth():
+    assert age("1990", "1980") is None

@@ -9,7 +9,7 @@ from pathlib import Path
 import jinja2
 from markdown_it import MarkdownIt
 
-from .dates import format_years
+from .dates import age_between, date_year, format_years, parse_date
 from .focus import focus_tree
 from .layout import compute_layout
 from .model import Event, Tree
@@ -45,8 +45,40 @@ def _event(event: Event | None):
     return {"date": event.date, "place": event.place}
 
 
+def _years_of(person) -> str:
+    return format_years(person.birth.date if person.birth else None, person.death.date if person.death else None)
+
+
 def _ref(tree: Tree, pid: str) -> dict:
-    return {"id": pid, "name": tree.people[pid].display_name}
+    person = tree.people[pid]
+    return {"id": pid, "name": person.display_name, "years": _years_of(person), "initials": person.initials}
+
+
+def _siblings(tree: Tree, rel: Relations, pid: str) -> list[dict]:
+    mine = rel.parents.get(pid, [])
+    found: dict[str, dict] = {}
+    for parent in mine:
+        for cid in rel.couples_of.get(parent, []):
+            for other in rel.kids.get(cid, []):
+                if other == pid or other in found:
+                    continue
+                theirs = rel.parents.get(other, [])
+                shared = [x for x in mine if x in theirs]
+                if len(shared) == 2:
+                    kind = "full"
+                elif len(mine) == 2 and len(theirs) == 2:
+                    kind = "half"
+                else:
+                    kind = "sibling"  # only one parent is known on a side: the other parent is not guessed
+                via = [{"id": x, "name": tree.people[x].display_name} for x in shared]
+                found[other] = {**_ref(tree, other), "type": kind, "via": via}
+
+    def key(ref: dict):
+        person = tree.people[ref["id"]]
+        year = date_year(person.birth.date) if person.birth else None
+        return (year is None, year or 0, ref["name"].lower(), ref["id"])
+
+    return sorted(found.values(), key=key)
 
 
 _TYPE_WORD = {
@@ -95,6 +127,9 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None) -> 
     children.sort(key=lambda r: (r["name"].lower(), r["id"]))
     birth_date = person.birth.date if person.birth else None
     death_date = person.death.date if person.death else None
+    born = parse_date(birth_date)
+    died = parse_date(death_date)
+    age = age_between(born, died) if born and died else None
     return {
         "id": pid,
         "name": person.display_name,
@@ -103,6 +138,11 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None) -> 
         "birth": _event(person.birth),
         "death": _event(person.death),
         "bodyHtml": _markdown.render(person.body) if person.body.strip() else "",
+        "initials": person.initials,
+        "image": None,
+        "age_at_death": age,
+        "age_at_death_approx": bool(age is not None and (born.approx or died.approx)),
+        "siblings": _siblings(tree, rel, pid),
         "parents": parents,
         "spouses": spouses,
         "children": children,

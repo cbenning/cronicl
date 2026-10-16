@@ -56,6 +56,11 @@ class Person:
         return " ".join(part for part in (self.given, self.surname) if part) or self.id
 
     @property
+    def initials(self) -> str:
+        letters = [(self.given or "").strip()[:1], (self.surname or "").strip()[:1]]
+        return "".join(letter.upper() for letter in letters if letter) or "?"
+
+    @property
     def location(self) -> str | None:
         if self.path is None:
             return None

@@ -46,6 +46,19 @@ def date_year(text: str | None) -> int | None:
     return parsed.year if parsed else None
 
 
+def age_between(born: ParsedDate, at: ParsedDate) -> int | None:
+    """Completed years from `born` to `at`, at the finest precision both dates share; None if `at` is earlier."""
+    years = at.year - born.year
+    if born.month and at.month:
+        if born.day and at.day:
+            before_birthday = (at.month, at.day) < (born.month, born.day)
+        else:
+            before_birthday = at.month < born.month
+        if before_birthday:
+            years -= 1
+    return years if years >= 0 else None
+
+
 def _year_label(text: str | None) -> str:
     parsed = parse_date(text)
     if parsed is None:
