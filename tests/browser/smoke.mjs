@@ -66,6 +66,10 @@ async function main() {
   await sleep(600);
   check('click opens the panel', (await ev(`!document.getElementById('panel').hidden`)) === true);
   check('panel shows the person', (await ev(`document.querySelector('#panel h2')?.textContent`)) === 'Bob Smith');
+  check('panel avatar shows initials', (await ev(`document.querySelector('#panel .avatar')?.textContent`)) === 'BS');
+  check('panel groups relatives as chips', (await ev(`document.querySelectorAll('#panel .chip').length`)) >= 2);
+  check('panel lists siblings', /Siblings/.test(await ev(`document.getElementById('panel').textContent`)));
+  check('panel has action pills', (await ev(`document.querySelectorAll('#panel .pill').length`)) >= 3);
   check('node is highlighted', (await ev(`document.querySelectorAll('.node.selected').length`)) === 1);
   check('url records the selection', (await ev(`location.hash`)) === '#/tree/smith-bob');
   check('selected person lights up connectors', (await ev(`document.querySelectorAll('.edge.hi').length`)) >= 1);

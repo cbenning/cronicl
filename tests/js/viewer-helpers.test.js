@@ -217,3 +217,14 @@ test('eventText words partnership starts and ends from either point of view', ()
   const partnersEnded = { ...ev['divorce:a+b'], kind: 'partnership', reason: 'separation' };
   assert.strictEqual(v.eventText(partnersEnded, people, 'a'), 'separated from Bo');
 });
+
+test('relationNote names the shared parent of a half-sibling and nothing for others', () => {
+  assert.strictEqual(
+    v.relationNote({ type: 'half', via: [{ id: 'a', name: 'Alfred' }] }),
+    'half-sibling via Alfred'
+  );
+  assert.strictEqual(v.relationNote({ type: 'half', via: [] }), 'half-sibling');
+  assert.strictEqual(v.relationNote({ type: 'full', via: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] }), '');
+  assert.strictEqual(v.relationNote({ type: 'sibling', via: [{ id: 'a', name: 'A' }] }), '');
+  assert.strictEqual(v.relationNote({ id: 'x', name: 'X' }), '');
+});

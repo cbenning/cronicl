@@ -229,6 +229,12 @@
     return { left: left, width: width };
   }
 
+  function relationNote(rel) {
+    if (rel.type !== 'half') return '';
+    var via = (rel.via || []).map(function (p) { return p.name; }).join(' & ');
+    return via ? 'half-sibling via ' + via : 'half-sibling';
+  }
+
   var GLYPH = { birth: '●', marriage: '⚭', partnership: '⚭', divorce: '⚮', death: '✝' };
 
   // ------------------------------------------------------------------ browser app
@@ -319,22 +325,33 @@
       return a;
     }
 
-    function relatives(title, list, view) {
+    function relativeGroup(title, list, view) {
       if (!list || !list.length) return null;
-      var wrap = document.createElement('div');
+      var wrap = document.createElement('section');
+      wrap.className = 'rel-group';
       var h = document.createElement('h3');
       h.textContent = title;
       var ul = document.createElement('ul');
+      ul.className = 'chips';
       list.forEach(function (rel) {
         var li = document.createElement('li');
-        li.appendChild(link(routeHash(view, rel.id), rel.name));
-        (rel.partnerships || []).forEach(function (part) {
-          if (!part.text) return;
-          var note = document.createElement('div');
-          note.className = 'partnership';
-          note.textContent = part.text;
-          li.appendChild(note);
-        });
+        var a = link(routeHash(view, rel.id), '');
+        a.className = 'chip';
+        var name = document.createElement('span');
+        name.className = 'chip-name';
+        name.textContent = rel.name;
+        a.appendChild(name);
+        function line(cls, text) {
+          if (!text) return;
+          var s = document.createElement('span');
+          s.className = cls;
+          s.textContent = text;
+          a.appendChild(s);
+        }
+        line('chip-years', rel.years);
+        line('chip-note', relationNote(rel));
+        (rel.partnerships || []).forEach(function (part) { line('partnership', part.text); });
+        li.appendChild(a);
         ul.appendChild(li);
       });
       wrap.appendChild(h);
@@ -357,15 +374,22 @@
       panel.textContent = '';
       var head = document.createElement('div');
       head.className = 'panel-head';
+      var avatar = document.createElement('div');
+      avatar.className = 'avatar avatar-sm';
+      avatar.setAttribute('aria-hidden', 'true');
+      var titleBox = document.createElement('div');
+      titleBox.className = 'panel-title';
       var title = document.createElement('h2');
       title.textContent = (people.get(id) || { name: id }).name;
+      titleBox.appendChild(title);
       var close = document.createElement('button');
       close.type = 'button';
       close.className = 'close';
       close.setAttribute('aria-label', 'Close');
       close.textContent = '×';
       close.addEventListener('click', closePanel);
-      head.appendChild(title);
+      head.appendChild(avatar);
+      head.appendChild(titleBox);
       head.appendChild(close);
       panel.appendChild(head);
       var body = document.createElement('div');
@@ -377,30 +401,46 @@
           if (state.selected !== id) return;
           body.textContent = '';
           title.textContent = p.name;
-          if (p.years) {
-            var y = document.createElement('p');
-            y.className = 'years';
-            y.textContent = p.years;
-            body.appendChild(y);
+          avatar.textContent = p.initials || '';
+          function para(cls, text) {
+            if (!text) return;
+            var el = document.createElement('p');
+            el.className = cls;
+            el.textContent = text;
+            titleBox.appendChild(el);
           }
-          var actions = document.createElement('p');
-          actions.className = 'actions';
-          actions.appendChild(link(routeHash('tree', id), 'Show in tree'));
-          actions.appendChild(document.createTextNode(' · '));
-          actions.appendChild(link(routeHash('focus', id), 'Focus tree'));
-          actions.appendChild(document.createTextNode(' · '));
-          actions.appendChild(link(routeHash('timeline', id), 'Their timeline'));
-          body.appendChild(actions);
+          para('years', p.years);
+          var places = [];
+          if (p.birth && p.birth.place) places.push('Born ' + p.birth.place);
+          if (p.death && p.death.place) places.push('Died ' + p.death.place);
+          para('places', places.join(' · '));
+          var pills = document.createElement('div');
+          pills.className = 'pills';
+          function pill(href, text) {
+            var a = link(href, text);
+            a.className = 'pill';
+            pills.appendChild(a);
+          }
+          if (state.view === 'timeline') pill(routeHash('tree', id), 'Show in tree');
+          pill(routeHash('focus', id), 'Focus tree');
+          pill(routeHash('timeline', id), 'Timeline');
+          pill('p/' + id + '/', 'Page');
+          body.appendChild(pills);
           if (p.bodyHtml) {
-            var div = document.createElement('div');
-            div.innerHTML = p.bodyHtml;
-            body.appendChild(div);
+            var bio = document.createElement('div');
+            bio.className = 'bio';
+            bio.innerHTML = p.bodyHtml;
+            body.appendChild(bio);
+            var more = link('p/' + id + '/', 'Read more');
+            more.className = 'read-more';
+            body.appendChild(more);
           }
-          [['Parents', p.parents], ['Spouses', p.spouses], ['Children', p.children]].forEach(function (pair) {
-            var section = relatives(pair[0], pair[1], state.view);
+          [
+            ['Parents', p.parents], ['Partners', p.spouses], ['Siblings', p.siblings], ['Children', p.children]
+          ].forEach(function (pair) {
+            var section = relativeGroup(pair[0], pair[1], state.view);
             if (section) body.appendChild(section);
           });
-          body.appendChild(link('p/' + id + '/', 'Open page'));
         })
         .catch(function () {
           body.textContent = 'Could not load this person.';
@@ -1086,7 +1126,8 @@
     yearPosition: yearPosition,
     personTimelineEvents: personTimelineEvents,
     relatedFor: relatedFor,
-    eventText: eventText
+    eventText: eventText,
+    relationNote: relationNote
   };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
