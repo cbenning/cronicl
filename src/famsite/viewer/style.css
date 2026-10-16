@@ -119,7 +119,8 @@ main { flex: 1; display: flex; min-height: 0; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px var(--space-3); margin: 0; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; }
-.columns { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+.columns { display: grid; gap: var(--space-4); grid-template-columns: minmax(0, 1fr); }
+.main-col, .side-col { min-width: 0; }
 @media (min-width: 56rem) { .columns { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--space-4); margin-bottom: var(--space-4); }
 .card h2 { margin: 0 0 var(--space-3); font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
@@ -131,3 +132,18 @@ main { flex: 1; display: flex; min-height: 0; }
 .events .age { color: var(--muted); }
 .mini-tree-scroll { overflow: auto; max-height: 28rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 @media print { .page-bar, .pill { display: none; } .person { max-width: none; } .card { box-shadow: none; } }
+.lifeline { display: block; max-width: 100%; height: auto; }
+.lifeline .axis { stroke: var(--border); stroke-width: 2; }
+.lifeline .tick { stroke: var(--muted); stroke-width: 1; }
+.lifeline .tick-label { fill: var(--muted); font-size: 11px; }
+.lifeline .mk { stroke-width: 2; }
+.lifeline .mk.self { fill: currentColor; }
+.lifeline .mk.rel { fill: var(--surface); }
+.lifeline .mk.birth { stroke: #16a34a; color: #16a34a; }
+.lifeline .mk.marriage { stroke: #9333ea; color: #9333ea; }
+.lifeline .mk.divorce { stroke: #dc2626; color: #dc2626; }
+.lifeline .mk.death { stroke: #6b7280; color: #6b7280; }
+.mini-tree { display: block; }
+.mini-tree .node.current rect { stroke: var(--accent); stroke-width: 3; }
+.mini-tree a:hover .node rect { stroke: var(--accent); }
+.mini-tree .years { fill: var(--muted); font-size: 11px; }

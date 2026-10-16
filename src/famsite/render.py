@@ -15,6 +15,7 @@ from .layout import compute_layout
 from .model import Event, Tree
 from .privacy import redact
 from .relations import Relations, build_relations
+from .svgviews import lifeline_svg, tree_svg
 from .timeline import build_timeline
 
 _PACKAGE = Path(__file__).parent
@@ -213,15 +214,24 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     put("timeline.json", dumps(timeline))
     put("index.html", env.get_template("index.html").render(title=title, people=index))
     person_template = env.get_template("person.html")
+    people_info = {pid: {"name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()}
+    page_svgs: dict[str, tuple[str, str]] = {}
     for pid in sorted(visible.people):
         focused = compute_layout(focus_tree(visible, relations, pid))
         focused["focus"] = pid
         put(f"focus/{pid}.json", dumps(focused))
+        name = payloads[pid]["name"]
+        page_svgs[pid] = (
+            tree_svg(focused, people_info, pid, lambda other: f"../{other}/", f"Family tree of {name}"),
+            lifeline_svg(payloads[pid]["events"], f"../../index.html#/timeline/{pid}", name),
+        )
     for pid, payload in payloads.items():
         put(f"data/people/{pid}.json", dumps(payload))
         put(
             f"p/{pid}/index.html",
-            person_template.render(title=title, person=payload, gallery=None, tree_svg="", lifeline_svg=""),
+            person_template.render(
+                title=title, person=payload, gallery=None, tree_svg=page_svgs[pid][0], lifeline_svg=page_svgs[pid][1]
+            ),
         )
 
     for asset in ("viewer.js", "style.css"):

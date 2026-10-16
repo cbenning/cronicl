@@ -234,3 +234,21 @@ def test_living_relatives_stay_hidden_on_the_page_end_to_end(tmp_path, make_tree
         text = data.decode("utf-8", errors="ignore")
         assert "Qqme" not in text and "Wwsib" not in text, rel
     assert (tmp_path / "p/old/index.html").exists()
+
+
+def test_person_page_embeds_lifeline_and_tree_and_is_deterministic(tmp_path, make_tree):
+    def build(target):
+        tree = make_tree(
+            [
+                p("smith-john", "John", "Smith", birth=Event(date="1920"), death=Event(date="1990")),
+                p("brown-mary", "Mary", "Brown", birth=Event(date="1925")),
+                p("smith-bob", "Bob", "Smith", birth=Event(date="1950"), parents=["smith-john", "brown-mary"]),
+            ]
+        )
+        build_site(tree, target, today=TODAY)
+        return (target / "p/smith-bob/index.html").read_bytes()
+
+    first = build(tmp_path / "one")
+    assert b'class="mini-tree"' in first and b'class="lifeline"' in first
+    assert b'href="../smith-john/"' in first
+    assert first == build(tmp_path / "two")
