@@ -283,16 +283,6 @@
     return n + (n === 1 ? ' generation ' : ' generations ') + (d < 0 ? 'above' : 'below');
   }
 
-  // A stable colour slot for a couple, so one family's lines share a colour from one render to the next.
-  function familyIndex(unionId, n) {
-    var h = 2166136261; // FNV-1a, then a final mix so the low bits (used by the modulo) depend on every character
-    for (var i = 0; i < unionId.length; i++) h = Math.imul(h ^ unionId.charCodeAt(i), 16777619) >>> 0;
-    h ^= h >>> 15;
-    h = Math.imul(h, 2246822519) >>> 0;
-    h ^= h >>> 13;
-    return (h >>> 0) % n;
-  }
-
   function visibleRange(tx, pxPerYear, originYear, width) {
     return { from: originYear + (0 - tx) / pxPerYear, to: originYear + (width - tx) / pxPerYear };
   }
@@ -348,7 +338,8 @@
     }
 
     function savedColourMode() {
-      try { return localStorage.getItem('famsite.colourMode') === 'lineage' ? 'lineage' : 'family'; } catch (e) { return 'family'; }
+      // the generation ramp is the default; the relationship roles are one click away
+      try { return localStorage.getItem('famsite.colourMode') === 'family' ? 'family' : 'lineage'; } catch (e) { return 'lineage'; }
     }
     var state = {
       view: 'tree', selected: null, layout: null, index: null, timeline: null, personEvents: {},
@@ -560,7 +551,6 @@
       var focusId = null;
       var focusCache = {};
       var hoverId = null;
-      var FAMILY_COLOURS = 8;
       // highlighted connectors are drawn after the plain ones, parents last so their line is never hidden
       var roleLayers = {};
       ['sibling', 'partner', 'child', 'parent'].forEach(function (role) {
@@ -648,7 +638,7 @@
             'class': 'union' + (endedUnions.has(ref) ? ' ended' : '') +
               (lin ? (linUnion !== undefined ? ' lin' : ' dim')
                 : hl ? (hl.unions.has(ref) ? ' hi role-' + hl.unions.get(ref) : ' dim')
-                : ' fam-' + familyIndex(ref, FAMILY_COLOURS))
+                : '')
           });
           if (linUnion !== undefined) shade(dot, linUnion);
           nodeLayer.appendChild(dot);
@@ -657,13 +647,12 @@
         var edge = state.layout.edges[Number(ref)];
         var role = hl ? hl.edges.get(Number(ref)) : null;
         var linEdge = lin ? lin.edges.get(Number(ref)) : undefined;
-        var family = edge.kind === 'spouse' ? edge.to : edge.from;
         var line = svgEl('polyline', {
           points: edge.points.map(function (p) { return p.join(','); }).join(' '),
           'class': 'edge ' + edge.kind + (edge.kind === 'spouse' && endedUnions.has(edge.to) ? ' ended' : '') +
             (lin ? (linEdge !== undefined ? ' hi lin' : ' dim')
               : hl ? (role ? ' hi role-' + role : ' dim')
-              : ' fam-' + familyIndex(family, FAMILY_COLOURS)),
+              : ''),
           fill: 'none'
         });
         if (linEdge !== undefined) shade(line, linEdge);
@@ -1344,7 +1333,6 @@
     relatedFor: relatedFor,
     relationNote: relationNote,
     legendFor: legendFor,
-    familyIndex: familyIndex,
     lineageFor: lineageFor,
     lineageShade: lineageShade,
     generationLabel: generationLabel

@@ -268,3 +268,20 @@ def test_timeline_json_does_not_repeat_every_persons_events(tmp_path, make_tree)
     assert all("text" in e for e in timeline["events"])  # the family view's wording stays
     payload = json.loads((tmp_path / "data/people/smith-bob.json").read_text(encoding="utf-8"))
     assert [e["id"] for e in payload["events"]] == ["birth:smith-bob", "death:smith-john"]
+
+
+def test_assets_are_versioned_by_content_so_a_rebuild_is_never_served_stale(tmp_path, make_tree):
+    import hashlib
+    from pathlib import Path
+
+    import famsite
+
+    tree = make_tree([p("a", "Al", "X")])
+    build_site(tree, tmp_path, today=TODAY)
+    root = Path(famsite.__file__).parent / "viewer"
+    js = hashlib.sha256((root / "viewer.js").read_bytes()).hexdigest()[:12]
+    css = hashlib.sha256((root / "style.css").read_bytes()).hexdigest()[:12]
+    index = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert f'src="viewer.js?v={js}"' in index and f'href="style.css?v={css}"' in index
+    page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
+    assert f'href="../../style.css?v={css}"' in page

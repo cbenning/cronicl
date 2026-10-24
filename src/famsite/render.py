@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 from dataclasses import dataclass
@@ -162,6 +163,11 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
     }
 
 
+def _asset_version(name: str) -> str:
+    """A short content hash for a viewer asset, so a rebuilt viewer is never served from a browser's cache."""
+    return hashlib.sha256((_PACKAGE / "viewer" / name).read_bytes()).hexdigest()[:12]
+
+
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
@@ -218,7 +224,8 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
         "people": {pid: {k: v for k, v in info.items() if k != "events"} for pid, info in timeline["people"].items()},
     }
     put("timeline.json", dumps(public_timeline))
-    put("index.html", env.get_template("index.html").render(title=title, people=index))
+    versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css")}
+    put("index.html", env.get_template("index.html").render(title=title, people=index, v=versions))
     person_template = env.get_template("person.html")
     people_info = {pid: {"name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()}
     page_svgs: dict[str, tuple[str, str]] = {}
@@ -236,7 +243,8 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
         put(
             f"p/{pid}/index.html",
             person_template.render(
-                title=title, person=payload, gallery=None, tree_svg=page_svgs[pid][0], lifeline_svg=page_svgs[pid][1]
+                title=title, person=payload, gallery=None, tree_svg=page_svgs[pid][0], lifeline_svg=page_svgs[pid][1],
+                v=versions
             ),
         )
 

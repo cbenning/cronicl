@@ -6,7 +6,6 @@ import http.server
 import json
 import os
 import secrets
-import socketserver
 import subprocess
 import sys
 from datetime import date
@@ -137,13 +136,26 @@ def cmd_build(args) -> int:
     return 0
 
 
+class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
+    """A debugging server should always show the build that was just made, never a browser's cached copy."""
+
+    def end_headers(self) -> None:
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
+
+def make_server(out: Path, port: int) -> http.server.ThreadingHTTPServer:
+    # ThreadingHTTPServer sets SO_REUSEADDR, so restarting serve right after stopping it does not fail to bind.
+    handler = functools.partial(NoCacheHandler, directory=str(out))
+    return http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
+
+
 def cmd_serve(args) -> int:
     code = cmd_build(args)
     if code != 0:
         return code
     out = Path(args.out) if args.out else Path(args.dir) / "out"
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(out))
-    with socketserver.TCPServer(("127.0.0.1", args.port), handler) as httpd:
+    with make_server(out, args.port) as httpd:
         print(f"serving {out} at http://127.0.0.1:{args.port}/ (Ctrl+C to stop)")
         try:
             httpd.serve_forever()

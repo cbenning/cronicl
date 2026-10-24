@@ -143,3 +143,24 @@ def test_build_with_no_privacy_key_does_not_redact(tmp_path, sample_ged, write):
     run("import-gedcom", sample_ged, "--dir", data, "--apply")
     run("build", "--dir", data, "--out", tmp_path / "out")
     assert "Jane Jones" in (tmp_path / "out" / "index.json").read_text(encoding="utf-8")
+
+
+def test_serve_sends_no_cache_headers_so_a_rebuilt_viewer_is_never_stale(tmp_path):
+    import functools
+    import threading
+    import urllib.request
+
+    from famsite.cli import NoCacheHandler, make_server
+
+    (tmp_path / "viewer.js").write_text("console.log(1)", encoding="utf-8")
+    server = make_server(tmp_path, 0)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{server.server_address[1]}/viewer.js") as response:
+            assert "no-cache" in response.headers["Cache-Control"]
+    finally:
+        server.shutdown()
+        server.server_close()
+    assert issubclass(NoCacheHandler, __import__("http.server").server.SimpleHTTPRequestHandler)
+    assert server.allow_reuse_address  # restarting serve must not hit "Address already in use"

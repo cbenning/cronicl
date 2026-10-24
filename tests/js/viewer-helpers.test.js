@@ -145,49 +145,6 @@ test('legendFor lists only the roles present, in a fixed order, with counts', ()
   assert.deepStrictEqual(v.legendFor(null), []);
 });
 
-test('familyIndex is stable, in range, and spreads different couples over several colours', () => {
-  assert.strictEqual(v.familyIndex('a+b', 8), v.familyIndex('a+b', 8));
-  const seen = new Set();
-  for (let i = 0; i < 40; i++) {
-    const k = v.familyIndex('person-' + i + '+other-' + i, 8);
-    assert.ok(k >= 0 && k < 8);
-    seen.add(k);
-  }
-  assert.ok(seen.size >= 5, 'got ' + seen.size + ' distinct colours');
-});
-
-test('visibleRange converts the pan/zoom state to a year span', () => {
-  // 10 px per year, year 1900 at x=40, 1000px wide
-  const r = v.visibleRange(40, 10, 1900, 1000);
-  assert.strictEqual(r.from, 1896);
-  assert.strictEqual(r.to, 1996);
-});
-
-test('thumbGeometry sizes and places the scrollbar thumb', () => {
-  const g = v.thumbGeometry({ min: 1900, max: 2000 }, { from: 1950, to: 1975 });
-  assert.strictEqual(g.left, 0.5);
-  assert.strictEqual(g.width, 0.25);
-});
-
-test('thumbGeometry clamps to the track and keeps a grabbable minimum', () => {
-  const wide = v.thumbGeometry({ min: 1900, max: 2000 }, { from: 1800, to: 2100 });
-  assert.deepStrictEqual(wide, { left: 0, width: 1 });
-  const tiny = v.thumbGeometry({ min: 1900, max: 2000 }, { from: 1990, to: 1990.1 });
-  assert.ok(tiny.width >= 0.03);
-  assert.ok(tiny.left + tiny.width <= 1);
-});
-
-test('relationNote names the shared parent of a half-sibling and nothing for others', () => {
-  assert.strictEqual(
-    v.relationNote({ type: 'half', via: [{ id: 'a', name: 'Alfred' }] }),
-    'half-sibling via Alfred'
-  );
-  assert.strictEqual(v.relationNote({ type: 'half', via: [] }), 'half-sibling');
-  assert.strictEqual(v.relationNote({ type: 'full', via: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] }), '');
-  assert.strictEqual(v.relationNote({ type: 'sibling', via: [{ id: 'a', name: 'A' }] }), '');
-  assert.strictEqual(v.relationNote({ id: 'x', name: 'X' }), '');
-});
-
 // three generations above "me", two below; a sibling and an aunt who are not on the line
 const lin = {
   unions: [

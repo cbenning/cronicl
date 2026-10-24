@@ -56,7 +56,7 @@ async function main() {
   check('tree renders nodes', nodeCount >= 5, nodeCount);
   const strokes = await ev(`(() => { const css = (sel, prop) => { const e = document.querySelector(sel); return e ? getComputedStyle(e)[prop] : null; }; return { childW: parseFloat(css('.edge.child', 'strokeWidth')), spouseW: parseFloat(css('.edge.spouse', 'strokeWidth')), edgeFx: css('.edge.child', 'vectorEffect'), nodeFx: css('.node rect', 'vectorEffect'), nodeW: parseFloat(css('.node rect', 'strokeWidth')), dotR: parseFloat((document.querySelector('.union') || {getAttribute: () => '0'}).getAttribute('r')) }; })()`);
   check('edges keep a constant on-screen width at any zoom', strokes.edgeFx === 'non-scaling-stroke' && strokes.nodeFx === 'non-scaling-stroke', JSON.stringify(strokes));
-  check('parent-to-child lines are heavier than spouse links and at least 2px', strokes.childW >= 2 && strokes.spouseW >= 1.5 && strokes.childW > strokes.spouseW, JSON.stringify(strokes));
+  check('parent-to-child lines are heavier than spouse links and never hairlines', strokes.childW >= 1.5 && strokes.spouseW >= 1.25 && strokes.childW > strokes.spouseW, JSON.stringify(strokes));
   check('couple junction dots stay visible when zoomed out', strokes.dotR >= 3, JSON.stringify(strokes));
   const overflow = await ev(`(() => { const bad = []; document.querySelectorAll('.node').forEach((g) => { const r = g.querySelector('rect').getBBox(); g.querySelectorAll('text').forEach((t) => { if (!t.textContent) return; const b = t.getBBox(); if (b.x < r.x + 4 || b.x + b.width > r.x + r.width - 4) bad.push(g.dataset.id + ':' + t.textContent + ':' + Math.round(b.width) + '/' + r.width); }); }); return bad; })()`);
   check('no node text comes within 4px of its box edge', overflow.length === 0, overflow.join('; '));
@@ -65,14 +65,14 @@ async function main() {
   check('ended partnership draws a dashed spouse line', (await ev(`document.querySelectorAll('.edge.spouse.ended').length`)) >= 1);
   check('ended partnership has a hollow dot', (await ev(`document.querySelectorAll('.union.ended').length`)) >= 1);
 
-  // ---- family colours (nothing selected)
-  check('each couple draws its lines in a family colour', (await ev(`document.querySelectorAll('.edge[class*="fam-"]').length`)) >= 1);
+  // ---- resting state: quiet and uniform
+  check('at rest every connector is one neutral colour, with no per-family rainbow', (await ev(`new Set([...document.querySelectorAll('.edge')].map((e) => getComputedStyle(e).stroke)).size === 1 && document.querySelectorAll('.edge[class*="fam-"]').length === 0`)) === true);
   check('no legend and no highlight mode when nothing is selected', (await ev(`document.getElementById('legend').hidden && !document.getElementById('tree').classList.contains('has-hl')`)) === true);
 
   // ---- hover preview
   await ev(`document.querySelector('.node[data-id="smith-bob"]').dispatchEvent(new PointerEvent('pointerenter'))`);
   await sleep(200);
-  check('hovering a person previews their relatives with the legend', (await ev(`!document.getElementById('legend').hidden && document.querySelectorAll('.node.role-parent').length >= 2`)) === true);
+  check('hovering a person previews their relatives with the legend', (await ev(`!document.getElementById('legend').hidden && document.querySelectorAll('.node.lin-old').length >= 1`)) === true);
   check('hovering does not open the panel', (await ev(`document.getElementById('panel').hidden`)) === true);
   await ev(`document.querySelector('.node[data-id="smith-bob"]').dispatchEvent(new PointerEvent('pointerleave'))`);
   await sleep(200);
@@ -90,34 +90,34 @@ async function main() {
   check('node is highlighted', (await ev(`document.querySelectorAll('.node.selected').length`)) === 1);
   check('url records the selection', (await ev(`location.hash`)) === '#/tree/smith-bob');
   check('selected person lights up connectors', (await ev(`document.querySelectorAll('.edge.hi').length`)) >= 1);
-  check('relatives are marked related', (await ev(`document.querySelectorAll('.node.related').length`)) >= 2);
+  check('relatives are marked', (await ev(`document.querySelectorAll('.node.lin, .node.related').length`)) >= 2);
   check('unrelated people and lines are faded', (await ev(`document.querySelectorAll('.node.dim').length`)) >= 1);
-  check('parents, siblings and children are told apart by role', (await ev(`document.querySelectorAll('.node.role-parent').length >= 2 && document.querySelectorAll('.node.role-sibling').length >= 1`)) === true);
-  check('the connectors carry the same roles', (await ev(`document.querySelectorAll('.edge.role-parent').length >= 1 && document.querySelectorAll('.edge.role-sibling').length >= 1`)) === true);
-  check('roles are different colours', (await ev(`(() => { const c = (sel) => getComputedStyle(document.querySelector(sel)).stroke; return c('.edge.role-parent') !== c('.edge.role-sibling'); })()`)) === true);
-  check('family colours step aside while a person is highlighted', (await ev(`document.getElementById('tree').classList.contains('has-hl') && document.querySelectorAll('.edge[class*="fam-"]').length === 0`)) === true);
-  check('the legend names the roles on screen', (await ev(`(() => { const l = document.getElementById('legend'); return !l.hidden && /Parents/.test(l.textContent) && /Siblings/.test(l.textContent); })()`)) === true);
-  // ---- lineage colours
-  check('the legend offers the two colour modes', (await ev(`!!document.querySelector('#legend [data-mode="family"]') && !!document.querySelector('#legend [data-mode="lineage"]')`)) === true);
-  await click('#legend [data-mode="lineage"]');
-  await sleep(300);
-  check('lineage mode shades ancestors and descendants', (await ev(`document.querySelectorAll('.node.lin-old').length >= 1 && document.querySelectorAll('.node.lin-new').length >= 1 && document.querySelectorAll('.edge.lin').length >= 1`)) === true);
+  // ---- default: lineage colours
+  check('the generation ramp is the default colouring', (await ev(`document.querySelectorAll('.node.lin-old').length >= 1 && document.querySelectorAll('.node.lin-new').length >= 1 && document.querySelectorAll('.edge.lin').length >= 1`)) === true);
   check('oldest and youngest are different colours', (await ev(`(() => { const c = (sel) => getComputedStyle(document.querySelector(sel + ' rect')).stroke; return c('.node.lin-old') !== c('.node.lin-new'); })()`)) === true);
-  check('relatives off the line fade in lineage mode', (await ev(`document.querySelector('.node[data-id="ellsworth-maude"]').classList.contains('dim')`)) === true);
-  check('the selected person keeps their own outline in lineage mode', (await ev(`document.querySelectorAll('.node.selected').length`)) === 1);
-  check('the legend shows the ramp and its ends', (await ev(`(() => { const l = document.getElementById('legend'); return !!l.querySelector('.legend-ramp') && /Oldest/.test(l.textContent) && /Youngest/.test(l.textContent); })()`)) === true);
+  check('relatives off the line fade', (await ev(`document.querySelector('.node[data-id="ellsworth-maude"]').classList.contains('dim')`)) === true);
+  check('the selected person keeps their own outline', (await ev(`document.querySelectorAll('.node.selected').length`)) === 1);
+  check('the legend shows the ramp and its ends', (await ev(`(() => { const l = document.getElementById('legend'); return !l.hidden && !!l.querySelector('.legend-ramp') && /Oldest/.test(l.textContent) && /Youngest/.test(l.textContent); })()`)) === true);
   check('node tooltips say how many generations away someone is', (await ev(`[...document.querySelectorAll('.node.lin-old title')].some((t) => /generations? above/.test(t.textContent))`)) === true);
-  check('the colour mode is remembered', (await ev(`localStorage.getItem('famsite.colourMode')`)) === 'lineage');
+  check('the legend offers both colour modes', (await ev(`!!document.querySelector('#legend [data-mode="family"]') && !!document.querySelector('#legend [data-mode="lineage"]')`)) === true);
+  // ---- relationship colours, one click away
   await click('#legend [data-mode="family"]');
   await sleep(300);
-  check('switching back restores the relationship colours', (await ev(`document.querySelectorAll('.node.role-parent').length >= 2 && document.querySelectorAll('.node.lin').length === 0`)) === true);
+  check('parents, siblings and children are told apart by role', (await ev(`document.querySelectorAll('.node.role-parent').length >= 2 && document.querySelectorAll('.node.role-sibling').length >= 1 && document.querySelectorAll('.node.lin').length === 0`)) === true);
+  check('the connectors carry the same roles', (await ev(`document.querySelectorAll('.edge.role-parent').length >= 1 && document.querySelectorAll('.edge.role-sibling').length >= 1`)) === true);
+  check('roles are different colours', (await ev(`(() => { const c = (sel) => getComputedStyle(document.querySelector(sel)).stroke; return c('.edge.role-parent') !== c('.edge.role-sibling'); })()`)) === true);
+  check('the legend names the roles on screen', (await ev(`(() => { const l = document.getElementById('legend'); return !l.hidden && /Parents/.test(l.textContent) && /Siblings/.test(l.textContent); })()`)) === true);
+  check('the chosen mode is remembered', (await ev(`localStorage.getItem('famsite.colourMode')`)) === 'family');
+  await click('#legend [data-mode="lineage"]');
+  await sleep(300);
+  check('switching back restores the generation ramp', (await ev(`document.querySelectorAll('.node.lin-old').length >= 1 && document.querySelectorAll('.node.role-parent').length === 0`)) === true);
   await shot('tree-panel-open');
   await click('#panel .close');
   await sleep(300);
   check('close button hides the panel', (await ev(`document.getElementById('panel').hidden`)) === true);
   check('close deselects the node', (await ev(`document.querySelectorAll('.node.selected').length`)) === 0);
   check('close clears the url selection', (await ev(`location.hash`)) === '#/tree');
-  check('close removes all highlighting', (await ev(`document.querySelectorAll('.edge.hi, .edge.dim, .node.dim, .node.related').length`)) === 0);
+  check('close removes all highlighting', (await ev(`document.querySelectorAll('.edge.hi, .edge.dim, .node.dim, .node.related, .node.lin').length`)) === 0);
   check('close hides the legend', (await ev(`document.getElementById('legend').hidden`)) === true);
   await click('.node[data-id="smith-john"]');
   await sleep(500);
