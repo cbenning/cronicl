@@ -550,7 +550,6 @@
       var fullLayout = null;
       var focusId = null;
       var focusCache = {};
-      var hoverId = null;
       // highlighted connectors are drawn after the plain ones, parents last so their line is never hidden
       var roleLayers = {};
       ['sibling', 'partner', 'child', 'parent'].forEach(function (role) {
@@ -576,11 +575,11 @@
         else if (lin) {
           linEntry = lin.people.get(id);
           if (linEntry) mark = ' lin' + (linEntry.partner ? ' lin-partner' : '');
-          else mark = id === hoverId ? ' hovered' : ' dim';
+          else mark = ' dim';
         } else if (hl) {
           var role = hl.people.get(id);
           if (role) mark = ' related role-' + role;
-          else mark = id === hoverId ? ' hovered' : ' dim';
+          else mark = ' dim';
         }
         if (id === focusId) mark += ' focus';
         var g = svgEl('g', { 'class': 'node' + mark, 'data-id': id });
@@ -608,17 +607,6 @@
         g.addEventListener('click', function (e) {
           e.stopPropagation();
           if (!moved) select(id, false, false);
-        });
-        // hovering previews the same highlight without opening the panel; an open selection wins over it
-        g.addEventListener('pointerenter', function () {
-          if (drag || state.selected || hoverId === id) return;
-          hoverId = id;
-          rebuild();
-        });
-        g.addEventListener('pointerleave', function () {
-          if (hoverId !== id) return;
-          hoverId = null;
-          rebuild();
         });
         return g;
       }
@@ -751,7 +739,7 @@
       }
 
       function rebuild() {
-        var target = state.selected || hoverId;
+        var target = state.selected;
         var known = target && state.layout && nodes.has(target);
         lin = known && state.colourMode === 'lineage' ? lineageFor(state.layout, target) : null;
         hl = known && !lin ? relatedFor(state.layout, target) : null;

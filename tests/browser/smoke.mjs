@@ -57,6 +57,8 @@ async function main() {
   const strokes = await ev(`(() => { const css = (sel, prop) => { const e = document.querySelector(sel); return e ? getComputedStyle(e)[prop] : null; }; return { childW: parseFloat(css('.edge.child', 'strokeWidth')), spouseW: parseFloat(css('.edge.spouse', 'strokeWidth')), edgeFx: css('.edge.child', 'vectorEffect'), nodeFx: css('.node rect', 'vectorEffect'), nodeW: parseFloat(css('.node rect', 'strokeWidth')), dotR: parseFloat((document.querySelector('.union') || {getAttribute: () => '0'}).getAttribute('r')) }; })()`);
   check('edges keep a constant on-screen width at any zoom', strokes.edgeFx === 'non-scaling-stroke' && strokes.nodeFx === 'non-scaling-stroke', JSON.stringify(strokes));
   check('parent-to-child lines are heavier than spouse links and never hairlines', strokes.childW >= 1.25 && strokes.spouseW >= 1 && strokes.childW > strokes.spouseW, JSON.stringify(strokes));
+  const outline = await ev(`(() => { const m = getComputedStyle(document.querySelector('.node rect')).stroke.match(/\\d+/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; })()`);
+  check('box outlines are light and quiet at rest', outline > 0.62 && strokes.nodeW <= 1, outline + ' / ' + strokes.nodeW);
   check('couple junction dots stay visible when zoomed out', strokes.dotR >= 3, JSON.stringify(strokes));
   const overflow = await ev(`(() => { const bad = []; document.querySelectorAll('.node').forEach((g) => { const r = g.querySelector('rect').getBBox(); g.querySelectorAll('text').forEach((t) => { if (!t.textContent) return; const b = t.getBBox(); if (b.x < r.x + 4 || b.x + b.width > r.x + r.width - 4) bad.push(g.dataset.id + ':' + t.textContent + ':' + Math.round(b.width) + '/' + r.width); }); }); return bad; })()`);
   check('no node text comes within 4px of its box edge', overflow.length === 0, overflow.join('; '));
@@ -69,14 +71,18 @@ async function main() {
   check('at rest every connector is one neutral colour, with no per-family rainbow', (await ev(`new Set([...document.querySelectorAll('.edge')].map((e) => getComputedStyle(e).stroke)).size === 1 && document.querySelectorAll('.edge[class*="fam-"]').length === 0`)) === true);
   check('no legend and no highlight mode when nothing is selected', (await ev(`document.getElementById('legend').hidden && !document.getElementById('tree').classList.contains('has-hl')`)) === true);
 
-  // ---- hover preview
-  await ev(`document.querySelector('.node[data-id="smith-bob"]').dispatchEvent(new PointerEvent('pointerenter'))`);
-  await sleep(200);
-  check('hovering a person previews their relatives with the legend', (await ev(`!document.getElementById('legend').hidden && document.querySelectorAll('.node.lin-old').length >= 1`)) === true);
-  check('hovering does not open the panel', (await ev(`document.getElementById('panel').hidden`)) === true);
-  await ev(`document.querySelector('.node[data-id="smith-bob"]').dispatchEvent(new PointerEvent('pointerleave'))`);
-  await sleep(200);
-  check('leaving a person clears the preview', (await ev(`document.getElementById('legend').hidden && document.querySelectorAll('.node.related').length === 0`)) === true);
+  // ---- hover only accents the node under the pointer (recolouring the whole tree on hover made panning lag)
+  const centre = (id) => ev(`(() => { const r = document.querySelector('.node[data-id="${id}"] rect').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+  const restStroke = await ev(`getComputedStyle(document.querySelector('.node[data-id="smith-bob"] rect')).stroke`);
+  const [bx, by] = await centre('smith-bob');
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: bx, y: by });
+  await sleep(250);
+  const hoverStroke = await ev(`getComputedStyle(document.querySelector('.node[data-id="smith-bob"] rect')).stroke`);
+  check('the hovered person is accented', hoverStroke !== restStroke, restStroke + ' -> ' + hoverStroke);
+  check('hovering does not recolour the rest of the tree or open anything', (await ev(`!document.getElementById('tree').classList.contains('has-hl') && document.getElementById('legend').hidden && document.getElementById('panel').hidden && document.querySelectorAll('.node.lin, .node.dim, .node.related, .edge.hi').length === 0`)) === true);
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
+  await sleep(250);
+  check('moving off restores the resting look', (await ev(`getComputedStyle(document.querySelector('.node[data-id="smith-bob"] rect')).stroke`)) === restStroke);
 
   // ---- panel open / close / deselect
   await click('.node[data-id="smith-bob"]');

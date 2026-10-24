@@ -47,12 +47,13 @@ read-only utilities. There is deliberately no bulk form.
 
 - **Tree:** every person on a pan-and-zoom canvas (only what is on screen is drawn). Long names wrap onto two
   lines; siblings and half-siblings always share a row.
-- **Reading the tree:** at rest every connector is one quiet colour. Selecting a person, or hovering one as a
-  preview, shades their own line by generation: oldest ancestors deep red, the selected generation violet, the
-  youngest descendants green, with partners dashed and everyone off the line faded. Each side of the ramp is
-  stretched over its own depth, and hovering a node says how many generations it is above or below. A
-  **Family** toggle in the legend (remembered in the browser) switches to relationship colours instead:
-  parents orange, partners pink, children green, siblings (including half-siblings) violet.
+- **Reading the tree:** at rest every connector and box outline is one quiet, light colour, and hovering a
+  person only accents that one box. Selecting a person shades their own line by generation: oldest ancestors
+  deep red, the selected generation violet, the youngest descendants green, with partners dashed and everyone
+  off the line faded. Each side of the ramp is stretched over its own depth, and hovering a node says how many
+  generations it is above or below. A **Family** toggle in the legend (remembered in the browser) switches to
+  relationship colours instead: parents orange, partners pink, children green, siblings (including
+  half-siblings) violet.
 - **Timeline:** every dated birth, marriage and death on one horizontal, zoomable time axis. People with no
   dated events are listed underneath.
 - **Focused tree:** `#/focus/<id>`, or "Focus tree" in the side panel: that person, everyone above them,
