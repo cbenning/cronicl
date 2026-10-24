@@ -68,17 +68,17 @@ main { flex: 1; display: flex; min-height: 0; }
 .ev.marriage rect { stroke: #9333ea; }
 .ev.death rect { stroke: #6b7280; }
 .ev.selected rect { stroke: var(--sel); stroke-width: 2.5; }
-.node rect { fill: var(--node); stroke: var(--node-line); stroke-width: 1.25px; vector-effect: non-scaling-stroke; }
-.node.selected rect { stroke: var(--sel); stroke-width: 3px; }
+.node rect { fill: var(--node); stroke: var(--node-line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.node.selected rect { stroke: var(--sel); stroke-width: 2.5px; }
 .node { cursor: pointer; }
 .node text { fill: currentColor; font-size: 13px; pointer-events: none; }
 .node .years { font-size: 11px; opacity: .7; }
 .node.selected .name { font-weight: 600; }
 /* Connectors keep a constant on-screen width: scaled strokes turn to sub-pixel hairlines when a big tree is fitted */
-.edge { stroke: var(--line); stroke-width: 1.5px; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
-.edge.child { stroke-width: 1.75px; }
-.edge.spouse { stroke-width: 1.25px; }
-.edge.hi { stroke: var(--sel); stroke-width: 3px; }
+.edge { stroke: var(--line); stroke-width: 1.25px; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.edge.child { stroke-width: 1.5px; }
+.edge.spouse { stroke-width: 1.1px; }
+.edge.hi { stroke: var(--sel); stroke-width: 2.25px; }
 .edge.dim { opacity: .25; }
 .union { fill: var(--line); }
 .union.hi { fill: var(--sel); }
@@ -162,19 +162,19 @@ main { flex: 1; display: flex; min-height: 0; }
 @media (max-width: 40rem) { .events li { grid-template-columns: 5.5rem 1fr; } .hero { flex-direction: column; align-items: flex-start; } }
 .union.ended { fill: var(--node); }
 /* relationship roles (a person is selected or hovered); these override the plain highlight colour */
-.edge.role-parent { stroke: var(--role-parent); stroke-width: 3.25px; }
-.edge.role-partner { stroke: var(--role-partner); stroke-width: 3px; }
-.edge.role-child { stroke: var(--role-child); stroke-width: 3.25px; }
-.edge.role-sibling { stroke: var(--role-sibling); stroke-width: 3px; }
+.edge.role-parent { stroke: var(--role-parent); stroke-width: 2.25px; }
+.edge.role-partner { stroke: var(--role-partner); stroke-width: 2px; }
+.edge.role-child { stroke: var(--role-child); stroke-width: 2.25px; }
+.edge.role-sibling { stroke: var(--role-sibling); stroke-width: 2px; }
 .union.role-parent { fill: var(--role-parent); } .union.role-partner { fill: var(--role-partner); }
 .union.role-child { fill: var(--role-child); } .union.role-sibling { fill: var(--role-sibling); }
 .union.ended.role-parent, .union.ended.role-partner, .union.ended.role-child, .union.ended.role-sibling { fill: var(--node); }
 .union.ended.role-parent { stroke: var(--role-parent); } .union.ended.role-partner { stroke: var(--role-partner); }
-.node.role-parent rect { stroke: var(--role-parent); stroke-width: 3px; }
-.node.role-partner rect { stroke: var(--role-partner); stroke-width: 3px; }
-.node.role-child rect { stroke: var(--role-child); stroke-width: 3px; }
-.node.role-sibling rect { stroke: var(--role-sibling); stroke-width: 3px; }
-.node.hovered rect { stroke: var(--sel); stroke-width: 3px; }
+.node.role-parent rect { stroke: var(--role-parent); stroke-width: 2.25px; }
+.node.role-partner rect { stroke: var(--role-partner); stroke-width: 2.25px; }
+.node.role-child rect { stroke: var(--role-child); stroke-width: 2.25px; }
+.node.role-sibling rect { stroke: var(--role-sibling); stroke-width: 2.25px; }
+.node.hovered rect { stroke: var(--sel); stroke-width: 2.25px; }
 #legend { position: absolute; left: var(--space-3); bottom: var(--space-3); z-index: 3; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); font-size: .85rem; pointer-events: none; }
 #legend[hidden] { display: none; }
 .legend-swatch { display: inline-block; width: 22px; height: 5px; margin-right: var(--space-2); border-radius: 3px; vertical-align: middle; }
@@ -184,10 +184,10 @@ main { flex: 1; display: flex; min-height: 0; }
 .lin-old { --c: color-mix(in oklch, var(--lin-old) calc(var(--p) * 1%), var(--lin-mid)); }
 .lin-new { --c: color-mix(in oklch, var(--lin-new) calc(var(--p) * 1%), var(--lin-mid)); }
 .lin-mid { --c: var(--lin-mid); }
-.edge.lin { stroke: var(--c); stroke-width: 3.25px; }
+.edge.lin { stroke: var(--c); stroke-width: 2.25px; }
 .union.lin { fill: var(--c); }
 .union.ended.lin { fill: var(--node); stroke: var(--c); }
-.node.lin rect { stroke: var(--c); stroke-width: 3px; }
+.node.lin rect { stroke: var(--c); stroke-width: 2.25px; }
 .node.lin-partner rect { stroke-dasharray: 5px 3px; }
 .legend-modes { display: flex; gap: var(--space-1); margin-bottom: var(--space-2); pointer-events: auto; }
 .legend-modes button { padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: .8rem; cursor: pointer; }

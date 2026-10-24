@@ -15,6 +15,9 @@ SWEEPS = 4
 BUS_PAD = 8  # minimum horizontal clearance between two buses on one level
 BUS_STEP = 10  # vertical distance between bus levels
 BUS_EDGE = 18  # clearance between a row of boxes and its first/last bus level
+DROP_CLEAR = 8  # a vertical connector keeps at least this far from the side of a box it passes
+ENTRY_INSET = 14  # a connector may enter a child's box anywhere except this close to a corner
+JOG_EDGE = 14  # a detoured connector runs this far above the top of the child's box
 
 
 class LayoutError(Exception):
@@ -24,6 +27,37 @@ class LayoutError(Exception):
 def _num(value: float):
     value = round(float(value), 2)
     return int(value) if value.is_integer() else value
+
+
+def _clear_entry(blocked: list[tuple[float, float]], want: float) -> float | None:
+    """The x nearest `want` (within the child's box, off its corners) where a vertical drop misses every blocked box."""
+    reach = NODE_W / 2 - ENTRY_INSET
+    offsets = [0.0]
+    step = 8.0
+    while step <= reach:
+        offsets += [step, -step]
+        step += 8.0
+    for off in offsets:
+        x = want + off
+        if all(not (x0 - DROP_CLEAR < x < x1 + DROP_CLEAR) for x0, x1 in blocked):
+            return x
+    return None
+
+
+def _nearest_free_column(blocked: list[tuple[float, float]], want: float) -> float:
+    """The x nearest `want` that is clear of every blocked box, to detour a drop through the gaps between them."""
+    spans = sorted((x0 - DROP_CLEAR, x1 + DROP_CLEAR) for x0, x1 in blocked)
+    merged: list[list[float]] = []
+    for start, end in spans:
+        if merged and start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    candidates = [min(want, merged[0][0])]  # left of everything
+    candidates.append(max(want, merged[-1][1]))  # right of everything
+    for (_, left_end), (right_start, _) in zip(merged, merged[1:]):
+        candidates.append(min(max(want, left_end), right_start))
+    return min(candidates, key=lambda x: abs(x - want))
 
 
 def _sibling_groups(unions, kids) -> dict[str, list[str]]:
@@ -251,10 +285,27 @@ def compute_layout(tree: Tree) -> dict:
 
     # Each couple's child connector is a horizontal "bus". Buses of different couples that would overlap
     # are put on different levels so unrelated families never look joined; rows get taller as needed.
+    # A child several rows below its parents is reached by a long vertical drop. It must not run behind the boxes
+    # in the rows it crosses (it would look as if it came from them), so each drop either enters the child's box
+    # off-centre where the way is clear, or detours through the nearest clear column and comes in from above.
+    row_boxes: dict[int, list[tuple[float, float]]] = {}
+    for pid in people:
+        row_boxes.setdefault(gen[pid], []).append((center(pid) - NODE_W / 2, center(pid) + NODE_W / 2))
+    routes: dict[tuple[str, str], tuple[float, float | None]] = {}  # (union, child) -> (entry x, detour column)
+    for uid in unions:
+        parent_row = gen[unions[uid][0]]
+        for kid in kids[uid]:
+            kx = center(kid)
+            blocked = [box for g in range(parent_row + 1, gen[kid]) for box in row_boxes.get(g, [])]
+            if not blocked:
+                routes[(uid, kid)] = (kx, None)
+                continue
+            entry = _clear_entry(blocked, kx)
+            routes[(uid, kid)] = (entry, None) if entry is not None else (kx, _nearest_free_column(blocked, kx))
     spans: dict[str, tuple[float, float]] = {}
     for uid in unions:
         if kids[uid]:
-            xs = [junction_x(uid)] + [center(k) for k in kids[uid]]
+            xs = [junction_x(uid)] + [routes[(uid, k)][1] if routes[(uid, k)][1] is not None else routes[(uid, k)][0] for k in kids[uid]]
             spans[uid] = (min(xs), max(xs))
     level_of: dict[str, int] = {}
     levels_in_gen: dict[int, int] = {}
@@ -315,15 +366,15 @@ def compute_layout(tree: Tree) -> dict:
                 )
         mid = row_y(g) + NODE_H + BUS_EDGE + level_of.get(uid, 0) * BUS_STEP
         for kid in kids[uid]:
-            kx = center(kid)
+            entry_x, detour = routes[(uid, kid)]
             ky = row_y(gen[kid])
+            if detour is None:
+                path = [(jx, jy), (jx, mid), (entry_x, mid), (entry_x, ky)]
+            else:
+                above = ky - JOG_EDGE
+                path = [(jx, jy), (jx, mid), (detour, mid), (detour, above), (entry_x, above), (entry_x, ky)]
             edges.append(
-                {
-                    "from": uid,
-                    "to": kid,
-                    "kind": "child",
-                    "points": [[_num(jx), _num(jy)], [_num(jx), _num(mid)], [_num(kx), _num(mid)], [_num(kx), _num(ky)]],
-                }
+                {"from": uid, "to": kid, "kind": "child", "points": [[_num(x), _num(y)] for x, y in path]}
             )
     edges.sort(key=lambda e: (e["from"], e["to"], e["kind"]))
     width = max(n["x"] + n["w"] for n in nodes) + MARGIN

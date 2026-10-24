@@ -36,7 +36,7 @@ def assert_buses_do_not_overlap(layout):
     for edge in layout["edges"]:
         if edge["kind"] != "child":
             continue
-        (_, _), (x0, y0), (x1, y1), (_, _) = edge["points"]
+        (x0, y0), (x1, y1) = edge["points"][1:3]  # the bus: the horizontal run under the parents' row
         assert y0 == y1
         buses.append((y0, min(x0, x1), max(x0, x1), edge["from"]))
     for i, (ya, a0, a1, ca) in enumerate(buses):
@@ -251,3 +251,39 @@ def test_ended_partnership_is_flagged_on_the_union(make_tree):
         {"type": "marriage", "start": "1955", "end": "1971", "end_reason": "divorce"}
     ]
     assert "ended" not in unions["c+d"] and "partnerships" not in unions["c+d"]
+
+
+def segments_crossing_foreign_boxes(layout):
+    """(edge, node) pairs where a vertical or horizontal connector segment passes behind a box it is not attached to."""
+    nodes = layout["nodes"]
+    hits = []
+    for edge in layout["edges"]:
+        for (x1, y1), (x2, y2) in zip(edge["points"], edge["points"][1:]):
+            for n in nodes:
+                if n["id"] in (edge["from"], edge["to"]):
+                    continue
+                inside_x = min(x1, x2) < n["x"] + n["w"] and max(x1, x2) > n["x"]
+                inside_y = min(y1, y2) < n["y"] + n["h"] and max(y1, y2) > n["y"]
+                if inside_x and inside_y:
+                    hits.append((edge["from"], edge["to"], n["id"]))
+    return hits
+
+
+def long_drop_tree(make_tree):
+    """Siblings share a row, so when x marries into a deeper family his whole sibship drops two rows below
+    their parents, beneath row 1 (which holds the spouse's side of the family)."""
+    people = [person("gp1"), person("gp2")]
+    people += [person(f"k{i}", parents=["gp1", "gp2"]) for i in range(3)]
+    people += [person("sp1"), person("z", parents=["k0", "sp1"]), person("a"), person("b")]
+    people += [person(f"c{i}", parents=["a", "b"]) for i in range(3)]
+    people += [person("x", parents=["a", "b"], spouse=["z"])]
+    return make_tree(people)
+
+
+def test_long_drops_never_pass_behind_other_people(make_tree):
+    tree = long_drop_tree(make_tree)
+    layout = compute_layout(tree)
+    gens = {n["id"]: n["y"] for n in layout["nodes"]}
+    assert gens["x"] > gens["a"] + 2 * NODE_H, "fixture should put x at least two rows below his parents"
+    assert segments_crossing_foreign_boxes(layout) == []
+    assert_invariants(tree, layout)
