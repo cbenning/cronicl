@@ -8,6 +8,7 @@
   --avatar-sm: 64px; --avatar-lg: 112px;
   /* names the tree and timeline CSS already use */
   --edge: #8a8f98; --node: var(--surface); --node-line: #5b6470; --sel: var(--accent);
+  --line: #566070; /* family-tree connectors: strong enough to read at fit zoom */
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -15,6 +16,7 @@
     --text: #e6e9ee; --muted: #9aa4b2; --border: #3a424d;
     --accent: #6ea8fe; --shadow: none;
     --edge: #6b7380; --node-line: #8b95a3;
+    --line: #a3adbb;
   }
 }
 * { box-sizing: border-box; }
@@ -60,28 +62,31 @@ main { flex: 1; display: flex; min-height: 0; }
 .ev.marriage rect { stroke: #9333ea; }
 .ev.death rect { stroke: #6b7280; }
 .ev.selected rect { stroke: var(--sel); stroke-width: 2.5; }
-.node rect { fill: var(--node); stroke: var(--node-line); }
-.node.selected rect { stroke: var(--sel); stroke-width: 3; }
+.node rect { fill: var(--node); stroke: var(--node-line); stroke-width: 1.25px; vector-effect: non-scaling-stroke; }
+.node.selected rect { stroke: var(--sel); stroke-width: 3px; }
 .node { cursor: pointer; }
 .node text { fill: currentColor; font-size: 13px; pointer-events: none; }
 .node .years { font-size: 11px; opacity: .7; }
 .node.selected .name { font-weight: 600; }
-.edge { stroke: var(--edge); stroke-width: 1.5; }
-.edge.hi { stroke: var(--sel); stroke-width: 2.5; }
-.edge.dim { opacity: .12; }
-.union { fill: var(--edge); }
+/* Connectors keep a constant on-screen width: scaled strokes turn to sub-pixel hairlines when a big tree is fitted */
+.edge { stroke: var(--line); stroke-width: 1.75px; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.edge.child { stroke-width: 2.25px; }
+.edge.spouse { stroke-width: 1.5px; }
+.edge.hi { stroke: var(--sel); stroke-width: 3px; }
+.edge.dim { opacity: .25; }
+.union { fill: var(--line); }
 .union.hi { fill: var(--sel); }
 .union.dim { opacity: .12; }
 .node.dim { opacity: .35; }
-.node.focus rect { stroke: #d97706; stroke-width: 3; }
+.node.focus rect { stroke: #d97706; stroke-width: 3px; }
 #focus-bar { display: flex; align-items: baseline; gap: 1rem; padding: .4rem 1rem; border-bottom: 1px solid var(--node-line); background: var(--node); }
 #focus-bar[hidden] { display: none; }
 #focus-bar .back { margin-left: auto; }
-.node.related rect { stroke: var(--sel); stroke-width: 2; }
+.node.related rect { stroke: var(--sel); stroke-width: 2px; }
 .error { padding: 1rem; color: #b91c1c; }
 .plain-list { padding: 1rem 2rem; }
-.edge.ended { stroke-dasharray: 6 4; }
-.union.ended { fill: var(--node); stroke: var(--edge); stroke-width: 1.5; }
+.edge.ended { stroke-dasharray: 6px 4px; }
+.union.ended { fill: var(--node); stroke: var(--line); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .union.ended.hi { stroke: var(--sel); }
 .ev.partnership rect { stroke: #9333ea; }
 .ev.divorce rect { stroke: #dc2626; }
@@ -144,7 +149,7 @@ main { flex: 1; display: flex; min-height: 0; }
 .lifeline .mk.divorce { stroke: #dc2626; color: #dc2626; }
 .lifeline .mk.death { stroke: #6b7280; color: #6b7280; }
 .mini-tree { display: block; }
-.mini-tree .node.current rect { stroke: var(--accent); stroke-width: 3; }
+.mini-tree .node.current rect { stroke: var(--accent); stroke-width: 3px; }
 .mini-tree a:hover .node rect { stroke: var(--accent); }
 .mini-tree .years { fill: var(--muted); font-size: 11px; }
 .mini-tree a { color: var(--text); }

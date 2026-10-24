@@ -54,6 +54,10 @@ async function main() {
   // ---- tree
   const nodeCount = await ev(`document.querySelectorAll('.node').length`);
   check('tree renders nodes', nodeCount >= 5, nodeCount);
+  const strokes = await ev(`(() => { const css = (sel, prop) => { const e = document.querySelector(sel); return e ? getComputedStyle(e)[prop] : null; }; return { childW: parseFloat(css('.edge.child', 'strokeWidth')), spouseW: parseFloat(css('.edge.spouse', 'strokeWidth')), edgeFx: css('.edge.child', 'vectorEffect'), nodeFx: css('.node rect', 'vectorEffect'), nodeW: parseFloat(css('.node rect', 'strokeWidth')), dotR: parseFloat((document.querySelector('.union') || {getAttribute: () => '0'}).getAttribute('r')) }; })()`);
+  check('edges keep a constant on-screen width at any zoom', strokes.edgeFx === 'non-scaling-stroke' && strokes.nodeFx === 'non-scaling-stroke', JSON.stringify(strokes));
+  check('parent-to-child lines are heavier than spouse links and at least 2px', strokes.childW >= 2 && strokes.spouseW >= 1.5 && strokes.childW > strokes.spouseW, JSON.stringify(strokes));
+  check('couple junction dots stay visible when zoomed out', strokes.dotR >= 3, JSON.stringify(strokes));
   const overflow = await ev(`(() => { const bad = []; document.querySelectorAll('.node').forEach((g) => { const r = g.querySelector('rect').getBBox(); g.querySelectorAll('text').forEach((t) => { if (!t.textContent) return; const b = t.getBBox(); if (b.x < r.x + 4 || b.x + b.width > r.x + r.width - 4) bad.push(g.dataset.id + ':' + t.textContent + ':' + Math.round(b.width) + '/' + r.width); }); }); return bad; })()`);
   check('no node text comes within 4px of its box edge', overflow.length === 0, overflow.join('; '));
   const sameRow = await ev(`(() => { const y = (id) => document.querySelector('.node[data-id="' + id + '"] rect')?.getAttribute('y'); return [y('smith-bob'), y('ellsworth-maude')]; })()`);

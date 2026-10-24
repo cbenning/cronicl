@@ -467,7 +467,7 @@
         if (kind === 'u:') {
           var u = unionIndex.get(ref);
           var dot = svgEl('circle', {
-            cx: u.x, cy: u.y, r: 3,
+            cx: u.x, cy: u.y, r: dotRadius(),
             'class': 'union' + (endedUnions.has(ref) ? ' ended' : '') + (hl ? (hl.unions.has(ref) ? ' hi' : ' dim') : '')
           });
           nodeLayer.appendChild(dot);
@@ -483,6 +483,9 @@
         (lit ? hiLayer : edgeLayer).appendChild(line);
         return line;
       }
+
+      // Junction dots are geometry, so they would shrink with the zoom: size them from the current scale instead.
+      function dotRadius() { return Math.min(9, Math.max(3, 4 / scale)); }
 
       function render() {
         if (!grid) return;
@@ -505,6 +508,10 @@
           if (!live.has(key)) live.set(key, make(key));
         });
         viewport.setAttribute('transform', 'translate(' + tx + ' ' + ty + ') scale(' + scale + ')');
+        var radius = dotRadius();
+        live.forEach(function (el, key) {
+          if (key.slice(0, 2) === 'u:') el.setAttribute('r', radius);
+        });
       }
 
       function rebuild() {
