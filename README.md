@@ -54,6 +54,9 @@ read-only utilities. There is deliberately no bulk form.
   generations it is above or below. A **Family** toggle in the legend (remembered in the browser) switches to
   relationship colours instead: parents orange, partners pink, children green, siblings (including
   half-siblings) violet.
+- **Islands:** families that are not connected to each other are laid out as separate blocks, largest first, left
+  to right, so a small unrelated family can no longer sit in the middle of the main tree and bend its lines.
+  People with no recorded relatives go in a labelled "Not connected to anyone" grid below everything else.
 - **Timeline:** every dated birth, marriage and death on one horizontal, zoomable time axis. People with no
   dated events are listed underneath.
 - **Focused tree:** `#/focus/<id>`, or "Focus tree" in the side panel: that person, everyone above them,

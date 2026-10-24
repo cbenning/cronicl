@@ -16,6 +16,8 @@ BUS_PAD = 8  # minimum horizontal clearance between two buses on one level
 BUS_STEP = 10  # vertical distance between bus levels
 BUS_EDGE = 18  # clearance between a row of boxes and its first/last bus level
 DROP_CLEAR = 8  # a vertical connector keeps at least this far from the side of a box it passes
+ISLAND_GAP = 2 * BLOCK_GAP  # horizontal space between unrelated families
+LONER_COLUMNS = 8  # widest the grid of people with no relatives gets, in boxes
 ENTRY_INSET = 14  # a connector may enter a child's box anywhere except this close to a corner
 JOG_EDGE = 14  # a detoured connector runs this far above the top of the child's box
 
@@ -203,7 +205,7 @@ def _pack(order: list[int], desired: dict[int, float | None], widths: dict[int, 
     return out
 
 
-def compute_layout(tree: Tree) -> dict:
+def _layout_connected(tree: Tree) -> dict:
     relations, unions, kids = _couples_and_kids(tree)
     people = sorted(tree.people)
     parent_union = dict(relations.birth_couple)
@@ -386,3 +388,99 @@ def compute_layout(tree: Tree) -> dict:
         "unions": out_unions,
         "edges": edges,
     }
+
+
+def _components(people: list[str], unions: dict[str, list[str]], kids: dict[str, list[str]]) -> list[list[str]]:
+    """Groups of people connected through any couple or parent-child link, each sorted by id."""
+    parent = {pid: pid for pid in people}
+
+    def find(x: str) -> str:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for uid, members in unions.items():
+        for other in list(members[1:]) + list(kids[uid]):
+            parent[find(other)] = find(members[0])
+    groups: dict[str, list[str]] = {}
+    for pid in people:
+        groups.setdefault(find(pid), []).append(pid)
+    return [sorted(g) for g in groups.values()]
+
+
+def _shifted(layout: dict, dx: float) -> dict:
+    """A copy of a laid-out island moved right by `dx`."""
+    return {
+        "nodes": [{**n, "x": _num(n["x"] + dx)} for n in layout["nodes"]],
+        "unions": [{**u, "x": _num(u["x"] + dx)} for u in layout["unions"]],
+        "edges": [{**e, "points": [[_num(x + dx), y] for x, y in e["points"]]} for e in layout["edges"]],
+    }
+
+
+def compute_layout(tree: Tree) -> dict:
+    """Lay out every connected family as its own island, largest first, left to right.
+
+    Unrelated families used to share the generation rows, which wove small families and lone people into the
+    middle of the main tree and bent its connectors around them. People with no relatives at all are put in a
+    labelled grid below everything else.
+    """
+    people = sorted(tree.people)
+    if not people:
+        return _layout_connected(tree)
+    _, unions, kids = _couples_and_kids(tree)
+    groups = _components(people, unions, kids)
+    related = {pid for uid, members in unions.items() for pid in [*members, *kids[uid]]}
+    # a person who is their own parent is still "related" (to themselves), so the cycle is reported, not hidden
+    loners = sorted(g[0] for g in groups if len(g) == 1 and g[0] not in related)
+    islands = sorted((g for g in groups if g[0] in related or len(g) > 1), key=lambda g: (-len(g), g[0]))
+    if len(islands) <= 1 and not loners:
+        return _layout_connected(tree)
+
+    nodes: list[dict] = []
+    out_unions: list[dict] = []
+    edges: list[dict] = []
+    cursor = float(MARGIN)  # where the next island's left edge goes
+    bottom = float(MARGIN)
+    for group in islands:
+        sub = _layout_connected(Tree(people={pid: tree.people[pid] for pid in group}, site=dict(tree.site)))
+        moved = _shifted(sub, cursor - MARGIN)
+        nodes += moved["nodes"]
+        out_unions += moved["unions"]
+        edges += moved["edges"]
+        cursor += sub["bounds"]["w"] - 2 * MARGIN + ISLAND_GAP
+        bottom = max(bottom, sub["bounds"]["h"] - MARGIN)
+    right = max((n["x"] + n["w"] for n in nodes), default=float(MARGIN))
+
+    layout: dict = {"version": 1}
+    if loners:
+        columns = max(1, min(len(loners), LONER_COLUMNS, max(4, int((right - MARGIN) // (NODE_W + H_GAP)))))
+        label_y = bottom + (BLOCK_GAP if nodes else 0) + 12
+        top = label_y + 16
+        for index, pid in enumerate(loners):
+            col, row = index % columns, index // columns
+            nodes.append(
+                {
+                    "id": pid,
+                    "x": _num(MARGIN + col * (NODE_W + H_GAP)),
+                    "y": _num(top + row * (NODE_H + H_GAP)),
+                    "w": NODE_W,
+                    "h": NODE_H,
+                }
+            )
+        layout["labels"] = [{"id": "unconnected", "text": "Not connected to anyone", "x": MARGIN, "y": _num(label_y)}]
+    nodes.sort(key=lambda n: n["id"])
+    out_unions.sort(key=lambda u: u["id"])
+    edges.sort(key=lambda e: (e["from"], e["to"], e["kind"]))
+    layout.update(
+        {
+            "bounds": {
+                "w": _num(max(n["x"] + n["w"] for n in nodes) + MARGIN),
+                "h": _num(max(n["y"] + n["h"] for n in nodes) + MARGIN),
+            },
+            "nodes": nodes,
+            "unions": out_unions,
+            "edges": edges,
+        }
+    )
+    return layout

@@ -67,6 +67,9 @@ async function main() {
   check('ended partnership draws a dashed spouse line', (await ev(`document.querySelectorAll('.edge.spouse.ended').length`)) >= 1);
   check('ended partnership has a hollow dot', (await ev(`document.querySelectorAll('.union.ended').length`)) >= 1);
 
+  // ---- unconnected people are set apart
+  check('people with no relatives sit in a labelled group below the tree', (await ev(`(() => { const label = [...document.querySelectorAll('#tree .group-label')].find((t) => /Not connected/.test(t.textContent)); const lone = document.querySelector('.node[data-id="lone-person"] rect'); const bob = document.querySelector('.node[data-id="smith-bob"] rect'); return !!label && !!lone && Number(lone.getAttribute('y')) > Number(bob.getAttribute('y')) + 64; })()`)) === true);
+
   // ---- resting state: quiet and uniform
   check('at rest every connector is one neutral colour, with no per-family rainbow', (await ev(`new Set([...document.querySelectorAll('.edge')].map((e) => getComputedStyle(e).stroke)).size === 1 && document.querySelectorAll('.edge[class*="fam-"]').length === 0`)) === true);
   check('no legend and no highlight mode when nothing is selected', (await ev(`document.getElementById('legend').hidden && !document.getElementById('tree').classList.contains('has-hl')`)) === true);

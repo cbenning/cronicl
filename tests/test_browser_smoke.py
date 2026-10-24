@@ -44,6 +44,9 @@ def test_viewer_in_a_real_browser(tmp_path, sample_ged):
         "birth: 1925\ndeath: 1990\nparents: [smith-john, brown-mary]\n---\n",
         encoding="utf-8",
     )
+    (data / "people" / "lone-person.md").write_text(
+        "---\nid: lone-person\nname:\n  given: Lone\n  surname: Person\n---\n", encoding="utf-8"
+    )
     (data / "people" / "wife-first.md").write_text(
         "---\nid: wife-first\nname:\n  given: Ex\n  surname: Wife\n"
         "partnerships:\n  - with: smith-john\n    type: marriage\n    start: 1940\n    end: 1945\n"

@@ -632,6 +632,13 @@
           nodeLayer.appendChild(dot);
           return dot;
         }
+        if (kind === 'l:') {
+          var label = state.layout.labels[Number(ref)];
+          var text = svgEl('text', { x: label.x, y: label.y, 'class': 'group-label', 'font-size': labelSize() });
+          text.textContent = label.text;
+          nodeLayer.appendChild(text);
+          return text;
+        }
         var edge = state.layout.edges[Number(ref)];
         var role = hl ? hl.edges.get(Number(ref)) : null;
         var linEdge = lin ? lin.edges.get(Number(ref)) : undefined;
@@ -650,6 +657,8 @@
 
       // Junction dots are geometry, so they would shrink with the zoom: size them from the current scale instead.
       function dotRadius() { return Math.min(9, Math.max(3, 4 / scale)); }
+      // group labels are text in layout units too: keep them readable when the tree is fitted
+      function labelSize() { return Math.min(64, Math.max(14, 13 / scale)); }
 
       function render() {
         if (!grid) return;
@@ -673,8 +682,10 @@
         });
         viewport.setAttribute('transform', 'translate(' + tx + ' ' + ty + ') scale(' + scale + ')');
         var radius = dotRadius();
+        var size = labelSize();
         live.forEach(function (el, key) {
           if (key.slice(0, 2) === 'u:') el.setAttribute('r', radius);
+          else if (key.slice(0, 2) === 'l:') el.setAttribute('font-size', size);
         });
       }
 
@@ -805,6 +816,9 @@
         layout.edges.forEach(function (e, i) {
           var b = boundsOf(e.points);
           boxes.push({ id: 'e:' + i, x: b.x, y: b.y, w: b.w, h: b.h });
+        });
+        (layout.labels || []).forEach(function (l, i) {
+          boxes.push({ id: 'l:' + i, x: l.x, y: l.y - 16, w: 320, h: 24 });
         });
         grid = buildGrid(boxes, CELL);
         fit();

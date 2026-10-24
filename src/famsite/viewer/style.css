@@ -198,3 +198,4 @@ main { flex: 1; display: flex; min-height: 0; }
 .legend-modes button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 .legend-ramp { width: 220px; height: 8px; border-radius: 4px; background: linear-gradient(in oklab to right, var(--lin-old), var(--lin-mid), var(--lin-new)); }
 .legend-ends { display: flex; justify-content: space-between; margin-top: var(--space-1); font-size: .75rem; color: var(--muted); }
+.group-label { fill: var(--muted); font-weight: 600; letter-spacing: .04em; }
