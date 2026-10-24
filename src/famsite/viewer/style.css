@@ -14,6 +14,8 @@
   /* one colour per couple's lines while nobody is highlighted, so long shared corridors can be followed */
   --fam-0: #1d6fa5; --fam-1: #b7791f; --fam-2: #2f855a; --fam-3: #9b2c6b;
   --fam-4: #5a67d8; --fam-5: #c05621; --fam-6: #2c7a7b; --fam-7: #805ad5;
+  /* lineage ramp: oldest ancestor red, the selected person's generation violet, youngest descendant green */
+  --lin-old: oklch(0.50 0.19 27); --lin-mid: oklch(0.50 0.21 295); --lin-new: oklch(0.68 0.17 150);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -25,6 +27,7 @@
     --role-parent: #fb923c; --role-partner: #f472b6; --role-child: #4ade80; --role-sibling: #a78bfa;
     --fam-0: #63b3ed; --fam-1: #ecc94b; --fam-2: #68d391; --fam-3: #f687b3;
     --fam-4: #7f9cf5; --fam-5: #f6ad55; --fam-6: #4fd1c5; --fam-7: #b794f4;
+    --lin-old: oklch(0.70 0.18 27); --lin-mid: oklch(0.72 0.17 295); --lin-new: oklch(0.82 0.17 150);
   }
 }
 * { box-sizing: border-box; }
@@ -191,3 +194,17 @@ main { flex: 1; display: flex; min-height: 0; }
 .legend-swatch { display: inline-block; width: 22px; height: 5px; margin-right: var(--space-2); border-radius: 3px; vertical-align: middle; }
 .legend-swatch.role-parent { background: var(--role-parent); } .legend-swatch.role-partner { background: var(--role-partner); }
 .legend-swatch.role-child { background: var(--role-child); } .legend-swatch.role-sibling { background: var(--role-sibling); }
+/* lineage colours: --p is how far along its side of the ramp (0-100); colours are mixed in a perceptual space */
+.lin-old { --c: color-mix(in oklch, var(--lin-old) calc(var(--p) * 1%), var(--lin-mid)); }
+.lin-new { --c: color-mix(in oklch, var(--lin-new) calc(var(--p) * 1%), var(--lin-mid)); }
+.lin-mid { --c: var(--lin-mid); }
+.edge.lin { stroke: var(--c); stroke-width: 3.25px; }
+.union.lin { fill: var(--c); }
+.union.ended.lin { fill: var(--node); stroke: var(--c); }
+.node.lin rect { stroke: var(--c); stroke-width: 3px; }
+.node.lin-partner rect { stroke-dasharray: 5px 3px; }
+.legend-modes { display: flex; gap: var(--space-1); margin-bottom: var(--space-2); pointer-events: auto; }
+.legend-modes button { padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: .8rem; cursor: pointer; }
+.legend-modes button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.legend-ramp { width: 220px; height: 8px; border-radius: 4px; background: linear-gradient(in oklch to right, var(--lin-old), var(--lin-mid), var(--lin-new)); }
+.legend-ends { display: flex; justify-content: space-between; margin-top: var(--space-1); font-size: .75rem; color: var(--muted); }

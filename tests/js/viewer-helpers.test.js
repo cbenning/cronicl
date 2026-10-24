@@ -187,3 +187,72 @@ test('relationNote names the shared parent of a half-sibling and nothing for oth
   assert.strictEqual(v.relationNote({ type: 'sibling', via: [{ id: 'a', name: 'A' }] }), '');
   assert.strictEqual(v.relationNote({ id: 'x', name: 'X' }), '');
 });
+
+// three generations above "me", two below; a sibling and an aunt who are not on the line
+const lin = {
+  unions: [
+    { id: 'U1', members: ['g1', 'g2'] },
+    { id: 'U2', members: ['p', 'q'] },
+    { id: 'U3', members: ['me', 'w'] },
+    { id: 'U4', members: ['k1', 'z'] },
+  ],
+  edges: [
+    { from: 'g1', to: 'U1', kind: 'spouse' }, // 0
+    { from: 'g2', to: 'U1', kind: 'spouse' }, // 1
+    { from: 'U1', to: 'p', kind: 'child' }, // 2
+    { from: 'U1', to: 'aunt', kind: 'child' }, // 3
+    { from: 'p', to: 'U2', kind: 'spouse' }, // 4
+    { from: 'q', to: 'U2', kind: 'spouse' }, // 5
+    { from: 'U2', to: 'me', kind: 'child' }, // 6
+    { from: 'U2', to: 'sib', kind: 'child' }, // 7
+    { from: 'me', to: 'U3', kind: 'spouse' }, // 8
+    { from: 'w', to: 'U3', kind: 'spouse' }, // 9
+    { from: 'U3', to: 'k1', kind: 'child' }, // 10
+    { from: 'U3', to: 'k2', kind: 'child' }, // 11
+    { from: 'k1', to: 'U4', kind: 'spouse' }, // 12
+    { from: 'z', to: 'U4', kind: 'spouse' }, // 13
+    { from: 'U4', to: 'gk', kind: 'child' }, // 14
+  ],
+};
+
+test('lineageFor numbers ancestors and descendants by generation and leaves collaterals out', () => {
+  const r = v.lineageFor(lin, 'me');
+  const gens = Object.fromEntries([...r.people].filter(([, e]) => !e.partner).map(([k, e]) => [k, e.d]));
+  assert.deepStrictEqual(gens, { p: -1, q: -1, g1: -2, g2: -2, k1: 1, k2: 1, gk: 2 });
+  const partners = Object.fromEntries([...r.people].filter(([, e]) => e.partner).map(([k, e]) => [k, e.d]));
+  assert.deepStrictEqual(partners, { w: 0, z: 1 });
+  assert.ok(!r.people.has('sib') && !r.people.has('aunt') && !r.people.has('me'));
+  assert.strictEqual(r.up, 2);
+  assert.strictEqual(r.down, 2);
+});
+
+test('lineageFor colours the lines and junctions of the line only', () => {
+  const r = v.lineageFor(lin, 'me');
+  assert.deepStrictEqual(Object.fromEntries(r.edges), {
+    0: -2, 1: -2, 2: -1, 4: -1, 5: -1, 6: 0, 8: 0, 9: 0, 10: 1, 11: 1, 12: 1, 13: 1, 14: 2,
+  });
+  assert.ok(!r.edges.has(3) && !r.edges.has(7), "an aunt's and a sibling's descent are not on the line");
+  assert.deepStrictEqual(Object.fromEntries(r.unions), { U1: -2, U2: -1, U3: 0, U4: 1 });
+});
+
+test('lineageFor copes with a person who has no ancestors or descendants', () => {
+  const r = v.lineageFor({ unions: [], edges: [] }, 'x');
+  assert.strictEqual(r.people.size, 0);
+  assert.strictEqual(r.up, 0);
+  assert.strictEqual(r.down, 0);
+});
+
+test('lineageShade spreads each side over the full ramp, whatever its depth', () => {
+  assert.deepStrictEqual(v.lineageShade(-2, 2, 2), { side: 'old', pct: 100 });
+  assert.deepStrictEqual(v.lineageShade(-1, 2, 2), { side: 'old', pct: 50 });
+  assert.deepStrictEqual(v.lineageShade(1, 2, 4), { side: 'new', pct: 25 });
+  assert.deepStrictEqual(v.lineageShade(1, 0, 1), { side: 'new', pct: 100 });
+  assert.deepStrictEqual(v.lineageShade(0, 3, 3), { side: 'mid', pct: 0 });
+});
+
+test('generationLabel says how far above or below the selected person someone is', () => {
+  assert.strictEqual(v.generationLabel(0), 'same generation');
+  assert.strictEqual(v.generationLabel(-1), '1 generation above');
+  assert.strictEqual(v.generationLabel(-3), '3 generations above');
+  assert.strictEqual(v.generationLabel(2), '2 generations below');
+});

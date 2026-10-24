@@ -195,6 +195,94 @@
     });
   }
 
+  // Everyone on the selected person's own line, numbered by generation: ancestors negative, descendants positive.
+  // Partners of the person and of their descendants are listed with the generation of the person they married.
+  // Returns people (id -> {d, partner}, never `id` itself), edges (layout edge index -> d), unions (id -> d)
+  // and the deepest generation up and down, which the colour ramp is spread over.
+  function lineageFor(layout, id) {
+    var members = {}, birthOf = {}, kidsOf = {}, ownOf = {};
+    (layout.unions || []).forEach(function (u) { members[u.id] = u.members || []; });
+    layout.edges.forEach(function (e) {
+      if (e.kind === 'child') {
+        birthOf[e.to] = e.from;
+        (kidsOf[e.from] = kidsOf[e.from] || []).push(e.to);
+      } else if (e.kind === 'spouse') {
+        (ownOf[e.from] = ownOf[e.from] || []).push(e.to);
+      }
+    });
+    (layout.unions || []).forEach(function (u) {
+      if ((u.members || []).length === 1) (ownOf[u.members[0]] = ownOf[u.members[0]] || []).push(u.id);
+    });
+    var gen = new Map([[id, 0]]);
+    var partners = new Map();
+    var queue = [id];
+    while (queue.length) {
+      var child = queue.shift();
+      var birth = birthOf[child];
+      if (!birth) continue;
+      (members[birth] || []).forEach(function (m) {
+        if (!gen.has(m)) { gen.set(m, gen.get(child) - 1); queue.push(m); }
+      });
+    }
+    var descendants = new Set([id]);
+    var ownLineal = new Set();
+    queue = [id];
+    while (queue.length) {
+      var x = queue.shift();
+      (ownOf[x] || []).forEach(function (u) {
+        ownLineal.add(u);
+        (members[u] || []).forEach(function (m) {
+          if (m !== x && !gen.has(m) && !partners.has(m)) partners.set(m, gen.get(x));
+        });
+        (kidsOf[u] || []).forEach(function (c) {
+          if (!gen.has(c)) { gen.set(c, gen.get(x) + 1); descendants.add(c); queue.push(c); }
+        });
+      });
+    }
+    var unions = new Map();
+    ownLineal.forEach(function (u) {
+      var owner = (members[u] || []).filter(function (m) { return descendants.has(m); })[0];
+      if (owner !== undefined) unions.set(u, gen.get(owner));
+    });
+    gen.forEach(function (d, person) {
+      var u = birthOf[person];
+      if (u && !unions.has(u)) unions.set(u, d - 1);
+    });
+    var edges = new Map();
+    layout.edges.forEach(function (e, i) {
+      if (e.kind === 'spouse' && unions.has(e.to)) {
+        if (gen.has(e.from)) edges.set(i, gen.get(e.from));
+        else if (partners.has(e.from)) edges.set(i, partners.get(e.from));
+      } else if (e.kind === 'child' && unions.has(e.from) && gen.has(e.to)) {
+        edges.set(i, gen.get(e.to));
+      }
+    });
+    var people = new Map();
+    var up = 0, down = 0;
+    gen.forEach(function (d, person) {
+      if (person === id) return;
+      people.set(person, { d: d, partner: false });
+      if (d < 0) up = Math.max(up, -d);
+      else down = Math.max(down, d);
+    });
+    partners.forEach(function (d, person) { people.set(person, { d: d, partner: true }); });
+    return { people: people, edges: edges, unions: unions, up: up, down: down };
+  }
+
+  // Where a generation sits on the ramp. Each side is stretched over its own depth, so the oldest ancestor is
+  // always the full "old" colour and the youngest descendant the full "new" one, however many generations exist.
+  function lineageShade(d, up, down) {
+    if (d < 0) return { side: 'old', pct: Math.round(100 * Math.min(1, -d / Math.max(up, 1))) };
+    if (d > 0) return { side: 'new', pct: Math.round(100 * Math.min(1, d / Math.max(down, 1))) };
+    return { side: 'mid', pct: 0 };
+  }
+
+  function generationLabel(d) {
+    if (d === 0) return 'same generation';
+    var n = Math.abs(d);
+    return n + (n === 1 ? ' generation ' : ' generations ') + (d < 0 ? 'above' : 'below');
+  }
+
   // A stable colour slot for a couple, so one family's lines share a colour from one render to the next.
   function familyIndex(unionId, n) {
     var h = 2166136261; // FNV-1a, then a final mix so the low bits (used by the modulo) depend on every character
@@ -259,7 +347,13 @@
       return el;
     }
 
-    var state = { view: 'tree', selected: null, layout: null, index: null, timeline: null, personEvents: {} };
+    function savedColourMode() {
+      try { return localStorage.getItem('famsite.colourMode') === 'lineage' ? 'lineage' : 'family'; } catch (e) { return 'family'; }
+    }
+    var state = {
+      view: 'tree', selected: null, layout: null, index: null, timeline: null, personEvents: {},
+      colourMode: savedColourMode()
+    };
     var people = new Map();
 
     // ---------------------------------------------------------------- navigation
@@ -461,6 +555,7 @@
       var moved = false;
       var loading = null;
       var hl = null;
+      var lin = null;
       var fullLayout = null;
       var focusId = null;
       var focusCache = {};
@@ -472,23 +567,39 @@
         roleLayers[role] = svgEl('g');
         viewport.insertBefore(roleLayers[role], nodeLayer);
       });
+      var linLayer = svgEl('g'); // lineage-coloured connectors
+      viewport.insertBefore(linLayer, nodeLayer);
+
+      // put an element on the generation ramp: a side class plus how far along that side it sits
+      function shade(el, d) {
+        var sh = lineageShade(d, lin.up, lin.down);
+        el.classList.add('lin-' + sh.side);
+        el.style.setProperty('--p', sh.pct);
+      }
 
       function makeNode(id) {
         var n = nodes.get(id);
         var info = people.get(id) || { name: id, years: '' };
         var mark = '';
+        var linEntry = null;
         if (id === state.selected) mark = ' selected';
-        else if (hl) {
+        else if (lin) {
+          linEntry = lin.people.get(id);
+          if (linEntry) mark = ' lin' + (linEntry.partner ? ' lin-partner' : '');
+          else mark = id === hoverId ? ' hovered' : ' dim';
+        } else if (hl) {
           var role = hl.people.get(id);
           if (role) mark = ' related role-' + role;
           else mark = id === hoverId ? ' hovered' : ' dim';
         }
         if (id === focusId) mark += ' focus';
         var g = svgEl('g', { 'class': 'node' + mark, 'data-id': id });
+        if (linEntry) shade(g, linEntry.d);
         g.appendChild(svgEl('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 6 }));
         var wrapped = wrapName(info.name, n.w - 2 * NODE_PAD, measureName, 2);
         var tip = svgEl('title');
-        tip.textContent = info.name + (info.years ? ' (' + info.years + ')' : '');
+        tip.textContent = info.name + (info.years ? ' (' + info.years + ')' : '') +
+          (linEntry ? ' · ' + generationLabel(linEntry.d) + (linEntry.partner ? ' (partner)' : '') : '');
         g.appendChild(tip);
         var top = wrapped.lines.length > 1 ? n.y + 20 : n.y + 26;
         wrapped.lines.forEach(function (line, i) {
@@ -531,24 +642,32 @@
         }
         if (kind === 'u:') {
           var u = unionIndex.get(ref);
+          var linUnion = lin ? lin.unions.get(ref) : undefined;
           var dot = svgEl('circle', {
             cx: u.x, cy: u.y, r: dotRadius(),
             'class': 'union' + (endedUnions.has(ref) ? ' ended' : '') +
-              (hl ? (hl.unions.has(ref) ? ' hi role-' + hl.unions.get(ref) : ' dim') : ' fam-' + familyIndex(ref, FAMILY_COLOURS))
+              (lin ? (linUnion !== undefined ? ' lin' : ' dim')
+                : hl ? (hl.unions.has(ref) ? ' hi role-' + hl.unions.get(ref) : ' dim')
+                : ' fam-' + familyIndex(ref, FAMILY_COLOURS))
           });
+          if (linUnion !== undefined) shade(dot, linUnion);
           nodeLayer.appendChild(dot);
           return dot;
         }
         var edge = state.layout.edges[Number(ref)];
         var role = hl ? hl.edges.get(Number(ref)) : null;
+        var linEdge = lin ? lin.edges.get(Number(ref)) : undefined;
         var family = edge.kind === 'spouse' ? edge.to : edge.from;
         var line = svgEl('polyline', {
           points: edge.points.map(function (p) { return p.join(','); }).join(' '),
           'class': 'edge ' + edge.kind + (edge.kind === 'spouse' && endedUnions.has(edge.to) ? ' ended' : '') +
-            (hl ? (role ? ' hi role-' + role : ' dim') : ' fam-' + familyIndex(family, FAMILY_COLOURS)),
+            (lin ? (linEdge !== undefined ? ' hi lin' : ' dim')
+              : hl ? (role ? ' hi role-' + role : ' dim')
+              : ' fam-' + familyIndex(family, FAMILY_COLOURS)),
           fill: 'none'
         });
-        (role ? roleLayers[role] : edgeLayer).appendChild(line);
+        if (linEdge !== undefined) shade(line, linEdge);
+        (linEdge !== undefined ? linLayer : role ? roleLayers[role] : edgeLayer).appendChild(line);
         return line;
       }
 
@@ -582,11 +701,56 @@
         });
       }
 
-      function renderLegend(related) {
-        var rows = legendFor(related);
+      function setColourMode(mode) {
+        state.colourMode = mode;
+        try { localStorage.setItem('famsite.colourMode', mode); } catch (e) { /* private mode: remember for this visit only */ }
+        rebuild();
+      }
+
+      function renderLegend() {
         legendEl.textContent = '';
-        legendEl.hidden = !rows.length || !(state.view === 'tree' || state.view === 'focus');
-        rows.forEach(function (row) {
+        legendEl.hidden = !(lin || hl) || !(state.view === 'tree' || state.view === 'focus');
+        if (legendEl.hidden) return;
+        // the mode can be switched only while a person stays selected: hovering moves off the legend and ends
+        if (state.selected) {
+          var modes = document.createElement('div');
+          modes.className = 'legend-modes';
+          [['family', 'Family'], ['lineage', 'Lineage']].forEach(function (pair) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.setAttribute('data-mode', pair[0]);
+            b.setAttribute('aria-pressed', String(state.colourMode === pair[0]));
+            b.textContent = pair[1];
+            b.addEventListener('click', function () { setColourMode(pair[0]); });
+            modes.appendChild(b);
+          });
+          legendEl.appendChild(modes);
+        }
+        if (lin) {
+          if (!lin.people.size) {
+            var none = document.createElement('div');
+            none.textContent = 'No ancestors or descendants recorded';
+            legendEl.appendChild(none);
+            return;
+          }
+          var ramp = document.createElement('div');
+          ramp.className = 'legend-ramp';
+          legendEl.appendChild(ramp);
+          var ends = document.createElement('div');
+          ends.className = 'legend-ends';
+          [
+            lin.up ? 'Oldest · −' + lin.up : '',
+            'Selected',
+            lin.down ? 'Youngest · +' + lin.down : ''
+          ].forEach(function (text) {
+            var span = document.createElement('span');
+            span.textContent = text;
+            ends.appendChild(span);
+          });
+          legendEl.appendChild(ends);
+          return;
+        }
+        legendFor(hl).forEach(function (row) {
           var item = document.createElement('div');
           item.className = 'legend-item';
           var swatch = document.createElement('span');
@@ -599,9 +763,11 @@
 
       function rebuild() {
         var target = state.selected || hoverId;
-        hl = target && state.layout && nodes.has(target) ? relatedFor(state.layout, target) : null;
-        treeSvg.classList.toggle('has-hl', !!hl);
-        renderLegend(hl);
+        var known = target && state.layout && nodes.has(target);
+        lin = known && state.colourMode === 'lineage' ? lineageFor(state.layout, target) : null;
+        hl = known && !lin ? relatedFor(state.layout, target) : null;
+        treeSvg.classList.toggle('has-hl', !!(hl || lin));
+        renderLegend();
         live.forEach(function (el) { el.remove(); });
         live.clear();
         render();
@@ -1178,7 +1344,10 @@
     relatedFor: relatedFor,
     relationNote: relationNote,
     legendFor: legendFor,
-    familyIndex: familyIndex
+    familyIndex: familyIndex,
+    lineageFor: lineageFor,
+    lineageShade: lineageShade,
+    generationLabel: generationLabel
   };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;

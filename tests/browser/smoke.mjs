@@ -97,6 +97,20 @@ async function main() {
   check('roles are different colours', (await ev(`(() => { const c = (sel) => getComputedStyle(document.querySelector(sel)).stroke; return c('.edge.role-parent') !== c('.edge.role-sibling'); })()`)) === true);
   check('family colours step aside while a person is highlighted', (await ev(`document.getElementById('tree').classList.contains('has-hl') && document.querySelectorAll('.edge[class*="fam-"]').length === 0`)) === true);
   check('the legend names the roles on screen', (await ev(`(() => { const l = document.getElementById('legend'); return !l.hidden && /Parents/.test(l.textContent) && /Siblings/.test(l.textContent); })()`)) === true);
+  // ---- lineage colours
+  check('the legend offers the two colour modes', (await ev(`!!document.querySelector('#legend [data-mode="family"]') && !!document.querySelector('#legend [data-mode="lineage"]')`)) === true);
+  await click('#legend [data-mode="lineage"]');
+  await sleep(300);
+  check('lineage mode shades ancestors and descendants', (await ev(`document.querySelectorAll('.node.lin-old').length >= 1 && document.querySelectorAll('.node.lin-new').length >= 1 && document.querySelectorAll('.edge.lin').length >= 1`)) === true);
+  check('oldest and youngest are different colours', (await ev(`(() => { const c = (sel) => getComputedStyle(document.querySelector(sel + ' rect')).stroke; return c('.node.lin-old') !== c('.node.lin-new'); })()`)) === true);
+  check('relatives off the line fade in lineage mode', (await ev(`document.querySelector('.node[data-id="ellsworth-maude"]').classList.contains('dim')`)) === true);
+  check('the selected person keeps their own outline in lineage mode', (await ev(`document.querySelectorAll('.node.selected').length`)) === 1);
+  check('the legend shows the ramp and its ends', (await ev(`(() => { const l = document.getElementById('legend'); return !!l.querySelector('.legend-ramp') && /Oldest/.test(l.textContent) && /Youngest/.test(l.textContent); })()`)) === true);
+  check('node tooltips say how many generations away someone is', (await ev(`[...document.querySelectorAll('.node.lin-old title')].some((t) => /generations? above/.test(t.textContent))`)) === true);
+  check('the colour mode is remembered', (await ev(`localStorage.getItem('famsite.colourMode')`)) === 'lineage');
+  await click('#legend [data-mode="family"]');
+  await sleep(300);
+  check('switching back restores the relationship colours', (await ev(`document.querySelectorAll('.node.role-parent').length >= 2 && document.querySelectorAll('.node.lin').length === 0`)) === true);
   await shot('tree-panel-open');
   await click('#panel .close');
   await sleep(300);

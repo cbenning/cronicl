@@ -51,6 +51,10 @@ read-only utilities. There is deliberately no bulk form.
   Hovering a person, or selecting them, switches to relationship colours with a legend: parents orange,
   partners pink, children green, siblings (including half-siblings) violet; everyone else fades. Hover is a
   preview only; an open selection takes precedence.
+  A **Lineage** toggle in the legend (remembered in the browser) instead shades the selected person's own
+  line by generation: oldest ancestors deep red, the selected generation violet, the youngest descendants
+  green, with partners dashed and everyone off the line faded. Each side of the ramp is stretched over its
+  own depth, so hovering a node says how many generations it is above or below.
 - **Timeline:** every dated birth, marriage and death on one horizontal, zoomable time axis. People with no
   dated events are listed underneath.
 - **Focused tree:** `#/focus/<id>`, or "Focus tree" in the side panel: that person, everyone above them,
