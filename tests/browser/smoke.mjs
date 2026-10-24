@@ -99,6 +99,11 @@ async function main() {
   check('relatives are marked', (await ev(`document.querySelectorAll('.node.lin, .node.related').length`)) >= 2);
   check('unrelated people and lines are faded', (await ev(`document.querySelectorAll('.node.dim').length`)) >= 1);
   // ---- default: lineage colours
+  const hsvSat = (sel) => ev(`(() => { const css = getComputedStyle(document.querySelector(${JSON.stringify(sel)})).stroke; const c = document.createElement('canvas').getContext('2d', { willReadFrequently: true }); c.fillStyle = '#000'; c.fillStyle = css; c.fillRect(0, 0, 1, 1); const m = c.getImageData(0, 0, 1, 1).data; return (Math.max(m[0], m[1], m[2]) - Math.min(m[0], m[1], m[2])) / Math.max(m[0], m[1], m[2], 1); })()`);
+  check('highlighted lines and outlines are slim', (await ev(`parseFloat(getComputedStyle(document.querySelector('.edge.lin')).strokeWidth) <= 1.75 && parseFloat(getComputedStyle(document.querySelector('.node.lin rect')).strokeWidth) <= 1.75`)) === true);
+  const satOld = await hsvSat('.node.lin-old rect');
+  const satNew = await hsvSat('.node.lin-new rect');
+  check('the generation colours are muted, not saturated', satOld <= 0.62 && satNew <= 0.62, satOld.toFixed(2) + ' / ' + satNew.toFixed(2));
   check('the generation ramp is the default colouring', (await ev(`document.querySelectorAll('.node.lin-old').length >= 1 && document.querySelectorAll('.node.lin-new').length >= 1 && document.querySelectorAll('.edge.lin').length >= 1`)) === true);
   check('oldest and youngest are different colours', (await ev(`(() => { const c = (sel) => getComputedStyle(document.querySelector(sel + ' rect')).stroke; return c('.node.lin-old') !== c('.node.lin-new'); })()`)) === true);
   check('relatives off the line fade', (await ev(`document.querySelector('.node[data-id="ellsworth-maude"]').classList.contains('dim')`)) === true);

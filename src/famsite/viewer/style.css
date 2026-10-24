@@ -11,9 +11,10 @@
   --line: #a0a9b6; /* resting connectors: quiet, but still a solid line at fit zoom */
   --box-line: #bcc4cf; /* resting box outlines */
   /* a selected person's relatives, by relationship */
-  --role-parent: #ea580c; --role-partner: #db2777; --role-child: #16a34a; --role-sibling: #7c3aed;
-  /* lineage ramp: oldest ancestor red, the selected person's generation violet, youngest descendant green */
-  --lin-old: oklch(0.50 0.19 27); --lin-mid: oklch(0.50 0.21 295); --lin-new: oklch(0.68 0.17 150);
+  --role-parent: oklch(0.58 0.10 55); --role-partner: oklch(0.58 0.09 355);
+  --role-child: oklch(0.57 0.09 160); --role-sibling: oklch(0.55 0.09 290);
+  /* lineage ramp, deliberately muted: oldest ancestor terracotta, the selected generation dusty violet, youngest descendant sea green */
+  --lin-old: oklch(0.55 0.10 35); --lin-mid: oklch(0.50 0.06 285); --lin-new: oklch(0.58 0.08 190);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -23,8 +24,9 @@
     --edge: #6b7380; --node-line: #8b95a3;
     --line: #667082;
     --box-line: #4a5361;
-    --role-parent: #fb923c; --role-partner: #f472b6; --role-child: #4ade80; --role-sibling: #a78bfa;
-    --lin-old: oklch(0.70 0.18 27); --lin-mid: oklch(0.72 0.17 295); --lin-new: oklch(0.82 0.17 150);
+    --role-parent: oklch(0.76 0.09 55); --role-partner: oklch(0.76 0.08 355);
+    --role-child: oklch(0.76 0.08 160); --role-sibling: oklch(0.74 0.08 290);
+    --lin-old: oklch(0.74 0.09 35); --lin-mid: oklch(0.74 0.06 285); --lin-new: oklch(0.78 0.08 190);
   }
 }
 * { box-sizing: border-box; }
@@ -72,7 +74,7 @@ main { flex: 1; display: flex; min-height: 0; }
 .ev.selected rect { stroke: var(--sel); stroke-width: 2.5; }
 .node rect { fill: var(--node); stroke: var(--box-line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .node:hover rect { stroke: var(--sel); stroke-width: 1.75px; } /* hover accents only the node under the pointer */
-.node.selected rect { stroke: var(--sel); stroke-width: 2.25px; }
+.node.selected rect { stroke: var(--sel); stroke-width: 2px; }
 .node { cursor: pointer; }
 .node text { fill: currentColor; font-size: 13px; pointer-events: none; }
 .node .years { font-size: 11px; opacity: .7; }
@@ -81,17 +83,17 @@ main { flex: 1; display: flex; min-height: 0; }
 .edge { stroke: var(--line); stroke-width: 1.1px; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
 .edge.child { stroke-width: 1.25px; }
 .edge.spouse { stroke-width: 1px; }
-.edge.hi { stroke: var(--sel); stroke-width: 2px; }
+.edge.hi { stroke: var(--sel); stroke-width: 1.5px; }
 .edge.dim { opacity: .25; }
 .union { fill: var(--line); }
 .union.hi { fill: var(--sel); }
 .union.dim { opacity: .12; }
 .node.dim { opacity: .35; }
-.node.focus rect { stroke: #d97706; stroke-width: 3px; }
+.node.focus rect { stroke: #b7791f; stroke-width: 2px; }
 #focus-bar { display: flex; align-items: baseline; gap: 1rem; padding: .4rem 1rem; border-bottom: 1px solid var(--node-line); background: var(--node); }
 #focus-bar[hidden] { display: none; }
 #focus-bar .back { margin-left: auto; }
-.node.related rect { stroke: var(--sel); stroke-width: 2px; }
+.node.related rect { stroke: var(--sel); stroke-width: 1.5px; }
 .error { padding: 1rem; color: #b91c1c; }
 .plain-list { padding: 1rem 2rem; }
 .edge.ended { stroke-dasharray: 6px 4px; }
@@ -158,41 +160,41 @@ main { flex: 1; display: flex; min-height: 0; }
 .lifeline .mk.divorce { stroke: #dc2626; color: #dc2626; }
 .lifeline .mk.death { stroke: #6b7280; color: #6b7280; }
 .mini-tree { display: block; }
-.mini-tree .node.current rect { stroke: var(--accent); stroke-width: 3px; }
+.mini-tree .node.current rect { stroke: var(--accent); stroke-width: 2px; }
 .mini-tree a:hover .node rect { stroke: var(--accent); }
 .mini-tree .years { fill: var(--muted); font-size: 11px; }
 .mini-tree a { color: var(--text); }
 @media (max-width: 40rem) { .events li { grid-template-columns: 5.5rem 1fr; } .hero { flex-direction: column; align-items: flex-start; } }
 .union.ended { fill: var(--node); }
 /* relationship roles (a person is selected); these override the plain highlight colour */
-.edge.role-parent { stroke: var(--role-parent); stroke-width: 2px; }
-.edge.role-partner { stroke: var(--role-partner); stroke-width: 2px; }
-.edge.role-child { stroke: var(--role-child); stroke-width: 2px; }
-.edge.role-sibling { stroke: var(--role-sibling); stroke-width: 2px; }
+.edge.role-parent { stroke: var(--role-parent); stroke-width: 1.5px; }
+.edge.role-partner { stroke: var(--role-partner); stroke-width: 1.5px; }
+.edge.role-child { stroke: var(--role-child); stroke-width: 1.5px; }
+.edge.role-sibling { stroke: var(--role-sibling); stroke-width: 1.5px; }
 .union.role-parent { fill: var(--role-parent); } .union.role-partner { fill: var(--role-partner); }
 .union.role-child { fill: var(--role-child); } .union.role-sibling { fill: var(--role-sibling); }
 .union.ended.role-parent, .union.ended.role-partner, .union.ended.role-child, .union.ended.role-sibling { fill: var(--node); }
 .union.ended.role-parent { stroke: var(--role-parent); } .union.ended.role-partner { stroke: var(--role-partner); }
-.node.role-parent rect { stroke: var(--role-parent); stroke-width: 2px; }
-.node.role-partner rect { stroke: var(--role-partner); stroke-width: 2px; }
-.node.role-child rect { stroke: var(--role-child); stroke-width: 2px; }
-.node.role-sibling rect { stroke: var(--role-sibling); stroke-width: 2px; }
+.node.role-parent rect { stroke: var(--role-parent); stroke-width: 1.5px; }
+.node.role-partner rect { stroke: var(--role-partner); stroke-width: 1.5px; }
+.node.role-child rect { stroke: var(--role-child); stroke-width: 1.5px; }
+.node.role-sibling rect { stroke: var(--role-sibling); stroke-width: 1.5px; }
 #legend { position: absolute; left: var(--space-3); bottom: var(--space-3); z-index: 3; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); font-size: .85rem; pointer-events: none; }
 #legend[hidden] { display: none; }
 .legend-swatch { display: inline-block; width: 22px; height: 5px; margin-right: var(--space-2); border-radius: 3px; vertical-align: middle; }
 .legend-swatch.role-parent { background: var(--role-parent); } .legend-swatch.role-partner { background: var(--role-partner); }
 .legend-swatch.role-child { background: var(--role-child); } .legend-swatch.role-sibling { background: var(--role-sibling); }
-/* lineage colours: --p is how far along its side of the ramp (0-100); colours are mixed in a perceptual space */
-.lin-old { --c: color-mix(in oklch, var(--lin-old) calc(var(--p) * 1%), var(--lin-mid)); }
-.lin-new { --c: color-mix(in oklch, var(--lin-new) calc(var(--p) * 1%), var(--lin-mid)); }
+/* lineage colours: --p is how far along its side of the ramp (0-100); blended in OKLab, a straight perceptual blend */
+.lin-old { --c: color-mix(in oklab, var(--lin-old) calc(var(--p) * 1%), var(--lin-mid)); }
+.lin-new { --c: color-mix(in oklab, var(--lin-new) calc(var(--p) * 1%), var(--lin-mid)); }
 .lin-mid { --c: var(--lin-mid); }
-.edge.lin { stroke: var(--c); stroke-width: 2px; }
+.edge.lin { stroke: var(--c); stroke-width: 1.5px; }
 .union.lin { fill: var(--c); }
 .union.ended.lin { fill: var(--node); stroke: var(--c); }
-.node.lin rect { stroke: var(--c); stroke-width: 2px; }
+.node.lin rect { stroke: var(--c); stroke-width: 1.5px; }
 .node.lin-partner rect { stroke-dasharray: 5px 3px; }
 .legend-modes { display: flex; gap: var(--space-1); margin-bottom: var(--space-2); pointer-events: auto; }
 .legend-modes button { padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: .8rem; cursor: pointer; }
 .legend-modes button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
-.legend-ramp { width: 220px; height: 8px; border-radius: 4px; background: linear-gradient(in oklch to right, var(--lin-old), var(--lin-mid), var(--lin-new)); }
+.legend-ramp { width: 220px; height: 8px; border-radius: 4px; background: linear-gradient(in oklab to right, var(--lin-old), var(--lin-mid), var(--lin-new)); }
 .legend-ends { display: flex; justify-content: space-between; margin-top: var(--space-1); font-size: .75rem; color: var(--muted); }
