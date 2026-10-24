@@ -252,3 +252,19 @@ def test_person_page_embeds_lifeline_and_tree_and_is_deterministic(tmp_path, mak
     assert b'class="mini-tree"' in first and b'class="lifeline"' in first
     assert b'href="../smith-john/"' in first
     assert first == build(tmp_path / "two")
+
+
+def test_timeline_json_does_not_repeat_every_persons_events(tmp_path, make_tree):
+    tree = make_tree(
+        [
+            p("smith-john", "John", "Smith", birth=Event(date="1920"), death=Event(date="1990")),
+            p("smith-bob", "Bob", "Smith", birth=Event(date="1950"), parents=["smith-john"]),
+        ]
+    )
+    build_site(tree, tmp_path, today=TODAY)
+    timeline = json.loads((tmp_path / "timeline.json").read_text(encoding="utf-8"))
+    assert all("events" not in person for person in timeline["people"].values())
+    assert timeline["people"]["smith-bob"]["parents"] == ["smith-john"]  # relationships stay
+    assert all("text" in e for e in timeline["events"])  # the family view's wording stays
+    payload = json.loads((tmp_path / "data/people/smith-bob.json").read_text(encoding="utf-8"))
+    assert [e["id"] for e in payload["events"]] == ["birth:smith-bob", "death:smith-john"]

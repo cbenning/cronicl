@@ -211,7 +211,13 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     env = _env()
     put("layout.json", dumps(layout))
     put("index.json", dumps(index))
-    put("timeline.json", dumps(timeline))
+    # Each person's own event rows live in data/people/<id>.json; repeating them here would grow this file with the
+    # number of people squared-ish, and the Timeline tab downloads it whole.
+    public_timeline = {
+        **timeline,
+        "people": {pid: {k: v for k, v in info.items() if k != "events"} for pid, info in timeline["people"].items()},
+    }
+    put("timeline.json", dumps(public_timeline))
     put("index.html", env.get_template("index.html").render(title=title, people=index))
     person_template = env.get_template("person.html")
     people_info = {pid: {"name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()}

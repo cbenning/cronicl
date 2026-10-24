@@ -216,7 +216,7 @@
       return el;
     }
 
-    var state = { view: 'tree', selected: null, layout: null, index: null, timeline: null };
+    var state = { view: 'tree', selected: null, layout: null, index: null, timeline: null, personEvents: {} };
     var people = new Map();
 
     // ---------------------------------------------------------------- navigation
@@ -716,12 +716,11 @@
 
       function buildItems() {
         var data = state.timeline;
-        var byId = {};
-        data.events.forEach(function (ev) { byId[ev.id] = ev; });
         var rows;
         if (focus) {
-          rows = ((data.people[focus] || {}).events || []).map(function (r) {
-            return { event: byId[r.id], role: r.role, text: r.text, age: r.age, approx: r.age_approx };
+          // a person's rows come from their own payload: timeline.json does not repeat them per person
+          rows = (state.personEvents[focus] || []).map(function (r) {
+            return { event: r, role: r.role, text: r.text, age: r.age, approx: r.age_approx };
           });
         } else {
           rows = data.events.map(function (ev) { return { event: ev, role: null, text: ev.text }; });
@@ -936,6 +935,18 @@
           tlHead.textContent = 'No such person: ' + focus;
           items = [];
           render();
+          return;
+        }
+        if (focus && !state.personEvents[focus]) {
+          var wanted = focus;
+          tlHead.textContent = 'Loading…';
+          fetch('data/people/' + wanted + '.json')
+            .then(function (r) { return r.json(); })
+            .then(function (p) {
+              state.personEvents[wanted] = p.events || [];
+              if (focus === wanted) show(wanted);
+            })
+            .catch(function () { tlHead.textContent = 'Could not load this person.'; });
           return;
         }
         header();
