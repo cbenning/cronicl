@@ -9,6 +9,11 @@
   /* names the tree and timeline CSS already use */
   --edge: #8a8f98; --node: var(--surface); --node-line: #5b6470; --sel: var(--accent);
   --line: #566070; /* family-tree connectors: strong enough to read at fit zoom */
+  /* a selected or hovered person's relatives, by relationship */
+  --role-parent: #ea580c; --role-partner: #db2777; --role-child: #16a34a; --role-sibling: #7c3aed;
+  /* one colour per couple's lines while nobody is highlighted, so long shared corridors can be followed */
+  --fam-0: #1d6fa5; --fam-1: #b7791f; --fam-2: #2f855a; --fam-3: #9b2c6b;
+  --fam-4: #5a67d8; --fam-5: #c05621; --fam-6: #2c7a7b; --fam-7: #805ad5;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -17,6 +22,9 @@
     --accent: #6ea8fe; --shadow: none;
     --edge: #6b7380; --node-line: #8b95a3;
     --line: #a3adbb;
+    --role-parent: #fb923c; --role-partner: #f472b6; --role-child: #4ade80; --role-sibling: #a78bfa;
+    --fam-0: #63b3ed; --fam-1: #ecc94b; --fam-2: #68d391; --fam-3: #f687b3;
+    --fam-4: #7f9cf5; --fam-5: #f6ad55; --fam-6: #4fd1c5; --fam-7: #b794f4;
   }
 }
 * { box-sizing: border-box; }
@@ -29,7 +37,7 @@ a { color: var(--accent); }
 #results { position: absolute; top: 100%; left: 12rem; z-index: 5; list-style: none; margin: 0; padding: 0; background: var(--node); border: 1px solid var(--node-line); max-height: 16rem; overflow: auto; }
 #results button { display: block; width: 100%; text-align: left; padding: .4rem .6rem; border: 0; background: none; font: inherit; cursor: pointer; }
 main { flex: 1; display: flex; min-height: 0; }
-#views { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#views { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
 #tree { flex: 1; width: 100%; touch-action: none; cursor: grab; background: transparent; }
 #tree[hidden], #timeline-svg[hidden] { display: none; }
 #tabs { display: flex; gap: .25rem; }
@@ -154,3 +162,32 @@ main { flex: 1; display: flex; min-height: 0; }
 .mini-tree .years { fill: var(--muted); font-size: 11px; }
 .mini-tree a { color: var(--text); }
 @media (max-width: 40rem) { .events li { grid-template-columns: 5.5rem 1fr; } .hero { flex-direction: column; align-items: flex-start; } }
+/* family colours (nothing highlighted) */
+.edge.fam-0 { stroke: var(--fam-0); } .union.fam-0 { fill: var(--fam-0); }
+.edge.fam-1 { stroke: var(--fam-1); } .union.fam-1 { fill: var(--fam-1); }
+.edge.fam-2 { stroke: var(--fam-2); } .union.fam-2 { fill: var(--fam-2); }
+.edge.fam-3 { stroke: var(--fam-3); } .union.fam-3 { fill: var(--fam-3); }
+.edge.fam-4 { stroke: var(--fam-4); } .union.fam-4 { fill: var(--fam-4); }
+.edge.fam-5 { stroke: var(--fam-5); } .union.fam-5 { fill: var(--fam-5); }
+.edge.fam-6 { stroke: var(--fam-6); } .union.fam-6 { fill: var(--fam-6); }
+.edge.fam-7 { stroke: var(--fam-7); } .union.fam-7 { fill: var(--fam-7); }
+.union.ended { fill: var(--node); }
+/* relationship roles (a person is selected or hovered); these override the plain highlight colour */
+.edge.role-parent { stroke: var(--role-parent); stroke-width: 3.25px; }
+.edge.role-partner { stroke: var(--role-partner); stroke-width: 3px; }
+.edge.role-child { stroke: var(--role-child); stroke-width: 3.25px; }
+.edge.role-sibling { stroke: var(--role-sibling); stroke-width: 3px; }
+.union.role-parent { fill: var(--role-parent); } .union.role-partner { fill: var(--role-partner); }
+.union.role-child { fill: var(--role-child); } .union.role-sibling { fill: var(--role-sibling); }
+.union.ended.role-parent, .union.ended.role-partner, .union.ended.role-child, .union.ended.role-sibling { fill: var(--node); }
+.union.ended.role-parent { stroke: var(--role-parent); } .union.ended.role-partner { stroke: var(--role-partner); }
+.node.role-parent rect { stroke: var(--role-parent); stroke-width: 3px; }
+.node.role-partner rect { stroke: var(--role-partner); stroke-width: 3px; }
+.node.role-child rect { stroke: var(--role-child); stroke-width: 3px; }
+.node.role-sibling rect { stroke: var(--role-sibling); stroke-width: 3px; }
+.node.hovered rect { stroke: var(--sel); stroke-width: 3px; }
+#legend { position: absolute; left: var(--space-3); bottom: var(--space-3); z-index: 3; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); font-size: .85rem; pointer-events: none; }
+#legend[hidden] { display: none; }
+.legend-swatch { display: inline-block; width: 22px; height: 5px; margin-right: var(--space-2); border-radius: 3px; vertical-align: middle; }
+.legend-swatch.role-parent { background: var(--role-parent); } .legend-swatch.role-partner { background: var(--role-partner); }
+.legend-swatch.role-child { background: var(--role-child); } .legend-swatch.role-sibling { background: var(--role-sibling); }

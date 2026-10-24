@@ -91,24 +91,69 @@ const fam = {
   ],
 };
 
-test('relatedFor lights up the parents line, own couples and children, not siblings', () => {
+test('relatedFor colours the parents line, partners, children and siblings by role', () => {
   const r = v.relatedFor(fam, 'c');
-  assert.deepStrictEqual([...r.people].sort(), ['a', 'b', 'e', 'x']);
-  assert.deepStrictEqual([...r.edges].sort((m, n) => m - n), [0, 1, 2, 4, 5, 6]);
-  assert.ok(!r.edges.has(3), "sibling d's connector is not highlighted");
-  assert.deepStrictEqual([...r.unions].sort(), ['a+b', 'c+x']);
+  assert.deepStrictEqual(Object.fromEntries(r.people), { a: 'parent', b: 'parent', d: 'sibling', x: 'partner', e: 'child' });
+  assert.deepStrictEqual(Object.fromEntries(r.edges), { 0: 'parent', 1: 'parent', 2: 'parent', 3: 'sibling', 4: 'partner', 5: 'partner', 6: 'child' });
+  assert.deepStrictEqual(Object.fromEntries(r.unions), { 'a+b': 'parent', 'c+x': 'partner' });
 });
 
 test('relatedFor works for a child with one known parent', () => {
   const r = v.relatedFor(fam, 'k');
-  assert.deepStrictEqual([...r.people], ['solo']);
-  assert.deepStrictEqual([...r.edges], [7]);
+  assert.deepStrictEqual(Object.fromEntries(r.people), { solo: 'parent' });
+  assert.deepStrictEqual(Object.fromEntries(r.edges), { 7: 'parent' });
 });
 
 test('relatedFor of an unconnected person highlights nothing', () => {
   const r = v.relatedFor(fam, 'nobody');
   assert.strictEqual(r.edges.size, 0);
   assert.strictEqual(r.people.size, 0);
+});
+
+const halves = {
+  unions: [
+    { id: 'p+q', members: ['p', 'q'] },
+    { id: 'p+r', members: ['p', 'r'] },
+  ],
+  edges: [
+    { from: 'p', to: 'p+q', kind: 'spouse' },
+    { from: 'q', to: 'p+q', kind: 'spouse' },
+    { from: 'p+q', to: 'me', kind: 'child' },
+    { from: 'p+q', to: 's1', kind: 'child' },
+    { from: 'p', to: 'p+r', kind: 'spouse' },
+    { from: 'r', to: 'p+r', kind: 'spouse' },
+    { from: 'p+r', to: 'h', kind: 'child' },
+  ],
+};
+
+test('relatedFor counts half-siblings through a shared parent as siblings and leaves the other partner out', () => {
+  const r = v.relatedFor(halves, 'me');
+  assert.deepStrictEqual(Object.fromEntries(r.people), { p: 'parent', q: 'parent', s1: 'sibling', h: 'sibling' });
+  assert.strictEqual(r.edges.get(6), 'sibling');
+  assert.ok(!r.edges.has(4) && !r.edges.has(5), "the parent's other partnership link is not highlighted");
+});
+
+test('legendFor lists only the roles present, in a fixed order, with counts', () => {
+  const r = v.relatedFor(fam, 'c');
+  assert.deepStrictEqual(v.legendFor(r), [
+    { role: 'parent', label: 'Parents', count: 2 },
+    { role: 'partner', label: 'Partners', count: 1 },
+    { role: 'child', label: 'Children', count: 1 },
+    { role: 'sibling', label: 'Siblings', count: 1 },
+  ]);
+  assert.deepStrictEqual(v.legendFor(v.relatedFor(fam, 'k')), [{ role: 'parent', label: 'Parents', count: 1 }]);
+  assert.deepStrictEqual(v.legendFor(null), []);
+});
+
+test('familyIndex is stable, in range, and spreads different couples over several colours', () => {
+  assert.strictEqual(v.familyIndex('a+b', 8), v.familyIndex('a+b', 8));
+  const seen = new Set();
+  for (let i = 0; i < 40; i++) {
+    const k = v.familyIndex('person-' + i + '+other-' + i, 8);
+    assert.ok(k >= 0 && k < 8);
+    seen.add(k);
+  }
+  assert.ok(seen.size >= 5, 'got ' + seen.size + ' distinct colours');
 });
 
 test('visibleRange converts the pan/zoom state to a year span', () => {

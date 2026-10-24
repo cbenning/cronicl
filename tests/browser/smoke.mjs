@@ -65,6 +65,19 @@ async function main() {
   check('ended partnership draws a dashed spouse line', (await ev(`document.querySelectorAll('.edge.spouse.ended').length`)) >= 1);
   check('ended partnership has a hollow dot', (await ev(`document.querySelectorAll('.union.ended').length`)) >= 1);
 
+  // ---- family colours (nothing selected)
+  check('each couple draws its lines in a family colour', (await ev(`document.querySelectorAll('.edge[class*="fam-"]').length`)) >= 1);
+  check('no legend and no highlight mode when nothing is selected', (await ev(`document.getElementById('legend').hidden && !document.getElementById('tree').classList.contains('has-hl')`)) === true);
+
+  // ---- hover preview
+  await ev(`document.querySelector('.node[data-id="smith-bob"]').dispatchEvent(new PointerEvent('pointerenter'))`);
+  await sleep(200);
+  check('hovering a person previews their relatives with the legend', (await ev(`!document.getElementById('legend').hidden && document.querySelectorAll('.node.role-parent').length >= 2`)) === true);
+  check('hovering does not open the panel', (await ev(`document.getElementById('panel').hidden`)) === true);
+  await ev(`document.querySelector('.node[data-id="smith-bob"]').dispatchEvent(new PointerEvent('pointerleave'))`);
+  await sleep(200);
+  check('leaving a person clears the preview', (await ev(`document.getElementById('legend').hidden && document.querySelectorAll('.node.related').length === 0`)) === true);
+
   // ---- panel open / close / deselect
   await click('.node[data-id="smith-bob"]');
   await sleep(600);
@@ -79,6 +92,11 @@ async function main() {
   check('selected person lights up connectors', (await ev(`document.querySelectorAll('.edge.hi').length`)) >= 1);
   check('relatives are marked related', (await ev(`document.querySelectorAll('.node.related').length`)) >= 2);
   check('unrelated people and lines are faded', (await ev(`document.querySelectorAll('.node.dim').length`)) >= 1);
+  check('parents, siblings and children are told apart by role', (await ev(`document.querySelectorAll('.node.role-parent').length >= 2 && document.querySelectorAll('.node.role-sibling').length >= 1`)) === true);
+  check('the connectors carry the same roles', (await ev(`document.querySelectorAll('.edge.role-parent').length >= 1 && document.querySelectorAll('.edge.role-sibling').length >= 1`)) === true);
+  check('roles are different colours', (await ev(`(() => { const c = (sel) => getComputedStyle(document.querySelector(sel)).stroke; return c('.edge.role-parent') !== c('.edge.role-sibling'); })()`)) === true);
+  check('family colours step aside while a person is highlighted', (await ev(`document.getElementById('tree').classList.contains('has-hl') && document.querySelectorAll('.edge[class*="fam-"]').length === 0`)) === true);
+  check('the legend names the roles on screen', (await ev(`(() => { const l = document.getElementById('legend'); return !l.hidden && /Parents/.test(l.textContent) && /Siblings/.test(l.textContent); })()`)) === true);
   await shot('tree-panel-open');
   await click('#panel .close');
   await sleep(300);
@@ -86,6 +104,7 @@ async function main() {
   check('close deselects the node', (await ev(`document.querySelectorAll('.node.selected').length`)) === 0);
   check('close clears the url selection', (await ev(`location.hash`)) === '#/tree');
   check('close removes all highlighting', (await ev(`document.querySelectorAll('.edge.hi, .edge.dim, .node.dim, .node.related').length`)) === 0);
+  check('close hides the legend', (await ev(`document.getElementById('legend').hidden`)) === true);
   await click('.node[data-id="smith-john"]');
   await sleep(500);
   await ev(`document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))`);
@@ -142,6 +161,7 @@ async function main() {
   await ev(`document.querySelector('#tabs a[data-view="timeline"]').click()`);
   await sleep(800);
   check('timeline tab shows the timeline and really hides the tree', (await ev(`getComputedStyle(document.getElementById('timeline')).display !== 'none' && getComputedStyle(document.getElementById('tree')).display === 'none'`)) === true);
+  check('the relationship legend never shows over the timeline', (await ev(`document.getElementById('legend').hidden`)) === true);
   check('timeline tab is marked current', (await ev(`document.querySelector('#tabs a[data-view="timeline"]').getAttribute('aria-current')`)) === 'page');
   const evCount = await ev(`document.querySelectorAll('#timeline-svg .ev').length`);
   check('timeline renders events', evCount >= 5, evCount);

@@ -47,6 +47,10 @@ read-only utilities. There is deliberately no bulk form.
 
 - **Tree:** every person on a pan-and-zoom canvas (only what is on screen is drawn). Long names wrap onto two
   lines; siblings and half-siblings always share a row.
+- **Reading the tree:** each couple's lines have their own colour, so long shared corridors can be followed.
+  Hovering a person, or selecting them, switches to relationship colours with a legend: parents orange,
+  partners pink, children green, siblings (including half-siblings) violet; everyone else fades. Hover is a
+  preview only; an open selection takes precedence.
 - **Timeline:** every dated birth, marriage and death on one horizontal, zoomable time axis. People with no
   dated events are listed underneath.
 - **Focused tree:** `#/focus/<id>`, or "Focus tree" in the side panel: that person, everyone above them,

@@ -125,10 +125,10 @@
     return ev.year + 0.5;
   }
 
-  // What to light up when `id` is selected: their parents' line, their own couples and those couples' children.
-  // Siblings' connectors are deliberately left out so one family can be traced through a dense tree.
+  // What to light up for `id`, each part tagged with its relationship to them: parent, partner, child or sibling.
+  // Returns Maps: people (id -> role, never `id` itself), edges (layout edge index -> role) and unions (id -> role).
   function relatedFor(layout, id) {
-    var edges = new Set(), people = new Set(), unions = new Set();
+    var people = new Map(), edges = new Map(), unions = new Map();
     var members = {};
     (layout.unions || []).forEach(function (u) { members[u.id] = u.members || []; });
     var own = new Set();
@@ -140,27 +140,69 @@
     (layout.unions || []).forEach(function (u) {
       if ((u.members || []).length === 1 && u.members[0] === id) own.add(u.id); // a lone parent has no spouse edge
     });
-    var couples = new Set(own);
-    if (birth) couples.add(birth);
-    couples.forEach(function (uid) {
-      unions.add(uid);
-      (members[uid] || []).forEach(function (p) { people.add(p); });
+    function put(map, key, role) { if (!map.has(key)) map.set(key, role); }
+    var parents = new Set();
+    if (birth) {
+      unions.set(birth, 'parent');
+      (members[birth] || []).forEach(function (p) {
+        if (p !== id) { put(people, p, 'parent'); parents.add(p); }
+      });
+    }
+    // the unions that give this person half-siblings: other unions of their parents
+    var halfUnions = new Set();
+    Object.keys(members).forEach(function (uid) {
+      if (uid !== birth && !own.has(uid) && members[uid].some(function (m) { return parents.has(m); })) halfUnions.add(uid);
+    });
+    own.forEach(function (uid) {
+      put(unions, uid, 'partner');
+      (members[uid] || []).forEach(function (m) { if (m !== id) put(people, m, 'partner'); });
     });
     layout.edges.forEach(function (e, i) {
-      if (e.kind === 'spouse' && couples.has(e.to)) {
-        edges.add(i);
-        people.add(e.from);
+      if (e.kind === 'spouse') {
+        if (e.to === birth) put(edges, i, 'parent');
+        else if (own.has(e.to)) put(edges, i, 'partner');
       } else if (e.kind === 'child') {
-        if (own.has(e.from)) {
-          edges.add(i);
-          people.add(e.to);
-        } else if (e.from === birth && e.to === id) {
-          edges.add(i);
+        if (e.from === birth) {
+          if (e.to === id) put(edges, i, 'parent');
+          else { put(edges, i, 'sibling'); put(people, e.to, 'sibling'); }
+        } else if (own.has(e.from)) {
+          put(edges, i, 'child');
+          put(people, e.to, 'child');
+        } else if (halfUnions.has(e.from) && e.to !== id) {
+          put(edges, i, 'sibling');
+          put(people, e.to, 'sibling');
         }
       }
     });
     people.delete(id);
-    return { edges: edges, people: people, unions: unions };
+    return { people: people, edges: edges, unions: unions };
+  }
+
+  var LEGEND = [
+    { role: 'parent', label: 'Parents' },
+    { role: 'partner', label: 'Partners' },
+    { role: 'child', label: 'Children' },
+    { role: 'sibling', label: 'Siblings' }
+  ];
+
+  // The legend rows for a highlight: only roles that actually occur, with how many people have them.
+  function legendFor(related) {
+    if (!related) return [];
+    var counts = {};
+    related.people.forEach(function (role) { counts[role] = (counts[role] || 0) + 1; });
+    return LEGEND.filter(function (row) { return counts[row.role]; }).map(function (row) {
+      return { role: row.role, label: row.label, count: counts[row.role] };
+    });
+  }
+
+  // A stable colour slot for a couple, so one family's lines share a colour from one render to the next.
+  function familyIndex(unionId, n) {
+    var h = 2166136261; // FNV-1a, then a final mix so the low bits (used by the modulo) depend on every character
+    for (var i = 0; i < unionId.length; i++) h = Math.imul(h ^ unionId.charCodeAt(i), 16777619) >>> 0;
+    h ^= h >>> 15;
+    h = Math.imul(h, 2246822519) >>> 0;
+    h ^= h >>> 13;
+    return (h >>> 0) % n;
   }
 
   function visibleRange(tx, pxPerYear, originYear, width) {
@@ -198,6 +240,7 @@
     var results = $('results');
     var tabs = Array.prototype.slice.call(document.querySelectorAll('#tabs a'));
     var focusBar = $('focus-bar');
+    var legendEl = $('legend');
 
     var canvas = document.createElement('canvas').getContext('2d');
     function measureWith(font) {
@@ -239,6 +282,7 @@
       setHidden(treeSvg, !treeLike);
       setHidden(tlSection, view !== 'timeline');
       if (!treeLike || view !== 'focus') setHidden(focusBar, true);
+      if (!treeLike) legendEl.hidden = true;
       tabs.forEach(function (a) {
         var active = a.getAttribute('data-view') === (treeLike ? 'tree' : view);
         if (active) a.setAttribute('aria-current', 'page');
@@ -420,15 +464,25 @@
       var fullLayout = null;
       var focusId = null;
       var focusCache = {};
-      var hiLayer = svgEl('g');
-      viewport.insertBefore(hiLayer, nodeLayer);
+      var hoverId = null;
+      var FAMILY_COLOURS = 8;
+      // highlighted connectors are drawn after the plain ones, parents last so their line is never hidden
+      var roleLayers = {};
+      ['sibling', 'partner', 'child', 'parent'].forEach(function (role) {
+        roleLayers[role] = svgEl('g');
+        viewport.insertBefore(roleLayers[role], nodeLayer);
+      });
 
       function makeNode(id) {
         var n = nodes.get(id);
         var info = people.get(id) || { name: id, years: '' };
         var mark = '';
         if (id === state.selected) mark = ' selected';
-        else if (hl) mark = hl.people.has(id) ? ' related' : ' dim';
+        else if (hl) {
+          var role = hl.people.get(id);
+          if (role) mark = ' related role-' + role;
+          else mark = id === hoverId ? ' hovered' : ' dim';
+        }
         if (id === focusId) mark += ' focus';
         var g = svgEl('g', { 'class': 'node' + mark, 'data-id': id });
         g.appendChild(svgEl('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 6 }));
@@ -454,6 +508,17 @@
           e.stopPropagation();
           if (!moved) select(id, false, false);
         });
+        // hovering previews the same highlight without opening the panel; an open selection wins over it
+        g.addEventListener('pointerenter', function () {
+          if (drag || state.selected || hoverId === id) return;
+          hoverId = id;
+          rebuild();
+        });
+        g.addEventListener('pointerleave', function () {
+          if (hoverId !== id) return;
+          hoverId = null;
+          rebuild();
+        });
         return g;
       }
 
@@ -468,19 +533,22 @@
           var u = unionIndex.get(ref);
           var dot = svgEl('circle', {
             cx: u.x, cy: u.y, r: dotRadius(),
-            'class': 'union' + (endedUnions.has(ref) ? ' ended' : '') + (hl ? (hl.unions.has(ref) ? ' hi' : ' dim') : '')
+            'class': 'union' + (endedUnions.has(ref) ? ' ended' : '') +
+              (hl ? (hl.unions.has(ref) ? ' hi role-' + hl.unions.get(ref) : ' dim') : ' fam-' + familyIndex(ref, FAMILY_COLOURS))
           });
           nodeLayer.appendChild(dot);
           return dot;
         }
         var edge = state.layout.edges[Number(ref)];
-        var lit = hl && hl.edges.has(Number(ref));
+        var role = hl ? hl.edges.get(Number(ref)) : null;
+        var family = edge.kind === 'spouse' ? edge.to : edge.from;
         var line = svgEl('polyline', {
           points: edge.points.map(function (p) { return p.join(','); }).join(' '),
-          'class': 'edge ' + edge.kind + (edge.kind === 'spouse' && endedUnions.has(edge.to) ? ' ended' : '') + (hl ? (lit ? ' hi' : ' dim') : ''),
+          'class': 'edge ' + edge.kind + (edge.kind === 'spouse' && endedUnions.has(edge.to) ? ' ended' : '') +
+            (hl ? (role ? ' hi role-' + role : ' dim') : ' fam-' + familyIndex(family, FAMILY_COLOURS)),
           fill: 'none'
         });
-        (lit ? hiLayer : edgeLayer).appendChild(line);
+        (role ? roleLayers[role] : edgeLayer).appendChild(line);
         return line;
       }
 
@@ -514,8 +582,26 @@
         });
       }
 
+      function renderLegend(related) {
+        var rows = legendFor(related);
+        legendEl.textContent = '';
+        legendEl.hidden = !rows.length || !(state.view === 'tree' || state.view === 'focus');
+        rows.forEach(function (row) {
+          var item = document.createElement('div');
+          item.className = 'legend-item';
+          var swatch = document.createElement('span');
+          swatch.className = 'legend-swatch role-' + row.role;
+          item.appendChild(swatch);
+          item.appendChild(document.createTextNode(row.label + ' · ' + row.count));
+          legendEl.appendChild(item);
+        });
+      }
+
       function rebuild() {
-        hl = state.selected && state.layout && nodes.has(state.selected) ? relatedFor(state.layout, state.selected) : null;
+        var target = state.selected || hoverId;
+        hl = target && state.layout && nodes.has(target) ? relatedFor(state.layout, target) : null;
+        treeSvg.classList.toggle('has-hl', !!hl);
+        renderLegend(hl);
         live.forEach(function (el) { el.remove(); });
         live.clear();
         render();
@@ -1090,7 +1176,9 @@
     routeHash: routeHash,
     yearPosition: yearPosition,
     relatedFor: relatedFor,
-    relationNote: relationNote
+    relationNote: relationNote,
+    legendFor: legendFor,
+    familyIndex: familyIndex
   };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
