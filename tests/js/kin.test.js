@@ -57,3 +57,19 @@ test('the closest blood relation wins over a partnership route', () => {
   const Q = Object.assign({}, P, { cuz: person('U', ['aunt', 'unc'], ['me']), me: person('U', ['dad', 'mum'], ['cuz']) });
   assert.strictEqual(k.kinship(Q, 'me', 'cuz').label, 'first cousin');
 });
+
+test('phrase', () => {
+  const gm = { label: 'grandmother', by: 'blood' };
+  assert.strictEqual(k.phrase(gm, 'Nora Hollings', true), 'Your grandmother');
+  assert.strictEqual(k.phrase(gm, 'Nora Hollings', false), "Nora Hollings's grandmother");
+  assert.strictEqual(k.phrase({ label: "partner's father", by: 'in-law' }, 'Nora', true), "Your partner's father");
+  assert.strictEqual(k.phrase({ label: 'self', by: 'self' }, 'Nora', true), 'This is you');
+  assert.strictEqual(k.phrase({ label: 'self', by: 'self' }, 'Nora', false), '');
+  assert.strictEqual(k.phrase({ label: null, by: null }, 'Nora', true), '');
+});
+test('sentence', () => {
+  const N = { a: { name: 'Amy Smith', sex: 'F', parents: ['b'], partners: [] }, b: { name: 'Bob Smith', sex: 'M', parents: [], partners: [] }, c: { name: 'Cy', sex: 'U', parents: [], partners: [] } };
+  assert.strictEqual(k.sentence(N, 'a', 'b'), "Bob Smith is Amy Smith's father.");
+  assert.strictEqual(k.sentence(N, 'a', 'a'), 'That is the same person.');
+  assert.strictEqual(k.sentence(N, 'a', 'c'), 'No recorded relationship between Amy Smith and Cy.');
+});

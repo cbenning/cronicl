@@ -104,7 +104,25 @@
     return none();
   }
 
-  var api = { kinship: kinship };
+  // The line shown on a person's page: "Your grandmother", or "<viewer>'s grandmother" when the viewer has not
+  // said who they are and the home person stands in.
+  function phrase(result, viewerName, mine) {
+    if (!result || !result.label) return '';
+    if (result.by === 'self') return mine ? 'This is you' : '';
+    return (mine ? 'Your' : viewerName + "'s") + ' ' + result.label;
+  }
+
+  // The relate page's answer about two chosen people.
+  function sentence(people, a, b) {
+    if (!people[a] || !people[b]) return '';
+    if (a === b) return 'That is the same person.';
+    var nameA = people[a].name || a, nameB = people[b].name || b;
+    var result = kinship(people, a, b);
+    if (!result.label) return 'No recorded relationship between ' + nameA + ' and ' + nameB + '.';
+    return nameB + ' is ' + nameA + "'s " + result.label + '.';
+  }
+
+  var api = { kinship: kinship, phrase: phrase, sentence: sentence };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.famsiteKin = api;
 })(typeof window !== 'undefined' ? window : this);
