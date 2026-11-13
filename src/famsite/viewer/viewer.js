@@ -332,6 +332,12 @@
     return { first: first, last: last };
   }
 
+  // Where a tree node's text goes: centred across the box, or to the right of a 40px portrait when there is one.
+  function nodeTextBox(n, hasImage) {
+    if (hasImage) return { x: n.x + 54, anchor: 'start', width: n.w - 54 - 8 };
+    return { x: n.x + n.w / 2, anchor: 'middle', width: n.w - 20 };
+  }
+
   function visibleRange(tx, pxPerYear, originYear, width) {
     return { from: originYear + (0 - tx) / pxPerYear, to: originYear + (width - tx) / pxPerYear };
   }
@@ -561,7 +567,15 @@
           if (state.selected !== id) return;
           body.textContent = '';
           title.textContent = p.name;
-          avatar.textContent = p.initials || '';
+          if (p.image) {
+            var photo = document.createElement('img');
+            photo.className = 'avatar avatar-sm';
+            photo.src = p.image.src;
+            photo.alt = p.image.alt;
+            avatar.replaceWith(photo);
+          } else {
+            avatar.textContent = p.initials || '';
+          }
           function para(cls, text) {
             if (!text) return;
             var el = document.createElement('p');
@@ -672,21 +686,31 @@
         var g = svgEl('g', { 'class': 'node' + mark, 'data-id': id });
         if (linEntry) shade(g, linEntry.d);
         g.appendChild(svgEl('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 6 }));
-        var wrapped = wrapName(info.name, n.w - 2 * NODE_PAD, measureName, 2);
+        var box = nodeTextBox(n, !!info.image);
+        if (info.image) {
+          var clip = svgEl('clipPath', { id: 'clip-' + id });
+          clip.appendChild(svgEl('circle', { cx: n.x + 28, cy: n.y + 32, r: 20 }));
+          g.appendChild(clip);
+          g.appendChild(svgEl('image', {
+            href: info.image, x: n.x + 8, y: n.y + 12, width: 40, height: 40,
+            'clip-path': 'url(#clip-' + id + ')', preserveAspectRatio: 'xMidYMid slice'
+          }));
+        }
+        var wrapped = wrapName(info.name, box.width, measureName, 2);
         var tip = svgEl('title');
         tip.textContent = info.name + (info.years ? ' (' + info.years + ')' : '') +
           (linEntry ? ' · ' + generationLabel(linEntry.d) + (linEntry.partner ? ' (partner)' : '') : '');
         g.appendChild(tip);
         var top = wrapped.lines.length > 1 ? n.y + 20 : n.y + 26;
         wrapped.lines.forEach(function (line, i) {
-          var t = svgEl('text', { x: n.x + n.w / 2, y: top + i * 16, 'text-anchor': 'middle', 'class': 'name' });
+          var t = svgEl('text', { x: box.x, y: top + i * 16, 'text-anchor': box.anchor, 'class': 'name' });
           t.textContent = line;
           g.appendChild(t);
         });
         var years = svgEl('text', {
-          x: n.x + n.w / 2,
+          x: box.x,
           y: n.y + n.h - 10,
-          'text-anchor': 'middle',
+          'text-anchor': box.anchor,
           'class': 'years'
         });
         years.textContent = info.years;
@@ -1546,6 +1570,7 @@
     barRect: barRect,
     axisBounds: axisBounds,
     rowWindow: rowWindow,
+    nodeTextBox: nodeTextBox,
     initialView: initialView,
     lodFor: lodFor,
     zoomAt: zoomAt,

@@ -379,6 +379,11 @@ async function main() {
   await send('Page.navigate', { url: base + '/tree.html#/tree/smith-bob' }); await sleep(1500);
   check('the panel shows the life summary and no separate places line', (await ev(`(() => { const s = document.querySelector('#panel .summary'); return !!s && /^Born /.test(s.textContent) && !document.querySelector('#panel .places'); })()`)) === true);
 
+  await send('Page.navigate', { url: base + '/p/ellsworth-maude/' }); await sleep(800);
+  check('the page hero shows the portrait in the avatar box', (await ev(`(() => { const i = document.querySelector('.hero img.avatar'); const b = i && i.getBoundingClientRect(); return !!i && i.naturalWidth > 0 && b.width === 112 && b.height === 112; })()`)) === true);
+  await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' }); await sleep(1500);
+  check('the panel and the tree node show the portrait', (await ev(`!!document.querySelector('#panel img.avatar') && !!document.querySelector('.node[data-id="ellsworth-maude"] image') && !document.querySelector('.node[data-id="smith-bob"] image')`)) === true);
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });

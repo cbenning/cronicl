@@ -266,3 +266,6 @@ h1, h2, .site-title, .chip-name, .panel-head h2, .bio { font-family: var(--font-
   .person { max-width: none; }
   * { box-shadow: none !important; }
 }
+
+/* Portraits */
+img.avatar { object-fit: cover; }

@@ -242,3 +242,9 @@ test('rowWindow keeps five rows of overscan', () => {
   assert.deepStrictEqual(v.rowWindow(600, 300, 30, 100), { first: 15, last: 35 });
   assert.deepStrictEqual(v.rowWindow(0, 300, 30, 4), { first: 0, last: 4 });
 });
+
+test('nodeTextBox makes room for a portrait', () => {
+  const n = { x: 100, y: 0, w: 160, h: 64 };
+  assert.deepStrictEqual(v.nodeTextBox(n, false), { x: 180, anchor: 'middle', width: 140 });
+  assert.deepStrictEqual(v.nodeTextBox(n, true), { x: 154, anchor: 'start', width: 98 });
+});

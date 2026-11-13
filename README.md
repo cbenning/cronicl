@@ -106,10 +106,17 @@ deselects). URLs are `#/tree[/<id>]`, `#/focus/<id>` and `#/timeline[/<id>]`.
 site.yml            title, intro, home, schema_version, privacy settings
 people/<id>.md      one file per person -- the only record type
 archive/            original .ged files, unmodified
+media/              portrait images named by `portrait:` in a person file
 ```
 
 `home:` in `site.yml` names the person the tree opens on (a person id). Without it the person with the most
 descendants is used; `check` warns when `home:` names nobody.
+
+`portrait: scans/nora.jpg` names one picture for a person, as a path under `media/` (`.jpg`, `.jpeg`, `.png`,
+`.webp`, `.gif`, `.avif`). `build` copies each referenced file, unchanged, to `out/media/`; nothing is resized,
+so keep portraits at most 600px wide and under 1 MB (`check` warns above 1 MB). The picture shows on the person
+page, in the side panel and on the person's tree box. A path that leaves `media/` is an error and is never
+copied, and a person hidden or replaced by privacy redaction never has a portrait.
 
 A person file:
 

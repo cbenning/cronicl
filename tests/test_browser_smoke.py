@@ -2,6 +2,7 @@
 
 Set FAMSITE_CHROME to a Chrome/Chromium/chrome-headless-shell binary to choose one explicitly.
 """
+import base64
 import functools
 import glob
 import http.server
@@ -41,8 +42,14 @@ def test_viewer_in_a_real_browser(tmp_path, sample_ged):
     assert main(["import-gedcom", str(sample_ged), "--dir", str(data), "-a"]) == 0
     (data / "people" / "ellsworth-maude.md").write_text(
         "---\nid: ellsworth-maude\nname:\n  given: Maude Sylvie Marnie\n  surname: Ellsworth\n"
-        "birth: 1925\ndeath: 1990\nparents: [smith-john, brown-mary]\n---\n",
+        "birth: 1925\ndeath: 1990\nportrait: maude.png\nparents: [smith-john, brown-mary]\n---\n",
         encoding="utf-8",
+    )
+    (data / "media").mkdir(exist_ok=True)
+    (data / "media" / "maude.png").write_bytes(
+        base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+        )
     )
     (data / "people" / "kid-now.md").write_text(
         "---\nid: kid-now\nname:\n  given: Kid\n  surname: Now\nbirth: 2000-05-05\nparents: [smith-bob]\n---\n",
