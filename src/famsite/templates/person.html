@@ -6,6 +6,7 @@
 <meta name="famsite-home" content="{{ home or '' }}">
 <title>{{ person.name }} — {{ title }}</title>
 <link rel="stylesheet" href="{{ root }}style.css?v={{ v.css }}">
+<script src="{{ root }}site.js?v={{ v.site }}" defer></script>
 </head>
 <body class="person-page">
 {% include "_header.html" %}

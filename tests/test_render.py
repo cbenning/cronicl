@@ -340,3 +340,18 @@ def test_home_page_of_an_empty_site(tmp_path, make_tree):
     build_site(make_tree([]), tmp_path, today=TODAY)
     home = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "No people yet" in home and "Recently updated" not in home
+
+
+def test_people_index_groups_by_surname(tmp_path, make_tree):
+    tree = make_tree([p("a", "Ann", "Müller"), p("b", "Bo", "MULLER"), p("c", "Cy", None), p("d", "Di", "Abel")])
+    build_site(tree, tmp_path, today=TODAY)
+    page = (tmp_path / "people/index.html").read_text(encoding="utf-8")
+    assert page.count('id="s-muller"') == 1
+    assert page.index('id="s-abel"') < page.index('id="s-muller"') < page.index('id="s-none"')
+    assert 'href="../p/a/"' in page and 'data-text="Ann Müller  a"' in page
+    assert (tmp_path / "site.js").exists()
+
+
+def test_people_index_of_an_empty_site(tmp_path, make_tree):
+    build_site(make_tree([]), tmp_path, today=TODAY)
+    assert "No people yet" in (tmp_path / "people/index.html").read_text(encoding="utf-8")

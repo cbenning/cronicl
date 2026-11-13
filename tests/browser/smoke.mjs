@@ -337,6 +337,11 @@ async function main() {
   await send('Page.navigate', { url: base + '/index.html#/tree/smith-bob' }); await sleep(1500);
   check('an old viewer link is forwarded to tree.html', /\/tree\.html#\/tree\/smith-bob$/.test(await ev('location.href')), await ev('location.href'));
 
+  await send('Page.navigate', { url: base + '/people/index.html?q=' + encodeURIComponent('bob <b>"') }); await sleep(800);
+  check('the people index filters by ?q= as plain text', (await ev(`(() => { const shown = [...document.querySelectorAll('[data-person]')].filter((li) => !li.hidden); return shown.length >= 0 && !document.querySelector('b:not([class])') && document.querySelector('.site-search input').value === 'bob <b>"'; })()`)) === true);
+  await send('Page.navigate', { url: base + '/people/index.html?q=bob' }); await sleep(800);
+  check('filtering leaves only matching people and hides empty groups', (await ev(`(() => { const shown = [...document.querySelectorAll('[data-person]')].filter((li) => !li.hidden); return shown.length >= 1 && shown.every((li) => /bob/i.test(li.dataset.text)) && [...document.querySelectorAll('[data-group]')].every((g) => g.hidden === !g.querySelector('[data-person]:not([hidden])')); })()`)) === true);
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });

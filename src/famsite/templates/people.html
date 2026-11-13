@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="famsite-home" content="{{ home or '' }}">
+<title>People — {{ title }}</title>
+<link rel="stylesheet" href="{{ root }}style.css?v={{ v.css }}">
+<script src="{{ root }}site.js?v={{ v.site }}" defer></script>
+</head>
+<body class="site-page people-page">
+{% include "_header.html" %}
+<main class="index">
+  <h1>People</h1>
+  {% if not groups %}
+  <p>No people yet.</p>
+  {% endif %}
+  {% for g in groups %}
+  <section data-group id="s-{{ g.slug }}">
+    <h2>{{ g.heading }} <span class="count">{{ g.people | length }}</span></h2>
+    <ul>
+      {% for person in g.people %}<li data-person data-text="{{ person.name }} {{ person.years }} {{ person.id }}"><a href="{{ root }}p/{{ person.id }}/">{{ person.name }}</a>{% if person.years %} <span class="years">{{ person.years }}</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+  <p id="no-match" hidden>No one matches.</p>
+</main>
+</body>
+</html>

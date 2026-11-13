@@ -17,6 +17,7 @@ from .layout import compute_layout
 from .model import Event, Tree
 from .privacy import redact
 from .relations import Relations, build_relations
+from .slug import slugify
 from .stats import site_stats
 from .svgviews import lifeline_svg, tree_svg
 from .timeline import build_timeline, event_text
@@ -220,6 +221,22 @@ def _home_context(visible: Tree, site: dict, payloads: dict, timeline: dict, rel
     }
 
 
+def _people_groups(visible: Tree, index: list[dict]) -> list[dict]:
+    """People grouped by surname (case and accents folded), groups in folded order, nameless people last."""
+    by_slug: dict[str, dict] = {}
+    for entry in index:  # `index` is sorted by name then id
+        surname = (visible.people[entry["id"]].surname or "").strip()
+        slug = slugify(surname) or "none"
+        group = by_slug.setdefault(slug, {"slug": slug, "heading": surname or "No surname recorded", "people": []})
+        group["people"].append(entry)
+    for group in by_slug.values():
+        if group["slug"] != "none":
+            first = min(group["people"], key=lambda e: e["id"])
+            group["heading"] = (visible.people[first["id"]].surname or "").strip()
+    ordered = sorted(by_slug.values(), key=lambda g: (g["slug"] == "none", g["slug"]))
+    return ordered
+
+
 def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | None = None) -> BuildSummary:
     out_dir = Path(out_dir)
     _clear_generated(out_dir)
@@ -260,9 +277,15 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
         "people": {pid: {k: v for k, v in info.items() if k != "events"} for pid, info in timeline["people"].items()},
     }
     put("timeline.json", dumps(public_timeline))
-    versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css")}
+    versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css"), "site": _asset_version("site.js")}
     home_context = _home_context(visible, tree.site, payloads, timeline, relations, home, recent)
     put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root="", **home_context))
+    put(
+        "people/index.html",
+        env.get_template("people.html").render(
+            title=title, v=versions, home=home, root="../", groups=_people_groups(visible, index)
+        ),
+    )
     put("tree.html", env.get_template("tree.html").render(title=title, people=index, v=versions, home=home, root=""))
     person_template = env.get_template("person.html")
     people_info = {pid: {"name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()}
@@ -287,7 +310,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
             ),
         )
 
-    for asset in ("viewer.js", "style.css"):
+    for asset in ("viewer.js", "style.css", "site.js"):
         source = _PACKAGE / "viewer" / asset
         if source.exists():
             target = out_dir / asset
