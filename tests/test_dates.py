@@ -110,3 +110,13 @@ def test_format_date(text, expected):
 ])
 def test_format_years_never_prints_an_open_dash(birth, death, expected):
     assert format_years(birth, death) == expected
+
+
+from famsite.dates import year_position
+
+
+def test_year_position():
+    assert year_position(1900, None, None) == 1900.5
+    assert year_position(1900, 7, 1) == 1900.5
+    assert year_position(1900, 1, None) == 1900.0
+    assert year_position(1900, 12, 31) == 1900.997

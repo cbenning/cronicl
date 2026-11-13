@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .dates import ParsedDate, age_between, parse_date
+from .dates import ParsedDate, age_between, parse_date, year_position
 from .model import Tree
 from .relations import Relations
 
@@ -97,7 +97,7 @@ def _person_rows(events: list[dict], info: dict, pid: str) -> list[tuple[dict, s
     return rows
 
 
-def build_timeline(tree: Tree, relations: Relations) -> dict:
+def build_timeline(tree: Tree, relations: Relations, living: set[str] | None = None) -> dict:
     """Dated life events (birth, marriage, death) plus the relationships needed for per-person timelines."""
     events: list[dict] = []
     for pid in sorted(tree.people):
@@ -175,11 +175,37 @@ def build_timeline(tree: Tree, relations: Relations) -> dict:
             )
         people[pid]["events"] = rows
 
+    def position(date_text: str | None) -> float | None:
+        parsed = parse_date(date_text)
+        return year_position(parsed.year, parsed.month, parsed.day) if parsed else None
+
+    starts: dict[str, float] = {}
+    ends: dict[str, float] = {}
+    for pid in sorted(tree.people):
+        person = tree.people[pid]
+        start = position(person.birth.date) if person.birth else None
+        end = position(person.death.date) if person.death else None
+        open_end = None
+        if start is not None and end is None:
+            open_end = "living" if pid in (living or set()) else "unknown"
+        people[pid]["span"] = {"start": start, "end": end, "open": open_end}
+        if start is not None:
+            starts[pid] = start
+        elif end is not None:
+            ends[pid] = end
+
+    def order(pid: str, at: float):
+        return (at, tree.people[pid].display_name.lower(), pid)
+
+    rows = [p for p in sorted(starts, key=lambda x: order(x, starts[x]))]
+    rows += sorted(ends, key=lambda x: order(x, ends[x]))
+
     years = [e["year"] for e in events]
     return {
         "version": 1,
         "range": {"min": min(years) if years else None, "max": max(years) if years else None},
         "events": events,
         "people": people,
+        "rows": rows,
         "undated": sorted(pid for pid in tree.people if pid not in dated),
     }

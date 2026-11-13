@@ -17,7 +17,7 @@ from .kin import build_kin
 from .layout import compute_layout
 from .model import Event, Tree
 from .places import place_index
-from .privacy import redact
+from .privacy import is_living, redact
 from .relations import Relations, build_relations
 from .slug import slugify
 from .stats import site_stats
@@ -255,7 +255,9 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
     title = str(tree.site.get("title", "Family Tree"))
     home = home_person(visible, relations) or ""
 
-    timeline = build_timeline(visible, relations)
+    cutoff = int(privacy.get("cutoff_years", 100))
+    living = {pid for pid, person in visible.people.items() if is_living(person, today, cutoff)}
+    timeline = build_timeline(visible, relations, living)
     payloads = {pid: person_payload(visible, pid, relations, timeline) for pid in sorted(visible.people)}
     index = sorted(
         ({"id": pid, "name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()),

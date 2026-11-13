@@ -315,3 +315,35 @@ def test_lifetime_bound_uses_only_the_known_side(make_tree):
     ])
     rows = build_timeline(tree, build_relations(tree))["people"]["me"]["events"]
     assert [r["id"] for r in rows] == ["birth:sib", "death:me"]
+
+
+def test_spans_and_rows(make_tree):
+    tree = make_tree([
+        {"id": "a", "given": "Ann", "birth": Event(date="1900-07-01"), "death": Event(date="1980")},
+        {"id": "b", "given": "Bob", "birth": Event(date="1990")},
+        {"id": "c", "given": "Cy", "birth": Event(date="1850")},
+        {"id": "d", "given": "Di", "death": Event(date="1970")},
+        {"id": "e", "given": "Ed"},
+        {"id": "f", "given": "Flo", "birth": Event(date="1995"), "living": False},
+    ])
+    tl = build_timeline(tree, build_relations(tree), living={"b", "e"})
+    spans = {pid: info["span"] for pid, info in tl["people"].items()}
+    assert spans == {
+        "a": {"start": 1900.5, "end": 1980.5, "open": None},
+        "b": {"start": 1990.5, "end": None, "open": "living"},
+        "c": {"start": 1850.5, "end": None, "open": "unknown"},
+        "d": {"start": None, "end": 1970.5, "open": None},
+        "e": {"start": None, "end": None, "open": None},
+        "f": {"start": 1995.5, "end": None, "open": "unknown"},
+    }
+    assert tl["rows"] == ["c", "a", "b", "f", "d"]
+
+
+def test_build_site_treats_living_by_the_privacy_rule(tmp_path, make_tree):
+    tree = make_tree([
+        {"id": "b", "given": "Bob", "birth": Event(date="1990")},
+        {"id": "f", "given": "Flo", "birth": Event(date="1995"), "living": False},
+    ])
+    build_site(tree, tmp_path, today=date(2026, 10, 10))
+    people = json.loads((tmp_path / "timeline.json").read_text(encoding="utf-8"))["people"]
+    assert people["b"]["span"]["open"] == "living" and people["f"]["span"]["open"] == "unknown"

@@ -77,6 +77,13 @@ def format_years(birth: str | None, death: str | None) -> str:
     return ""
 
 
+def year_position(year: int, month: int | None, day: int | None) -> float:
+    """A date as a decimal year, to place it on a time axis: July 1 of any year is year + 0.5."""
+    if month:
+        return round(year + (month - 1) / 12 + ((day or 1) - 1) / 372, 3)
+    return round(year + 0.5, 3)
+
+
 def format_date(text: str | None) -> str:
     """Write a date in words: '12 March 1941', 'about 1941'. Unparseable text is returned as written."""
     if text is None:
