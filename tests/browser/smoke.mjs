@@ -362,6 +362,20 @@ async function main() {
   await send('Page.navigate', { url: base + '/relate/index.html?a=smith-amy&b=smith-john' }); await sleep(1200);
   check('the relate page answers for the two people in the link', /grandfather\.$/.test(await ev(`document.getElementById('relate-answer').textContent`)), await ev(`document.getElementById('relate-answer').textContent`));
 
+  // ---- look
+  await send('Page.navigate', { url: base + '/p/smith-bob/' }); await sleep(800);
+  const look = await ev(`(() => { const css = getComputedStyle(document.documentElement); const h1 = getComputedStyle(document.querySelector('.hero h1')).fontFamily; return { bg: css.getPropertyValue('--bg').trim(), text: css.getPropertyValue('--text').trim(), h1, body: getComputedStyle(document.body).fontFamily, column: document.querySelector('main.person').getBoundingClientRect().width, overflow: document.documentElement.scrollWidth > window.innerWidth }; })()`);
+  check('warm neutral tokens are in place', look.bg === '#faf8f5' && look.text === '#211e1a', JSON.stringify(look));
+  check('names are set in the serif stack and the interface in the system stack', /Palatino|Iowan|Georgia/.test(look.h1) && /system-ui/.test(look.body), JSON.stringify(look));
+  check('the person page is one column no wider than 60rem and never scrolls sideways', look.column <= 60 * 16 + 1 && !look.overflow, JSON.stringify(look));
+  await ev(`(() => { const a = document.createElement('article'); a.className = 'bio'; a.textContent = 'https://example.org/' + 'a'.repeat(200); document.querySelector('.hero').after(a); })()`);
+  check('a long unbroken URL in a biography wraps', (await ev(`document.documentElement.scrollWidth <= window.innerWidth && document.querySelector('.bio').getBoundingClientRect().width <= 46 * 16 + 1`)) === true);
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] });
+  check('dark tokens are in place', (await ev(`getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()`)) === '#171614');
+  await shot('person-page-dark');
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
+  await shot('person-page-light');
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });
