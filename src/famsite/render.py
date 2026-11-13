@@ -175,8 +175,8 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-_GENERATED_DIRS = ("data", "p", "focus")
-_GENERATED_FILES = ("index.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css")
+_GENERATED_DIRS = ("data", "p", "focus", "people", "places")
+_GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js")
 
 
 def _clear_generated(out_dir: Path) -> None:
@@ -228,7 +228,8 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     }
     put("timeline.json", dumps(public_timeline))
     versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css")}
-    put("index.html", env.get_template("index.html").render(title=title, people=index, v=versions, home=home))
+    put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root=""))
+    put("tree.html", env.get_template("tree.html").render(title=title, people=index, v=versions, home=home, root=""))
     person_template = env.get_template("person.html")
     people_info = {pid: {"name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()}
     page_svgs: dict[str, tuple[str, str]] = {}
@@ -240,7 +241,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
         name = payloads[pid]["name"]
         page_svgs[pid] = (
             tree_svg(focused, people_info, pid, lambda other: f"../{other}/", f"Family tree of {name}"),
-            lifeline_svg(payloads[pid]["events"], f"../../index.html#/timeline/{pid}", name),
+            lifeline_svg(payloads[pid]["events"], f"../../tree.html#/timeline/{pid}", name),
         )
     for pid, payload in payloads.items():
         put(f"data/people/{pid}.json", dumps(payload))
@@ -248,7 +249,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
             f"p/{pid}/index.html",
             person_template.render(
                 title=title, person=payload, gallery=None, tree_svg=page_svgs[pid][0], lifeline_svg=page_svgs[pid][1],
-                v=versions, home=home
+                v=versions, home=home, root="../../"
             ),
         )
 

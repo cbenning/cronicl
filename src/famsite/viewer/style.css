@@ -127,8 +127,8 @@ main { flex: 1; display: flex; min-height: 0; }
 .chip-years, .chip-note, .partnership { display: block; font-size: .85rem; color: var(--muted); }
 .person-page { height: auto; min-height: 100vh; }
 .person-page main.person { display: block; flex: none; }
-.page-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); background: var(--surface); }
-.page-bar .site-title { font-weight: 700; color: var(--text); text-decoration: none; margin-right: auto; }
+.site-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); background: var(--surface); }
+.site-bar .site-title { font-weight: 700; color: var(--text); text-decoration: none; margin-right: auto; }
 .person { width: 100%; max-width: 72rem; margin: 0 auto; padding: var(--space-4); }
 .hero { display: flex; gap: var(--space-4); align-items: center; margin-bottom: var(--space-4); }
 .hero h1 { margin: 0; font-size: 1.75rem; line-height: 1.2; overflow-wrap: anywhere; }
@@ -148,7 +148,7 @@ main { flex: 1; display: flex; min-height: 0; }
 .events li.rel .what { color: var(--muted); }
 .events .age { color: var(--muted); }
 .mini-tree-scroll { overflow: auto; max-height: 36rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-@media print { .page-bar, .pill { display: none; } .person { max-width: none; } .card { box-shadow: none; } }
+@media print { .site-bar, .pill { display: none; } .person { max-width: none; } .card { box-shadow: none; } }
 .lifeline { display: block; max-width: 100%; height: auto; }
 .lifeline .axis { stroke: var(--border); stroke-width: 2; }
 .lifeline .tick { stroke: var(--muted); stroke-width: 1; }
@@ -223,3 +223,12 @@ main { flex: 1; display: flex; min-height: 0; }
 .group-label.island { display: none; fill: var(--text); }
 #tree.lod-far .group-label.island { display: inline; }
 #tree.lod-far .node rect { fill: var(--surface-2); }
+
+/* Shared site header */
+.site-bar nav { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.site-bar nav a { color: var(--text); text-decoration: none; }
+.site-bar nav a:hover { color: var(--accent); }
+.site-search input { min-width: 12rem; padding: .35rem .5rem; }
+@media (max-width: 40rem) { .site-search { flex: 1 1 100%; } .site-search input { width: 100%; min-width: 0; box-sizing: border-box; } }
+.bar-link { color: inherit; }
+.person .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }

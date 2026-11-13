@@ -80,7 +80,7 @@ def test_static_person_page_links_relatives_and_back(tmp_path, make_tree):
     build_site(sample(make_tree), tmp_path, today=TODAY)
     page = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
     assert 'href="../smith-john/"' in page
-    assert 'href="../../index.html#/tree/smith-bob"' in page  # canonical route; bare #/<id> still works
+    assert 'href="../../tree.html#/tree/smith-bob"' in page
 
 
 def test_build_is_deterministic(tmp_path, make_tree):
@@ -281,7 +281,7 @@ def test_assets_are_versioned_by_content_so_a_rebuild_is_never_served_stale(tmp_
     root = Path(famsite.__file__).parent / "viewer"
     js = hashlib.sha256((root / "viewer.js").read_bytes()).hexdigest()[:12]
     css = hashlib.sha256((root / "style.css").read_bytes()).hexdigest()[:12]
-    index = (tmp_path / "index.html").read_text(encoding="utf-8")
+    index = (tmp_path / "tree.html").read_text(encoding="utf-8")
     assert f'src="viewer.js?v={js}"' in index and f'href="style.css?v={css}"' in index
     page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
     assert f'href="../../style.css?v={css}"' in page
@@ -304,3 +304,15 @@ def test_pages_name_the_home_person(tmp_path, make_tree):
 def test_an_empty_site_has_no_home_person(tmp_path, make_tree):
     build_site(make_tree([]), tmp_path, today=TODAY)
     assert '<meta name="famsite-home" content="">' in (tmp_path / "index.html").read_text(encoding="utf-8")
+
+
+def test_home_and_viewer_are_separate_pages(tmp_path, make_tree):
+    build_site(sample(make_tree), tmp_path, today=TODAY)
+    home = (tmp_path / "index.html").read_text(encoding="utf-8")
+    viewer = (tmp_path / "tree.html").read_text(encoding="utf-8")
+    assert 'id="tree"' in viewer and 'id="tree"' not in home
+    assert "location.replace('tree.html' + location.hash)" in home
+    assert 'action="people/index.html"' in home
+    page = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
+    assert 'href="../../tree.html#/focus/smith-bob"' in page and "index.html#/" not in page
+    assert 'action="../../people/index.html"' in page

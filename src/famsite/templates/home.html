@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="famsite-home" content="{{ home or '' }}">
+<script>if (location.hash.indexOf('#/') === 0) location.replace('tree.html' + location.hash);</script>
+<title>{{ title }}</title>
+<link rel="stylesheet" href="{{ root }}style.css?v={{ v.css }}">
+</head>
+<body class="site-page home-page">
+{% include "_header.html" %}
+<main class="home">
+  <h1>{{ title }}</h1>
+</main>
+</body>
+</html>

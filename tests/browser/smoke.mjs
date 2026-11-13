@@ -48,7 +48,7 @@ async function main() {
   const click = (sel) => ev(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return false; e.dispatchEvent(new MouseEvent('click', {bubbles: true})); return true; })()`);
   const goto = async (hash) => { await ev(`location.hash = ${JSON.stringify(hash)}`); await sleep(500); };
 
-  await send('Page.navigate', { url: base + '/#/tree' });
+  await send('Page.navigate', { url: base + '/tree.html#/tree' });
   await sleep(1500);
 
   // ---- tree
@@ -270,7 +270,7 @@ async function main() {
 
   // ---- opening view
   await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
-  await send('Page.navigate', { url: base + '/' }); await sleep(1500);
+  await send('Page.navigate', { url: base + '/tree.html' }); await sleep(1500);
   const home = await ev(`document.querySelector('meta[name="famsite-home"]').content`);
   check('with no route the viewer opens the home person\'s focused tree', (await ev('location.hash')) === '#/focus/' + home, await ev('location.hash'));
   check('the Tree tab is current in a focused tree', (await ev(`document.querySelector('#tabs a[aria-current="page"]').textContent`)) === 'Tree');
@@ -334,9 +334,12 @@ async function main() {
   await sleep(600);
   check('the relative page opens with its own name', (await ev(`document.querySelector('.hero h1')?.textContent`)) !== 'Bob Smith' && !!(await ev(`document.querySelector('.hero h1')?.textContent`)));
 
+  await send('Page.navigate', { url: base + '/index.html#/tree/smith-bob' }); await sleep(1500);
+  check('an old viewer link is forwarded to tree.html', /\/tree\.html#\/tree\/smith-bob$/.test(await ev('location.href')), await ev('location.href'));
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-  await send('Page.navigate', { url: base + '/#/tree/ellsworth-maude' });
+  await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });
   await sleep(1500);
   const phone = await ev(`(() => { const p = document.getElementById('panel').getBoundingClientRect(); const h = document.querySelector('#panel h2').getBoundingClientRect(); const s = document.getElementById('search').getBoundingClientRect(); return { panelW: p.width, panelBottom: p.bottom, panelH: p.height, titleW: h.width, searchRight: s.right, pageW: document.documentElement.scrollWidth }; })()`);
   check('phone: the panel is a full-width bottom sheet', phone.panelW === 390 && Math.round(phone.panelBottom) === 844 && phone.panelH <= 844 * 0.6 + 1, JSON.stringify(phone));
