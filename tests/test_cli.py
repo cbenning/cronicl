@@ -164,3 +164,23 @@ def test_serve_sends_no_cache_headers_so_a_rebuilt_viewer_is_never_stale(tmp_pat
         server.server_close()
     assert issubclass(NoCacheHandler, __import__("http.server").server.SimpleHTTPRequestHandler)
     assert server.allow_reuse_address  # restarting serve must not hit "Address already in use"
+
+
+def test_build_warns_when_living_people_are_published(tmp_path, write, capsys):
+    root = tmp_path / "fam"
+    assert main(["init", "--dir", str(root)]) == 0
+    write(root, "people/kid.md", "---\nname:\n  given: Kid\nbirth: 1990\n---\n")
+    write(root, "people/old.md", "---\nname:\n  given: Old\nbirth: 1800\n---\n")
+    assert main(["build", "--dir", str(root)]) == 0
+    out = capsys.readouterr().out
+    assert "W-PRIVACY-OFF" in out and "1 person is treated as living" in out
+
+
+def test_build_is_quiet_when_redaction_is_on(tmp_path, write, capsys):
+    root = tmp_path / "fam"
+    assert main(["init", "--dir", str(root)]) == 0
+    site = root / "site.yml"
+    site.write_text(site.read_text().replace("living: full", "living: placeholder"))
+    write(root, "people/kid.md", "---\nname:\n  given: Kid\nbirth: 1990\n---\n")
+    assert main(["build", "--dir", str(root)]) == 0
+    assert "W-PRIVACY-OFF" not in capsys.readouterr().out

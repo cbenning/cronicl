@@ -16,6 +16,7 @@ from .edit import EditError, apply_living
 from .fix import apply_plan, plan_fix
 from .gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
 from .layout import LayoutError
+from .privacy import is_living
 from .render import build_site, dumps
 from .schema import PERSON_SCHEMA
 from .search import search_people
@@ -130,8 +131,19 @@ def cmd_build(args) -> int:
     warnings = [i for i in issues if i.severity == "warning"]
     if warnings:
         _print_issues(warnings, "text")
+    today = date.today()
+    privacy = tree.site.get("privacy", {}) or {}
+    if privacy.get("living", "full") == "full":
+        cutoff = int(privacy.get("cutoff_years", 100))
+        living = sum(1 for person in tree.people.values() if is_living(person, today, cutoff))
+        if living:
+            who = "1 person is" if living == 1 else f"{living} people are"
+            print(
+                f"WARNING W-PRIVACY-OFF site.yml: {who} treated as living and privacy.living is \"full\"; "
+                "set it to placeholder or hidden before publishing"
+            )
     out = Path(args.out) if args.out else root / "out"
-    summary = build_site(tree, out, today=date.today())
+    summary = build_site(tree, out, today=today)
     print(f"built {summary.people} people, {summary.files} files into {out}")
     return 0
 
