@@ -66,10 +66,19 @@ def _person_rows(events: list[dict], info: dict, pid: str) -> list[tuple[dict, s
     for key, role in _ROLE_KEYS:
         for other in info[key]:
             roles[other] = role
+    first = last = None  # whole-year bounds of this person's own lifetime; None when that side is unknown
+    for event in events:
+        if event["people"] == [pid]:
+            if event["type"] == "birth":
+                first = event["year"]
+            elif event["type"] == "death":
+                last = event["year"]
     rows: list[tuple[dict, str]] = []
     for event in events:
         if pid in event["people"]:
             rows.append((event, "self"))
+            continue
+        if (first is not None and event["year"] < first) or (last is not None and event["year"] > last):
             continue
         role = next((roles[p] for p in event["people"] if p in roles), None)
         if role is None:

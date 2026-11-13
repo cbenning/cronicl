@@ -216,7 +216,6 @@ def test_person_events_apply_the_role_rules_and_wording(make_tree):
         ("divorce:me+sp", "self", "divorced Sp Ouse"),
         ("death:par", "parent", "Par Ent died"),
         ("death:me", "self", "died"),
-        ("death:sp", "spouse", "Sp Ouse died"),
     ]
     assert not any(r["id"] == "birth:stranger" for r in data["people"]["me"]["events"])
 
@@ -294,3 +293,25 @@ def test_a_parents_death_stays_on_the_persons_timeline(make_tree):
     rows = {(r["id"], r["role"]) for r in build_timeline(tree, build_relations(tree))["people"]["me"]["events"]}
     assert ("death:dad", "parent") in rows
     assert ("marriage:dad+mum", "parent") not in rows
+
+
+def test_relatives_events_outside_own_lifetime_are_left_out(make_tree):
+    tree = make_tree([
+        {"id": "mum", "given": "Mum", "birth": Event(date="1910"), "death": Event(date="1950")},
+        {"id": "old", "given": "Old", "birth": Event(date="1936"), "death": Event(date="2017"), "parents": ["mum"]},
+        {"id": "me", "given": "Me", "birth": Event(date="1938"), "death": Event(date="2016"), "parents": ["mum"]},
+        {"id": "twin", "given": "Twin", "birth": Event(date="1938-03"), "parents": ["mum"]},
+        {"id": "kid", "given": "Kid", "birth": Event(date="1960"), "parents": ["me"]},
+    ])
+    rows = build_timeline(tree, build_relations(tree))["people"]["me"]["events"]
+    assert [r["id"] for r in rows] == ["birth:me", "birth:twin", "death:mum", "birth:kid", "death:me"]
+
+
+def test_lifetime_bound_uses_only_the_known_side(make_tree):
+    tree = make_tree([
+        {"id": "mum", "given": "Mum"},
+        {"id": "me", "given": "Me", "death": Event(date="1950"), "parents": ["mum"]},
+        {"id": "sib", "given": "Sib", "birth": Event(date="1900"), "death": Event(date="1960"), "parents": ["mum"]},
+    ])
+    rows = build_timeline(tree, build_relations(tree))["people"]["me"]["events"]
+    assert [r["id"] for r in rows] == ["birth:sib", "death:me"]
