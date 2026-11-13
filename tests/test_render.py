@@ -367,3 +367,14 @@ def test_places_page_lists_people_under_each_place(tmp_path, make_tree):
     build_site(tree, tmp_path, today=TODAY)
     page = (tmp_path / "places/index.html").read_text(encoding="utf-8")
     assert 'id="pl-guelph"' in page and 'href="../p/a/"' in page and "born 3 February 1900" in page
+
+
+def test_every_page_names_its_root_for_the_scripts(tmp_path, make_tree):
+    build_site(sample(make_tree), tmp_path, today=TODAY)
+    assert '<meta name="famsite-root" content="">' in (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert '<meta name="famsite-root" content="">' in (tmp_path / "tree.html").read_text(encoding="utf-8")
+    assert '<meta name="famsite-root" content="../">' in (tmp_path / "people/index.html").read_text(encoding="utf-8")
+    page = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
+    assert '<meta name="famsite-root" content="../../">' in page
+    assert 'data-kin-for="smith-bob"' in page and 'id="set-me"' in page
+    assert page.index("kin.js") < page.index("site.js")

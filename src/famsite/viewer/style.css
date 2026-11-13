@@ -245,3 +245,6 @@ main { flex: 1; display: flex; min-height: 0; }
 .home .recent li, .home #on-this-day li { padding: var(--space-1) 0; }
 .home .when, .home .years { color: var(--muted); font-size: .9rem; }
 body.site-page { height: auto; min-height: 100vh; }
+
+/* Kinship line */
+.kin { margin: 2px 0 0; color: var(--accent); font-size: .9rem; }

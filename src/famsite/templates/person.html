@@ -4,8 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="famsite-home" content="{{ home or '' }}">
+<meta name="famsite-root" content="{{ root }}">
 <title>{{ person.name }} — {{ title }}</title>
 <link rel="stylesheet" href="{{ root }}style.css?v={{ v.css }}">
+<script src="{{ root }}kin.js?v={{ v.kin }}" defer></script>
 <script src="{{ root }}site.js?v={{ v.site }}" defer></script>
 </head>
 <body class="person-page">
@@ -16,10 +18,12 @@
     <div class="hero-text">
       <h1>{{ person.name }}</h1>
       {% if person.years %}<p class="years">{{ person.years }}</p>{% endif %}
+      <p class="kin" data-kin-for="{{ person.id }}" hidden></p>
       <nav class="actions" aria-label="Views">
         <a class="pill" href="{{ root }}tree.html#/tree/{{ person.id }}">Family tree</a>
         <a class="pill" href="{{ root }}tree.html#/focus/{{ person.id }}">Focus tree</a>
         <a class="pill" href="{{ root }}tree.html#/timeline/{{ person.id }}">Timeline</a>
+        <button type="button" class="pill" id="set-me" data-id="{{ person.id }}" hidden>This is me</button>
       </nav>
       {% set born = person.birth and (person.birth.date or person.birth.place) %}
       {% set died = person.death and (person.death.date or person.death.place) %}

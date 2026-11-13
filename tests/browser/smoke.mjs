@@ -342,6 +342,17 @@ async function main() {
   await send('Page.navigate', { url: base + '/people/index.html?q=bob' }); await sleep(800);
   check('filtering leaves only matching people and hides empty groups', (await ev(`(() => { const shown = [...document.querySelectorAll('[data-person]')].filter((li) => !li.hidden); return shown.length >= 1 && shown.every((li) => /bob/i.test(li.dataset.text)) && [...document.querySelectorAll('[data-group]')].every((g) => g.hidden === !g.querySelector('[data-person]:not([hidden])')); })()`)) === true);
 
+  await send('Page.navigate', { url: base + '/p/smith-bob/' }); await sleep(1200);
+  const homeName = await ev(`document.querySelector('meta[name="famsite-home"]').content`);
+  check('a person page says how they relate to the home person', homeName === 'smith-bob' || /'s /.test(await ev(`document.querySelector('.kin').textContent`)), await ev(`document.querySelector('.kin').textContent`));
+  await click('#set-me');
+  check('"This is me" is remembered and the line turns to "This is you"', (await ev(`localStorage.getItem('famsite.me')`)) === 'smith-bob' && (await ev(`document.querySelector('.kin').textContent`)) === 'This is you');
+  await send('Page.navigate', { url: base + '/tree.html' }); await sleep(1500);
+  check('the viewer now opens on me', (await ev('location.hash')) === '#/focus/smith-bob', await ev('location.hash'));
+  await ev(`document.querySelector('.node:not(.focus)').dispatchEvent(new MouseEvent('click', { bubbles: true }))`); await sleep(600);
+  check('the panel carries a kinship line', /^Your /.test(await ev(`(document.querySelector('#panel .kin') || {}).textContent || ''`)), await ev(`(document.querySelector('#panel .kin') || {}).textContent`));
+  await ev(`localStorage.removeItem('famsite.me')`);
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });

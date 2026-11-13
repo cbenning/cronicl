@@ -357,7 +357,13 @@
     var focusBar = $('focus-bar');
     var legendEl = $('legend');
     var controls = $('tree-controls');
-    var home = (document.querySelector('meta[name="famsite-home"]') || {}).content || null;
+    var metaHome = (document.querySelector('meta[name="famsite-home"]') || {}).content || null;
+    var ME_KEY = 'famsite.me';
+    function savedMe() {
+      try { return root.localStorage.getItem(ME_KEY) || null; } catch (e) { return null; }
+    }
+    // The person the viewer said is them, else the site's home person.
+    var home = savedMe() || metaHome;
     var treeTab = document.querySelector('#tabs a[data-view="focus"]');
 
     var canvas = document.createElement('canvas').getContext('2d');
@@ -491,6 +497,27 @@
       if (state.view === 'tree' && parseRoute(location.hash).id) go('tree', null);
     }
 
+    // The kinship line in the panel: how this person relates to the viewer ("Your grandmother").
+    var kinData = null;
+    function fillKin(line, id) {
+      var kin = root.famsiteKin, site = root.famsiteSite;
+      if (!kin || !site) return;
+      if (!kinData) {
+        kinData = fetch('kin.json').then(function (r) { return r.json(); }).then(function (d) { return d.people; })
+          .catch(function () { return null; });
+      }
+      kinData.then(function (kinPeople) {
+        if (!kinPeople) return;
+        var store = null;
+        try { store = root.localStorage; } catch (e) { store = null; }
+        var who = site.viewerId(store, kinPeople, metaHome);
+        if (!who.id) return;
+        var text = kin.phrase(kin.kinship(kinPeople, who.id, id), kinPeople[who.id].name, who.mine);
+        line.textContent = text;
+        line.hidden = !text;
+      });
+    }
+
     function showPanel(id) {
       state.selected = id;
       panel.hidden = false;
@@ -533,6 +560,11 @@
             titleBox.appendChild(el);
           }
           para('years', p.years);
+          var kinLine = document.createElement('p');
+          kinLine.className = 'kin';
+          kinLine.hidden = true;
+          titleBox.appendChild(kinLine);
+          fillKin(kinLine, id);
           var places = [];
           if (p.birth && p.birth.place) places.push('Born ' + p.birth.place);
           if (p.death && p.death.place) places.push('Died ' + p.death.place);
@@ -940,6 +972,15 @@
           })
           .catch(function () {
             focusId = null;
+            if (id === savedMe()) {
+              // "me" names someone who is no longer in the site: forget it and use the site's home person
+              try { root.localStorage.removeItem(ME_KEY); } catch (e) { /* nothing to forget */ }
+              home = metaHome;
+              if (home && home !== id) {
+                go('focus', home);
+                return;
+              }
+            }
             go('tree', null);
           });
       }

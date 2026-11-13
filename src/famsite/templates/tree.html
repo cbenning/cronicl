@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="famsite-home" content="{{ home or '' }}">
+<meta name="famsite-root" content="{{ root }}">
 <title>{{ title }}</title>
 <link rel="stylesheet" href="style.css?v={{ v.css }}">
 </head>
@@ -46,6 +47,8 @@
   {% endfor %}
   </ul>
 </noscript>
+<script src="kin.js?v={{ v.kin }}"></script>
+<script src="site.js?v={{ v.site }}"></script>
 <script src="viewer.js?v={{ v.js }}"></script>
 </body>
 </html>

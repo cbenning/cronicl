@@ -18,6 +18,69 @@
     return (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
   }
 
+  var ME_KEY = 'famsite.me';
+
+  // Who is looking: the person the visitor said is them, else the home person. A saved id that is no longer in
+  // the site is forgotten; a store that throws (private mode) is treated as empty.
+  function viewerId(storage, people, home) {
+    var saved = null;
+    try { saved = storage ? storage.getItem(ME_KEY) : null; } catch (e) { saved = null; }
+    if (saved) {
+      if (people[saved]) return { id: saved, mine: true };
+      try { storage.removeItem(ME_KEY); } catch (e) { /* nothing to forget */ }
+    }
+    if (home && people[home]) return { id: home, mine: false };
+    return { id: null, mine: false };
+  }
+
+  function localStore() {
+    try {
+      var store = root.localStorage;
+      store.getItem(ME_KEY);
+      return store;
+    } catch (e) { return null; }
+  }
+
+  function metaContent(name) {
+    var el = document.querySelector('meta[name="' + name + '"]');
+    return el ? el.getAttribute('content') || '' : '';
+  }
+
+  // The kinship line and the "This is me" button on a person page.
+  function initKin(line) {
+    var id = line.getAttribute('data-kin-for');
+    var base = metaContent('famsite-root');
+    var home = metaContent('famsite-home');
+    var button = document.getElementById('set-me');
+    var kin = root.famsiteKin;
+    if (!kin) return;
+    fetch(base + 'kin.json').then(function (r) { return r.json(); }).then(function (data) {
+      var people = data.people;
+      var store = localStore();
+      function render() {
+        var who = viewerId(store, people, home);
+        var text = who.id ? kin.phrase(kin.kinship(people, who.id, id), people[who.id].name, who.mine) : '';
+        line.textContent = text;
+        line.hidden = !text;
+        if (button) {
+          var saved = who.mine && who.id === id;
+          button.textContent = saved ? 'This is you · undo' : 'This is me';
+        }
+      }
+      if (button && store) {
+        button.hidden = false;
+        button.addEventListener('click', function () {
+          try {
+            if (store.getItem(ME_KEY) === id) store.removeItem(ME_KEY);
+            else store.setItem(ME_KEY, id);
+          } catch (e) { return; }
+          render();
+        });
+      }
+      render();
+    }).catch(function () { /* the page is complete without the line */ });
+  }
+
   function queryParam(search) {
     var found = /[?&]q=([^&]*)/.exec(search || '');
     if (!found) return '';
@@ -37,6 +100,8 @@
       });
       section.hidden = !any;
     }
+    var kinLine = document.querySelector('[data-kin-for]');
+    if (kinLine) initKin(kinLine);
     var people = Array.prototype.slice.call(document.querySelectorAll('[data-person]'));
     if (!people.length) return;
     var input = document.querySelector('.site-search input');
@@ -60,7 +125,7 @@
     filter();
   }
 
-  var api = { fold: fold, matches: matches, todayKey: todayKey };
+  var api = { fold: fold, matches: matches, todayKey: todayKey, viewerId: viewerId };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else if (typeof document !== 'undefined') {
