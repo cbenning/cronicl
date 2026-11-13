@@ -12,13 +12,14 @@ from markdown_it import MarkdownIt
 
 from .dates import age_between, date_year, format_date, format_years, parse_date
 from .focus import focus_people, focus_tree, hidden_counts
+from .home import home_person
 from .layout import compute_layout
 from .model import Event, Tree
-from .home import home_person
 from .privacy import redact
 from .relations import Relations, build_relations
+from .stats import site_stats
 from .svgviews import lifeline_svg, tree_svg
-from .timeline import build_timeline
+from .timeline import build_timeline, event_text
 
 _PACKAGE = Path(__file__).parent
 _markdown = MarkdownIt("commonmark", {"html": False})
@@ -187,6 +188,38 @@ def _clear_generated(out_dir: Path) -> None:
         (out_dir / name).unlink(missing_ok=True)
 
 
+def _home_context(visible: Tree, site: dict, payloads: dict, timeline: dict, relations: Relations, home: str,
+                  recent: list[dict] | None) -> dict:
+    """Everything the home page prints, derived from the redacted tree."""
+    names = {pid: person.display_name for pid, person in visible.people.items()}
+    intro = str(site.get("intro", "") or "").strip()
+    on_this_day = sorted(
+        (
+            {
+                "md": f"{e['month']:02d}-{e['day']:02d}",
+                "year": e["year"],
+                "text": event_text(e, names, None),
+                "id": e["people"][0],
+            }
+            for e in timeline["events"]
+            if e["month"] and e["day"]
+        ),
+        key=lambda item: (item["md"], item["year"], item["id"]),
+    )
+    changed = [
+        {**_ref(visible, item["id"]), "when": format_date(item["date"])}
+        for item in (recent or [])
+        if item["id"] in visible.people
+    ]
+    return {
+        "intro_html": _markdown.render(intro) if intro else "",
+        "home_ref": _ref(visible, home) if home else None,
+        "stats": site_stats(visible, relations, timeline),
+        "recent": changed,
+        "on_this_day": on_this_day,
+    }
+
+
 def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | None = None) -> BuildSummary:
     out_dir = Path(out_dir)
     _clear_generated(out_dir)
@@ -228,7 +261,8 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
     }
     put("timeline.json", dumps(public_timeline))
     versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css")}
-    put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root=""))
+    home_context = _home_context(visible, tree.site, payloads, timeline, relations, home, recent)
+    put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root="", **home_context))
     put("tree.html", env.get_template("tree.html").render(title=title, people=index, v=versions, home=home, root=""))
     person_template = env.get_template("person.html")
     people_info = {pid: {"name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()}

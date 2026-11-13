@@ -12,6 +12,54 @@
 {% include "_header.html" %}
 <main class="home">
   <h1>{{ title }}</h1>
+  {% if intro_html %}<div class="intro">{{ intro_html | safe }}</div>{% endif %}
+  <form class="home-search" action="people/index.html" method="get" role="search">
+    <input type="search" name="q" aria-label="Search people" placeholder="Search people">
+    <button type="submit">Search</button>
+  </form>
+  {% if home_ref %}
+  <section class="start">
+    <h2>Start with</h2>
+    <a class="chip" href="p/{{ home_ref.id }}/">
+      <span class="chip-name">{{ home_ref.name }}</span>
+      {% if home_ref.years %}<span class="chip-years">{{ home_ref.years }}</span>{% endif %}
+    </a>
+  </section>
+  {% endif %}
+  <p class="numbers">
+    {%- if stats.people == 0 -%}No people yet
+    {%- else -%}
+      {{ stats.people }} {{ "person" if stats.people == 1 else "people" }} · {{ stats.generations }} {{ "generation" if stats.generations == 1 else "generations" }}
+      {%- if stats.first_year is not none %} · {{ stats.first_year }}{% if stats.last_year != stats.first_year %}–{{ stats.last_year }}{% endif %}{% endif %}
+    {%- endif -%}
+  </p>
+  {% if stats.surnames %}
+  <section class="surnames">
+    <h2>Surnames</h2>
+    <p>
+      {% for s in stats.surnames[:12] %}<a class="pill" href="people/index.html#s-{{ s.slug }}">{{ s.surname }} · {{ s.count }}</a> {% endfor %}
+    </p>
+    <p><a href="people/index.html">All people</a> · <a href="places/index.html">All places</a></p>
+  </section>
+  {% endif %}
+  {% if on_this_day %}
+  <section id="on-this-day" hidden>
+    <h2>On this day</h2>
+    <ul>
+      {% for item in on_this_day %}<li data-md="{{ item.md }}" hidden><a href="p/{{ item.id }}/">{{ item.year }} · {{ item.text }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  {% if recent %}
+  <section class="recent">
+    <h2>Recently updated</h2>
+    <ul>
+      {% for r in recent %}<li><a href="p/{{ r.id }}/">{{ r.name }}</a>{% if r.years %} <span class="years">{{ r.years }}</span>{% endif %} <span class="when">{{ r.when }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
 </main>
 </body>
 </html>
