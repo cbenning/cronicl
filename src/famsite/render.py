@@ -180,7 +180,7 @@ def _write(path: Path, text: str) -> None:
 
 
 _GENERATED_DIRS = ("data", "p", "focus", "people", "places")
-_GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.json")
+_GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json")
 
 
 def _clear_generated(out_dir: Path) -> None:
@@ -280,7 +280,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
         "people": {pid: {k: v for k, v in info.items() if k != "events"} for pid, info in timeline["people"].items()},
     }
     put("timeline.json", dumps(public_timeline))
-    versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css"), "site": _asset_version("site.js")}
+    versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css"), "site": _asset_version("site.js"), "kin": _asset_version("kin.js")}
     home_context = _home_context(visible, tree.site, payloads, timeline, relations, home, recent)
     put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root="", **home_context))
     put(
@@ -327,7 +327,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
             ),
         )
 
-    for asset in ("viewer.js", "style.css", "site.js"):
+    for asset in ("viewer.js", "style.css", "site.js", "kin.js"):
         source = _PACKAGE / "viewer" / asset
         if source.exists():
             target = out_dir / asset
