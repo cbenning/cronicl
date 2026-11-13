@@ -213,3 +213,28 @@ test('generationLabel says how far above or below the selected person someone is
   assert.strictEqual(v.generationLabel(-3), '3 generations above');
   assert.strictEqual(v.generationLabel(2), '2 generations below');
 });
+
+test('initialView fits a layout that stays readable', () => {
+  assert.deepStrictEqual(v.initialView({ w: 1000, h: 500 }, { w: 1400, h: 800 }, null), { scale: 1, tx: 200, ty: 150 });
+  assert.deepStrictEqual(v.initialView({ w: 2000, h: 500 }, { w: 1400, h: 800 }, null), { scale: 0.7, tx: 0, ty: 225 });
+});
+test('initialView centres on the target at scale 1 when fitting would be unreadable', () => {
+  const t = { x: 5000, y: 100, w: 160, h: 64 };
+  assert.deepStrictEqual(v.initialView({ w: 10000, h: 500 }, { w: 1400, h: 800 }, t), { scale: 1, tx: -4380, ty: 268 });
+  assert.deepStrictEqual(v.initialView({ w: 10000, h: 500 }, { w: 1400, h: 800 }, null), { scale: 1, tx: -4300, ty: 0 });
+});
+test('initialView never magnifies a tiny layout', () => {
+  assert.strictEqual(v.initialView({ w: 224, h: 128 }, { w: 1400, h: 800 }, null).scale, 1);
+});
+test('lodFor picks the level of detail from the scale', () => {
+  assert.deepStrictEqual([0.6, 0.59, 0.35, 0.34].map(v.lodFor), ['near', 'mid', 'mid', 'far']);
+});
+test('zoomAt keeps the point under the pointer still and clamps', () => {
+  assert.deepStrictEqual(v.zoomAt({ scale: 1, tx: 0, ty: 0 }, 2, 100, 50), { scale: 2, tx: -100, ty: -50 });
+  assert.strictEqual(v.zoomAt({ scale: 2, tx: 0, ty: 0 }, 2, 0, 0).scale, 3);
+  assert.strictEqual(v.zoomAt({ scale: 0.06, tx: 0, ty: 0 }, 0.5, 0, 0).scale, 0.05);
+});
+test('legendEnds says how far the line runs in words', () => {
+  assert.deepStrictEqual(v.legendEnds(1, 3), { old: '1 generation up', young: '3 generations down' });
+  assert.deepStrictEqual(v.legendEnds(0, 0), { old: '', young: '' });
+});

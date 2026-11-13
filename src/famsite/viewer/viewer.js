@@ -283,6 +283,43 @@
     return n + (n === 1 ? ' generation ' : ' generations ') + (d < 0 ? 'above' : 'below');
   }
 
+  var READABLE_SCALE = 0.6;
+  var FAR_SCALE = 0.35;
+  var MIN_SCALE = 0.05;
+  var MAX_SCALE = 3;
+  var ZOOM_STEP = 1.4;
+
+  // Where the tree opens: the whole layout when that stays readable, otherwise scale 1 centred on the target.
+  function initialView(bounds, size, target) {
+    var fit = Math.min(size.w / bounds.w, size.h / bounds.h, 1);
+    if (!isFinite(fit) || fit <= 0) fit = 1;
+    if (fit >= READABLE_SCALE) {
+      return { scale: fit, tx: (size.w - bounds.w * fit) / 2, ty: Math.max(0, (size.h - bounds.h * fit) / 2) };
+    }
+    if (target) {
+      return { scale: 1, tx: size.w / 2 - (target.x + target.w / 2), ty: size.h / 2 - (target.y + target.h / 2) };
+    }
+    return { scale: 1, tx: size.w / 2 - bounds.w / 2, ty: 0 };
+  }
+
+  function lodFor(scale) {
+    if (scale >= READABLE_SCALE) return 'near';
+    if (scale >= FAR_SCALE) return 'mid';
+    return 'far';
+  }
+
+  // Zoom by `factor` keeping the point (px, py) under the pointer still.
+  function zoomAt(view, factor, px, py) {
+    var next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.scale * factor));
+    var k = next / view.scale;
+    return { scale: next, tx: px - (px - view.tx) * k, ty: py - (py - view.ty) * k };
+  }
+
+  function legendEnds(up, down) {
+    function words(n, dir) { return n > 0 ? n + (n === 1 ? ' generation ' : ' generations ') + dir : ''; }
+    return { old: words(up, 'up'), young: words(down, 'down') };
+  }
+
   function visibleRange(tx, pxPerYear, originYear, width) {
     return { from: originYear + (0 - tx) / pxPerYear, to: originYear + (width - tx) / pxPerYear };
   }
@@ -1329,6 +1366,10 @@
     packLanes: packLanes,
     parseRoute: parseRoute,
     visibleRange: visibleRange,
+    initialView: initialView,
+    lodFor: lodFor,
+    zoomAt: zoomAt,
+    legendEnds: legendEnds,
     thumbGeometry: thumbGeometry,
     routeHash: routeHash,
     yearPosition: yearPosition,
