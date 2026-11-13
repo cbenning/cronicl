@@ -146,7 +146,7 @@ def cmd_build(args) -> int:
                 "set it to placeholder or hidden before publishing"
             )
     out = Path(args.out) if args.out else root / "out"
-    summary = build_site(tree, out, today=today, recent=recent_changes(root))
+    summary = build_site(tree, out, today=today, recent=recent_changes(root), media_dir=root / "media")
     print(f"built {summary.people} people, {summary.files} files into {out}")
     return 0
 

@@ -428,3 +428,47 @@ def test_svgviews_is_gone():
     import importlib.util
 
     assert importlib.util.find_spec("famsite.svgviews") is None
+
+
+def media_tree(make_tree, tmp_path):
+    media = tmp_path / "data" / "media"
+    (media / "scans").mkdir(parents=True)
+    (media / "scans" / "ann #1.jpg").write_bytes(b"ANN")
+    (media / "kid.jpg").write_bytes(b"KIDBYTES")
+    (tmp_path / "data" / "secret.jpg").write_bytes(b"SECRET")
+    tree = make_tree([
+        {"id": "a", "given": "Ann", "birth": Event(date="1800"), "portrait": "scans/ann #1.jpg"},
+        {"id": "b", "given": "Bea", "birth": Event(date="1801"), "portrait": "scans/ann #1.jpg"},
+        {"id": "c", "given": "Cy", "birth": Event(date="1802"), "portrait": "../secret.jpg"},
+        {"id": "kid", "given": "Kid", "birth": Event(date="2000"), "portrait": "kid.jpg"},
+    ])
+    tree.site = {"privacy": {"living": "placeholder", "id_salt": "s"}}
+    return tree, media
+
+
+def test_portraits_are_copied_and_named_in_the_payload(tmp_path, make_tree):
+    tree, media = media_tree(make_tree, tmp_path)
+    out = tmp_path / "out"
+    build_site(tree, out, today=TODAY, media_dir=media)
+    assert (out / "media/scans/ann #1.jpg").read_bytes() == b"ANN"
+    payload = json.loads((out / "data/people/a.json").read_text(encoding="utf-8"))
+    assert payload["image"] == {"src": "media/scans/ann%20%231.jpg", "alt": "Portrait of Ann"}
+    assert json.loads((out / "data/people/c.json").read_text(encoding="utf-8"))["image"] is None
+    copied = sorted(str(f.relative_to(out / "media")) for f in (out / "media").rglob("*") if f.is_file())
+    assert copied == ["scans/ann #1.jpg"]
+    everything = b"".join(f.read_bytes() for f in out.rglob("*") if f.is_file())
+    assert b"KIDBYTES" not in everything and b"kid.jpg" not in everything and b"SECRET" not in everything
+    assert 'src="../../media/scans/ann%20%231.jpg"' in (out / "p/a/index.html").read_text(encoding="utf-8")
+    index = json.loads((out / "index.json").read_text(encoding="utf-8"))
+    assert {e["id"]: e["image"] for e in index if e["id"] in "abc"} == {
+        "a": "media/scans/ann%20%231.jpg", "b": "media/scans/ann%20%231.jpg", "c": None}
+
+
+def test_a_removed_portrait_leaves_no_stale_copy(tmp_path, make_tree):
+    tree, media = media_tree(make_tree, tmp_path)
+    out = tmp_path / "out"
+    build_site(tree, out, today=TODAY, media_dir=media)
+    for person in tree.people.values():
+        person.portrait = None
+    build_site(tree, out, today=TODAY, media_dir=media)
+    assert not (out / "media").exists()

@@ -28,7 +28,8 @@
 {% include "_header.html" %}
 <main class="person">
   <section class="hero">
-    <div class="avatar avatar-lg" aria-hidden="true">{{ person.initials }}</div>
+    {% if person.image %}<img class="avatar avatar-lg" src="{{ root }}{{ person.image.src }}" alt="{{ person.image.alt }}" width="112" height="112">
+    {% else %}<div class="avatar avatar-lg" aria-hidden="true">{{ person.initials }}</div>{% endif %}
     <div class="hero-text">
       <h1>{{ person.name }}</h1>
       {% if person.years %}<p class="years">{{ person.years }}</p>{% endif %}

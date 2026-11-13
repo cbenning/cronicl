@@ -6,6 +6,7 @@ import shutil
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from urllib.parse import quote
 
 import jinja2
 from markdown_it import MarkdownIt
@@ -16,6 +17,7 @@ from .home import home_person
 from .kin import build_kin
 from .layout import compute_layout
 from .lineage import ancestor_tree, count_descendants, descendant_outline
+from .media import ALLOWED, resolve
 from .model import Event, Tree
 from .places import place_index
 from .privacy import is_living, redact
@@ -202,7 +204,7 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-_GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate")
+_GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate", "media")
 _GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json")
 
 
@@ -212,6 +214,30 @@ def _clear_generated(out_dir: Path) -> None:
         shutil.rmtree(out_dir / name, ignore_errors=True)
     for name in _GENERATED_FILES:
         (out_dir / name).unlink(missing_ok=True)
+
+
+def _portraits(visible: Tree, out_dir: Path, media_dir: Path | None) -> dict[str, dict]:
+    """Copy each referenced portrait, once, into out/media/ and return the payload `image` for each person.
+
+    Only people in the redacted tree are considered, so a living person's file is never read or copied. A path that
+    leaves media/, a missing file or a type that is not allowed is skipped (`check` reports it).
+    """
+    images: dict[str, dict] = {}
+    if media_dir is None:
+        return images
+    for pid in sorted(visible.people):
+        person = visible.people[pid]
+        if not person.portrait or not person.portrait.lower().endswith(ALLOWED):
+            continue
+        source = resolve(media_dir, person.portrait)
+        if source is None:
+            continue
+        target = out_dir / "media" / person.portrait
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+        images[pid] = {"src": "media/" + quote(person.portrait), "alt": f"Portrait of {person.display_name}"}
+    return images
 
 
 def _home_context(visible: Tree, site: dict, payloads: dict, timeline: dict, relations: Relations, home: str,
@@ -262,7 +288,9 @@ def _people_groups(visible: Tree, index: list[dict]) -> list[dict]:
     return ordered
 
 
-def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | None = None) -> BuildSummary:
+def build_site(
+    tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | None = None, media_dir: Path | None = None
+) -> BuildSummary:
     out_dir = Path(out_dir)
     _clear_generated(out_dir)
     privacy = tree.site.get("privacy", {}) or {}
@@ -282,12 +310,18 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
     living = {pid for pid, person in visible.people.items() if is_living(person, today, cutoff)}
     timeline = build_timeline(visible, relations, living)
     payloads = {pid: person_payload(visible, pid, relations, timeline) for pid in sorted(visible.people)}
+    images = _portraits(visible, out_dir, media_dir)
+    for pid, payload in payloads.items():
+        payload["image"] = images.get(pid)
     index = sorted(
-        ({"id": pid, "name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()),
+        (
+            {"id": pid, "name": pl["name"], "years": pl["years"], "image": pl["image"]["src"] if pl["image"] else None}
+            for pid, pl in payloads.items()
+        ),
         key=lambda e: (e["name"].lower(), e["id"]),
     )
 
-    written = 0
+    written = len({image["src"] for image in images.values()})
 
     def put(rel: str, text: str) -> None:
         nonlocal written
