@@ -1,6 +1,6 @@
 from datetime import date
 
-from famsite.model import Event
+from famsite.model import Event, Partnership
 from famsite.privacy import redact
 from famsite.render import person_payload
 
@@ -88,3 +88,17 @@ def test_payload_events_are_dated_rows_with_text_and_age(make_tree):
     assert ev["death:dad"]["age"] == 69 and ev["death:dad"]["year"] == 1990
     assert ev["birth:kid"]["role"] == "child" and ev["birth:kid"]["text"] == "Kay Roe born"
     assert [e["year"] for e in payload["events"]] == sorted(e["year"] for e in payload["events"])
+
+
+def test_payload_carries_worded_dates(make_tree):
+    tree = make_tree([
+        {"id": "a", "given": "Ann", "birth": Event(date="1941-03-12", place="Guelph"),
+         "death": Event(date="APR 4 TH 2020"),
+         "partnerships": [Partnership("b", type="marriage", start="1955-06-20", end="1990-02", end_reason="divorce")]},
+        {"id": "b", "given": "Bob"},
+    ])
+    payload = person_payload(tree, "a")
+    assert payload["birth"] == {"date": "1941-03-12", "place": "Guelph", "when": "12 March 1941"}
+    assert payload["death"]["when"] == "APR 4 TH 2020"
+    assert [e["when"] for e in payload["events"]] == ["12 March 1941", "20 June 1955", "February 1990"]
+    assert payload["spouses"][0]["partnerships"][0]["text"] == "Married 20 June 1955 – divorced February 1990"

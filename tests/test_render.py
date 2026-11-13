@@ -285,3 +285,10 @@ def test_assets_are_versioned_by_content_so_a_rebuild_is_never_served_stale(tmp_
     assert f'src="viewer.js?v={js}"' in index and f'href="style.css?v={css}"' in index
     page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
     assert f'href="../../style.css?v={css}"' in page
+
+
+def test_person_page_prints_dates_in_words(tmp_path, make_tree):
+    tree = make_tree([p("a", "Ann", "X", birth=Event(date="1941-03-12"), death=Event(date="2021-06-04"))])
+    build_site(tree, tmp_path, today=TODAY)
+    page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
+    assert "12 March 1941" in page and "1941-03-12" not in page

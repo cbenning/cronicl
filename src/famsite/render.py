@@ -10,7 +10,7 @@ from pathlib import Path
 import jinja2
 from markdown_it import MarkdownIt
 
-from .dates import age_between, date_year, format_years, parse_date
+from .dates import age_between, date_year, format_date, format_years, parse_date
 from .focus import focus_tree
 from .layout import compute_layout
 from .model import Event, Tree
@@ -44,7 +44,7 @@ def _env() -> jinja2.Environment:
 def _event(event: Event | None):
     if event is None:
         return None
-    return {"date": event.date, "place": event.place}
+    return {"date": event.date, "place": event.place, "when": format_date(event.date)}
 
 
 def _years_of(person) -> str:
@@ -96,11 +96,11 @@ def partnership_text(type_, start, end, end_reason, place) -> str:
         return ""
     text = _TYPE_WORD.get(type_ or "unknown", "Partners")
     if start:
-        text += f" {start}"
+        text += f" {format_date(start)}"
     if end:
         text += " – " + _END_WORD.get(end_reason, "ended")
         if end != "unknown":
-            text += f" {end}"
+            text += f" {format_date(end)}"
     if place:
         text += f" ({place})"
     return text
@@ -141,6 +141,7 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
         for optional in ("kind", "reason"):
             if source.get(optional):
                 entry[optional] = source[optional]
+        entry["when"] = format_date(source["date"])
         entry.update(role=row["role"], text=row["text"], age=row["age"], age_approx=row["age_approx"])
         events.append(entry)
     return {
