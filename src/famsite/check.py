@@ -48,6 +48,10 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
     relations = build_relations(tree)
     issues += relations.issues
 
+    home = (tree.site or {}).get("home")
+    if home and str(home) not in tree.people:
+        issues.append(Issue("W-HOME-UNKNOWN", f"home {str(home)!r} is not a person id; the default home person is used", "site.yml"))
+
     for person in tree.people.values():
         where = person.location
         if not is_valid_id(person.id):

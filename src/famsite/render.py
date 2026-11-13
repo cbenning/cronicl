@@ -14,6 +14,7 @@ from .dates import age_between, date_year, format_date, format_years, parse_date
 from .focus import focus_tree
 from .layout import compute_layout
 from .model import Event, Tree
+from .home import home_person
 from .privacy import redact
 from .relations import Relations, build_relations
 from .svgviews import lifeline_svg, tree_svg
@@ -200,6 +201,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     relations = build_relations(visible)
     layout = compute_layout(visible)
     title = str(tree.site.get("title", "Family Tree"))
+    home = home_person(visible, relations) or ""
 
     timeline = build_timeline(visible, relations)
     payloads = {pid: person_payload(visible, pid, relations, timeline) for pid in sorted(visible.people)}
@@ -226,7 +228,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     }
     put("timeline.json", dumps(public_timeline))
     versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css")}
-    put("index.html", env.get_template("index.html").render(title=title, people=index, v=versions))
+    put("index.html", env.get_template("index.html").render(title=title, people=index, v=versions, home=home))
     person_template = env.get_template("person.html")
     people_info = {pid: {"name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()}
     page_svgs: dict[str, tuple[str, str]] = {}
@@ -245,7 +247,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
             f"p/{pid}/index.html",
             person_template.render(
                 title=title, person=payload, gallery=None, tree_svg=page_svgs[pid][0], lifeline_svg=page_svgs[pid][1],
-                v=versions
+                v=versions, home=home
             ),
         )
 

@@ -292,3 +292,15 @@ def test_person_page_prints_dates_in_words(tmp_path, make_tree):
     build_site(tree, tmp_path, today=TODAY)
     page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
     assert "12 March 1941" in page and "1941-03-12" not in page
+
+
+def test_pages_name_the_home_person(tmp_path, make_tree):
+    tree = sample(make_tree)
+    build_site(tree, tmp_path, today=TODAY)
+    assert '<meta name="famsite-home" content="smith-john">' in (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert '<meta name="famsite-home" content="smith-john">' in (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
+
+
+def test_an_empty_site_has_no_home_person(tmp_path, make_tree):
+    build_site(make_tree([]), tmp_path, today=TODAY)
+    assert '<meta name="famsite-home" content="">' in (tmp_path / "index.html").read_text(encoding="utf-8")

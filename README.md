@@ -79,10 +79,13 @@ deselects). URLs are `#/tree[/<id>]`, `#/focus/<id>` and `#/timeline[/<id>]`.
 ## Data layout
 
 ```
-site.yml            title, schema_version, privacy settings
+site.yml            title, home, schema_version, privacy settings
 people/<id>.md      one file per person -- the only record type
 archive/            original .ged files, unmodified
 ```
+
+`home:` in `site.yml` names the person the tree opens on (a person id). Without it the person with the most
+descendants is used; `check` warns when `home:` names nobody.
 
 A person file:
 

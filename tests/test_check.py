@@ -124,3 +124,9 @@ def test_unknown_type_and_reason_warn_but_are_kept(make_tree):
         [named("a", partnerships=[Partnership("b", type="handfasting", end="1990", end_reason="drifted")]), named("b")]
     )
     assert codes(check_tree(tree)) == ["W-END-REASON-UNKNOWN", "W-PARTNERSHIP-TYPE-UNKNOWN"]
+
+
+def test_unknown_home_is_reported(make_tree):
+    tree = make_tree([{"id": "a", "given": "A"}])
+    tree.site = {"home": "nobody"}
+    assert "W-HOME-UNKNOWN" in [i.code for i in check_tree(tree)]
