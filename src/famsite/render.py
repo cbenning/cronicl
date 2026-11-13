@@ -187,7 +187,7 @@ def _clear_generated(out_dir: Path) -> None:
         (out_dir / name).unlink(missing_ok=True)
 
 
-def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
+def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | None = None) -> BuildSummary:
     out_dir = Path(out_dir)
     _clear_generated(out_dir)
     privacy = tree.site.get("privacy", {}) or {}

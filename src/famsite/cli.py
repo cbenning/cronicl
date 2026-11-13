@@ -16,6 +16,7 @@ from .edit import EditError, apply_living
 from .fix import apply_plan, plan_fix
 from .gaps import find_gaps
 from .gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
+from .history import recent_changes
 from .layout import LayoutError
 from .privacy import is_living
 from .relations import build_relations
@@ -145,7 +146,7 @@ def cmd_build(args) -> int:
                 "set it to placeholder or hidden before publishing"
             )
     out = Path(args.out) if args.out else root / "out"
-    summary = build_site(tree, out, today=today)
+    summary = build_site(tree, out, today=today, recent=recent_changes(root))
     print(f"built {summary.people} people, {summary.files} files into {out}")
     return 0
 
