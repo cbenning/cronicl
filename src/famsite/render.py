@@ -179,7 +179,7 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-_GENERATED_DIRS = ("data", "p", "focus", "people", "places")
+_GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate")
 _GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json")
 
 
@@ -302,6 +302,10 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
     put(
         "places/index.html",
         env.get_template("places.html").render(title=title, v=versions, home=home, root="../", places=places),
+    )
+    put(
+        "relate/index.html",
+        env.get_template("relate.html").render(title=title, v=versions, home=home, root="../", people=index),
     )
     put("tree.html", env.get_template("tree.html").render(title=title, people=index, v=versions, home=home, root=""))
     person_template = env.get_template("person.html")

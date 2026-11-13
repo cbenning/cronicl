@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="famsite-home" content="{{ home or '' }}">
+<meta name="famsite-root" content="{{ root }}">
+<title>How are we related? — {{ title }}</title>
+<link rel="stylesheet" href="{{ root }}style.css?v={{ v.css }}">
+<script src="{{ root }}kin.js?v={{ v.kin }}" defer></script>
+<script src="{{ root }}site.js?v={{ v.site }}" defer></script>
+</head>
+<body class="site-page relate-page">
+{% include "_header.html" %}
+<main class="index">
+  <h1>How are we related?</h1>
+  <noscript><p>This page needs JavaScript to work out a relationship. Every person page lists parents, partners, children and siblings without it.</p></noscript>
+  {% if people %}
+  <p class="relate-pick">
+    <label>Person <select id="relate-a">{% for person in people %}<option value="{{ person.id }}">{{ person.name }}{% if person.years %} ({{ person.years }}){% endif %}</option>{% endfor %}</select></label>
+    <label>and <select id="relate-b">{% for person in people %}<option value="{{ person.id }}">{{ person.name }}{% if person.years %} ({{ person.years }}){% endif %}</option>{% endfor %}</select></label>
+  </p>
+  <p id="relate-answer" aria-live="polite"></p>
+  {% else %}
+  <p>No people yet.</p>
+  <p id="relate-answer" aria-live="polite"></p>
+  {% endif %}
+</main>
+</body>
+</html>

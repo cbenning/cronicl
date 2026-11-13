@@ -353,6 +353,9 @@ async function main() {
   check('the panel carries a kinship line', /^Your /.test(await ev(`(document.querySelector('#panel .kin') || {}).textContent || ''`)), await ev(`(document.querySelector('#panel .kin') || {}).textContent`));
   await ev(`localStorage.removeItem('famsite.me')`);
 
+  await send('Page.navigate', { url: base + '/relate/index.html?a=smith-amy&b=smith-john' }); await sleep(1200);
+  check('the relate page answers for the two people in the link', /grandfather\.$/.test(await ev(`document.getElementById('relate-answer').textContent`)), await ev(`document.getElementById('relate-answer').textContent`));
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });

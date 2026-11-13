@@ -3,7 +3,7 @@
 
   // Lower-case and strip accents so "Köhler" and "KOHLER" are the same word.
   function fold(text) {
-    return String(text == null ? '' : text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    return String(text == null ? '' : text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   }
 
   // Every word of the query must appear in the text, in any order. Plain substrings only: no pattern syntax.
@@ -81,6 +81,38 @@
     }).catch(function () { /* the page is complete without the line */ });
   }
 
+  function queryValue(search, name) {
+    var found = new RegExp('[?&]' + name + '=([^&]*)').exec(search || '');
+    if (!found) return '';
+    try { return decodeURIComponent(found[1].replace(/\+/g, ' ')); } catch (e) { return found[1]; }
+  }
+
+  // The relate page: two pickers and one sentence.
+  function initRelate(selectA, selectB) {
+    var answer = document.getElementById('relate-answer');
+    var base = metaContent('famsite-root');
+    var home = metaContent('famsite-home');
+    var kin = root.famsiteKin;
+    if (!kin) return;
+    fetch(base + 'kin.json').then(function (r) { return r.json(); }).then(function (data) {
+      var people = data.people;
+      var who = viewerId(localStore(), people, home);
+      var a = queryValue(location.search, 'a') || who.id;
+      var b = queryValue(location.search, 'b');
+      if (a && people[a]) selectA.value = a;
+      if (b && people[b]) selectB.value = b;
+      function render() {
+        answer.textContent = kin.sentence(people, selectA.value, selectB.value);
+        try {
+          history.replaceState(null, '', '?a=' + encodeURIComponent(selectA.value) + '&b=' + encodeURIComponent(selectB.value));
+        } catch (e) { /* the answer still shows */ }
+      }
+      selectA.addEventListener('change', render);
+      selectB.addEventListener('change', render);
+      render();
+    }).catch(function () { /* the page says it needs scripts */ });
+  }
+
   function queryParam(search) {
     var found = /[?&]q=([^&]*)/.exec(search || '');
     if (!found) return '';
@@ -100,6 +132,8 @@
       });
       section.hidden = !any;
     }
+    var relateA = document.getElementById('relate-a');
+    if (relateA) initRelate(relateA, document.getElementById('relate-b'));
     var kinLine = document.querySelector('[data-kin-for]');
     if (kinLine) initKin(kinLine);
     var people = Array.prototype.slice.call(document.querySelectorAll('[data-person]'));

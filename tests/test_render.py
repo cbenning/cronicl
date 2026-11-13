@@ -378,3 +378,12 @@ def test_every_page_names_its_root_for_the_scripts(tmp_path, make_tree):
     assert '<meta name="famsite-root" content="../../">' in page
     assert 'data-kin-for="smith-bob"' in page and 'id="set-me"' in page
     assert page.index("kin.js") < page.index("site.js")
+
+
+def test_relate_page_lists_everyone(tmp_path, make_tree):
+    build_site(sample(make_tree), tmp_path, today=TODAY)
+    page = (tmp_path / "relate/index.html").read_text(encoding="utf-8")
+    assert page.count('<option value="smith-bob"') == 2 and 'id="relate-answer"' in page
+    assert "needs JavaScript" in page  # inside <noscript>
+    person = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
+    assert 'href="../../relate/index.html?b=smith-bob"' in person

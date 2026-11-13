@@ -51,6 +51,11 @@ read-only utilities. There is deliberately no bulk form.
   "On this day" list (filled in by the browser) and recently updated people (from the data folder's git history,
   when it is a repository).
 - `people/index.html` lists everyone grouped by surname; any page's search box filters it (`?q=`).
+- **Kinship:** each person page and side panel says how that person is related to you ("Your
+  great-grandmother"). Press **This is me** on your own page and the choice is remembered in your browser only
+  (`localStorage`, never sent anywhere); until then relations are told from the home person's side.
+  `relate/index.html` answers "how are these two people related?" for any pair (`?a=<id>&b=<id>`). Kinship is
+  worked out in the browser from `kin.json`; pages without JavaScript simply omit the line.
 - `places/index.html` lists every place named in the files and who was born, died or married there.
 - `tree.html` is the viewer, described next; old `index.html#/...` links are forwarded to it.
 

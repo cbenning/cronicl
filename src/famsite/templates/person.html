@@ -23,6 +23,7 @@
         <a class="pill" href="{{ root }}tree.html#/tree/{{ person.id }}">Family tree</a>
         <a class="pill" href="{{ root }}tree.html#/focus/{{ person.id }}">Focus tree</a>
         <a class="pill" href="{{ root }}tree.html#/timeline/{{ person.id }}">Timeline</a>
+        <a class="pill" href="{{ root }}relate/index.html?b={{ person.id }}">How are we related?</a>
         <button type="button" class="pill" id="set-me" data-id="{{ person.id }}" hidden>This is me</button>
       </nav>
       {% set born = person.birth and (person.birth.date or person.birth.place) %}
