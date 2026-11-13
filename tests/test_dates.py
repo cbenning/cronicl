@@ -79,3 +79,21 @@ def test_age_falls_back_to_the_finest_precision_both_share():
 
 def test_age_is_none_before_birth():
     assert age("1990", "1980") is None
+
+
+from famsite.dates import format_date
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("1941-03-12", "12 March 1941"),
+    ("1941-01", "January 1941"),
+    ("1941", "1941"),
+    ("~1941", "about 1941"),
+    ("~1941-03-12", "about 12 March 1941"),
+    ("APR 4 TH 2020", "APR 4 TH 2020"),
+    ("  1941  ", "1941"),
+    ("", ""),
+    (None, ""),
+])
+def test_format_date(text, expected):
+    assert format_date(text) == expected

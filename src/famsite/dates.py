@@ -73,6 +73,23 @@ def format_years(birth: str | None, death: str | None) -> str:
     return f"{born}–{died}"
 
 
+def format_date(text: str | None) -> str:
+    """Write a date in words: '12 March 1941', 'about 1941'. Unparseable text is returned as written."""
+    if text is None:
+        return ""
+    raw = text.strip()
+    parsed = parse_date(raw)
+    if parsed is None:
+        return raw
+    parts = []
+    if parsed.day:
+        parts.append(str(parsed.day))
+    if parsed.month:
+        parts.append(calendar.month_name[parsed.month])
+    parts.append(str(parsed.year))
+    return ("about " if parsed.approx else "") + " ".join(parts)
+
+
 def from_gedcom(text: str) -> tuple[str, bool]:
     """Convert a GEDCOM date to famsite form. Returns (value, ok); on failure value is the original text."""
     raw = text.strip()
