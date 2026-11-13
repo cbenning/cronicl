@@ -68,9 +68,13 @@ def _year_label(text: str | None) -> str:
 
 def format_years(birth: str | None, death: str | None) -> str:
     born, died = _year_label(birth), _year_label(death)
-    if not born and not died:
-        return ""
-    return f"{born}–{died}"
+    if born and died:
+        return f"{born}–{died}"
+    if born:
+        return f"b. {born}"
+    if died:
+        return f"d. {died}"
+    return ""
 
 
 def format_date(text: str | None) -> str:

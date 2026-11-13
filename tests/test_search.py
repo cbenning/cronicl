@@ -73,7 +73,7 @@ def test_limit(make_tree):
 def test_hits_carry_context_for_telling_people_apart(make_tree):
     hit = next(h for h in search_people(sample(make_tree), "bob smith", today=TODAY) if h.id == "smith-bob")
     assert hit.name == "Bob Smith"
-    assert hit.years == "1950–"
+    assert hit.years == "b. 1950"
     assert hit.place == "Vancouver, BC"
     assert hit.parents == ["John Smith", "Mary Brown"]
 

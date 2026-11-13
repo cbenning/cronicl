@@ -24,8 +24,8 @@ def test_date_year():
 
 def test_format_years():
     assert format_years("1950-03-12", "2020-07-01") == "1950–2020"
-    assert format_years("1950", None) == "1950–"
-    assert format_years(None, "2020") == "–2020"
+    assert format_years("1950", None) == "b. 1950"
+    assert format_years(None, "2020") == "d. 2020"
     assert format_years(None, None) == ""
     assert format_years("~1850", "~1910") == "~1850–~1910"
     assert format_years("BET 1900 AND 1910", None) == ""
@@ -97,3 +97,16 @@ from famsite.dates import format_date
 ])
 def test_format_date(text, expected):
     assert format_date(text) == expected
+
+
+@pytest.mark.parametrize("birth, death, expected", [
+    ("1941-03-12", "2021", "1941–2021"),
+    ("1907", None, "b. 1907"),
+    (None, "1990-02", "d. 1990"),
+    ("~1907", None, "b. ~1907"),
+    ("~1850", "~1910", "~1850–~1910"),
+    ("garbage", None, ""),
+    (None, None, ""),
+])
+def test_format_years_never_prints_an_open_dash(birth, death, expected):
+    assert format_years(birth, death) == expected
