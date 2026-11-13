@@ -15,6 +15,9 @@
   --role-child: oklch(0.57 0.09 160); --role-sibling: oklch(0.55 0.09 290);
   /* lineage ramp, deliberately muted: oldest ancestor terracotta, the selected generation dusty violet, youngest descendant sea green */
   --lin-old: oklch(0.55 0.10 35); --lin-mid: oklch(0.50 0.06 285); --lin-new: oklch(0.58 0.08 190);
+  /* timeline events */
+  --ev-birth: oklch(0.57 0.09 160); --ev-partner: oklch(0.58 0.09 355);
+  --ev-end: oklch(0.55 0.11 30); --ev-death: oklch(0.50 0.02 260);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -27,6 +30,8 @@
     --role-parent: oklch(0.76 0.09 55); --role-partner: oklch(0.76 0.08 355);
     --role-child: oklch(0.76 0.08 160); --role-sibling: oklch(0.74 0.08 290);
     --lin-old: oklch(0.74 0.09 35); --lin-mid: oklch(0.74 0.06 285); --lin-new: oklch(0.78 0.08 190);
+    --ev-birth: oklch(0.76 0.08 160); --ev-partner: oklch(0.76 0.08 355);
+    --ev-end: oklch(0.74 0.10 30); --ev-death: oklch(0.72 0.02 260);
   }
 }
 * { box-sizing: border-box; }
@@ -63,15 +68,6 @@ main { flex: 1; display: flex; min-height: 0; }
 .axis-bg { fill: var(--node); }
 .tick { stroke: var(--edge); stroke-width: 1; opacity: .35; }
 .tick-label { fill: currentColor; font-size: 11px; opacity: .75; }
-.stem { stroke: var(--edge); stroke-width: 1; opacity: .5; }
-.ev rect { fill: var(--node); stroke: var(--node-line); }
-.ev text { fill: currentColor; font-size: 12px; pointer-events: none; }
-.ev { cursor: pointer; }
-.ev.self text { font-weight: 600; }
-.ev.birth rect { stroke: #16a34a; }
-.ev.marriage rect { stroke: #9333ea; }
-.ev.death rect { stroke: #6b7280; }
-.ev.selected rect { stroke: var(--sel); stroke-width: 2.5; }
 .node rect { fill: var(--node); stroke: var(--box-line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .node:hover rect { stroke: var(--sel); stroke-width: 1.75px; } /* hover accents only the node under the pointer */
 .node.selected rect { stroke: var(--sel); stroke-width: 2px; }
@@ -100,8 +96,6 @@ main { flex: 1; display: flex; min-height: 0; }
 .edge.ended { stroke-dasharray: 6px 4px; }
 .union.ended { fill: var(--node); stroke: var(--line); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .union.ended.hi { stroke: var(--sel); }
-.ev.partnership rect { stroke: #9333ea; }
-.ev.divorce rect { stroke: #dc2626; }
 #panel { width: 24rem; max-width: 42vw; overflow: auto; padding: var(--space-4); border-left: 1px solid var(--border); background: var(--surface); }
 .panel-head { display: flex; align-items: flex-start; gap: var(--space-3); }
 .panel-title { flex: 1; min-width: 0; }
@@ -248,3 +242,21 @@ body.site-page { height: auto; min-height: 100vh; }
 
 /* Kinship line */
 .kin { margin: 2px 0 0; color: var(--accent); font-size: .9rem; }
+
+/* Timeline: one lifespan bar per person */
+#timeline-empty { padding: var(--space-4); color: var(--muted); }
+#timeline-empty[hidden], .tl-controls[hidden] { display: none; }
+.span-row { cursor: pointer; }
+.span-row .bar { fill: var(--muted); opacity: .45; }
+.span-row .bar.open-unknown { fill: url(#tl-fade); }
+.span-row.selected .bar { fill: var(--accent); opacity: 1; }
+.span-row.selected .bar.open-unknown { fill: url(#tl-fade-accent); }
+.span-row.related .bar { opacity: .8; }
+.span-row.dim { opacity: .3; }
+.cap.birth { fill: var(--ev-birth); }
+.cap.death { fill: var(--ev-death); }
+.mark.partner { fill: var(--ev-partner); }
+.mark.end { fill: var(--ev-end); }
+.span-row .label { font-size: 12px; fill: currentColor; }
+.span-row .label .years { fill: var(--muted); }
+.span-row.selected .label { font-weight: 600; }

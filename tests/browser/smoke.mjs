@@ -191,9 +191,10 @@ async function main() {
   check('timeline tab shows the timeline and really hides the tree', (await ev(`getComputedStyle(document.getElementById('timeline')).display !== 'none' && getComputedStyle(document.getElementById('tree')).display === 'none'`)) === true);
   check('the relationship legend never shows over the timeline', (await ev(`document.getElementById('legend').hidden`)) === true);
   check('timeline tab is marked current', (await ev(`document.querySelector('#tabs a[data-view="timeline"]').getAttribute('aria-current')`)) === 'page');
-  const evCount = await ev(`document.querySelectorAll('#timeline-svg .ev').length`);
-  check('timeline renders events', evCount >= 5, evCount);
-  check('timeline shows the divorce', (await ev(`document.querySelectorAll('#timeline-svg .ev.divorce').length`)) >= 1);
+  const tl = await ev(`(() => { const now = new Date().getFullYear(); const labels = [...document.querySelectorAll('#timeline-svg .tick-label')].map((t) => Number(t.textContent)); const r = (sel) => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect() : null; }; const bob = r('.span-row[data-id="smith-bob"] .bar'); const kid = r('.span-row[data-id="kid-now"] .bar'); const old = r('.span-row[data-id="old-open"] .bar'); const svg = r('#timeline-svg'); return { rows: document.querySelectorAll('.span-row').length, pills: document.querySelectorAll('.ev').length, maxLabel: Math.max.apply(null, labels), now, bobW: bob && bob.width, kidRight: kid && kid.right, oldW: old && old.width, svgRight: svg.right, living: !!document.querySelector('.span-row[data-id="kid-now"] .bar.open-living'), unknown: !!document.querySelector('.span-row[data-id="old-open"] .bar.open-unknown'), loneRow: !!document.querySelector('.span-row[data-id="lone-person"]') }; })()`);
+  check('one lifespan row per dated person, and no event pills', tl.rows >= 5 && tl.pills === 0 && !tl.loneRow, JSON.stringify(tl));
+  check('the axis does not run past next year', tl.maxLabel <= tl.now + 1, JSON.stringify(tl));
+  check('a living person\'s bar runs to today; an unknown end is a short fading stub', tl.living && tl.unknown && tl.kidRight > tl.svgRight - 80 && tl.oldW < tl.bobW, JSON.stringify(tl));
   check('timeline header says family', (await ev(`document.querySelector('#timeline-head h2')?.textContent`)) === 'Family timeline');
   await shot('timeline-family');
 
@@ -204,6 +205,8 @@ async function main() {
   const r0 = await readout();
   check('timeline shows a position indicator', /years in view/.test(r0), r0);
   check('timeline has pan and zoom buttons', (await ev(`['tl-left','tl-right','tl-zoom-in','tl-zoom-out','tl-fit'].every((i) => !!document.getElementById(i))`)) === true);
+  // the whole axis is on screen at first, so there is nothing to pan until the view is zoomed in
+  await click('#tl-zoom-in'); await click('#tl-zoom-in'); await click('#tl-zoom-in');
   await mouse('mouseMoved', 700, 650);
   await mouse('mousePressed', 700, 650, { button: 'left', clickCount: 1 });
   await mouse('mouseMoved', 500, 650, { buttons: 1 });
@@ -221,7 +224,8 @@ async function main() {
   check('Shift+wheel pans', r3 !== r2, `${r2} -> ${r3}`);
   const before = await yearsInView();
   await mouse('mouseWheel', 700, 400, { deltaX: 0, deltaY: -300 });
-  check('plain wheel zooms in', (await yearsInView()) < before);
+  await mouse('mouseWheel', 700, 400, { deltaX: 0, deltaY: -30, modifiers: 2 });
+  check('Ctrl+wheel zooms in', (await yearsInView()) < before);
   await click('#tl-right');
   const r4 = await readout();
   check('right button moves along the timeline', r4 !== (await (async () => { await click('#tl-left'); await click('#tl-left'); return readout(); })()));
@@ -234,7 +238,7 @@ async function main() {
   const thumbPct = await ev(`parseFloat(document.querySelector('#timeline-scroll .thumb').style.width)`);
   check('scrollbar thumb reflects the visible part', thumbPct > 0 && thumbPct <= 100, thumbPct);
   const k0 = await readout();
-  await ev(`document.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true}))`);
+  await ev(`document.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft', bubbles: true}))`);
   check('arrow keys move along the timeline', (await readout()) !== k0);
   await click('#tl-fit');
   check('Fit restores the overview', (await readout()) === r0);
@@ -242,18 +246,20 @@ async function main() {
   await mouse('mouseReleased', 80, 770, { button: 'left', clickCount: 1 });
   const geom = await ev(`(() => { const r = document.getElementById('timeline-scroll').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()`);
   check('scrollbar is on screen', geom[2] > 100 && geom[1] > 0, JSON.stringify(geom));
-  await click('#timeline-svg .ev');
+  await click('#timeline-svg .span-row');
   await sleep(500);
-  check('clicking an event opens the panel', (await ev(`!document.getElementById('panel').hidden`)) === true);
+  check('clicking a person\'s row opens the panel', (await ev(`!document.getElementById('panel').hidden`)) === true);
   await click('#panel .close');
   await sleep(200);
   check('panel closes in the timeline too', (await ev(`document.getElementById('panel').hidden`)) === true);
 
-  // ---- person timeline
+  // ---- a person's route in the timeline
   await goto('#/timeline/smith-bob');
-  check('person timeline header', /Bob Smith — timeline/.test(await ev(`document.querySelector('#timeline-head h2')?.textContent`)));
-  check('person timeline marks their own events', (await ev(`document.querySelectorAll('#timeline-svg .ev.self').length`)) >= 2);
-  check('person timeline has a way back', (await ev(`!!document.querySelector('#timeline-head a.back')`)) === true);
+  const sel = await ev(`(() => { const row = document.querySelector('.span-row.selected'); const b = row && row.getBoundingClientRect(); const s = document.getElementById('timeline-svg').getBoundingClientRect(); return { id: row && row.dataset.id, inView: !!b && b.top >= s.top && b.bottom <= s.bottom, dim: document.querySelectorAll('.span-row.dim').length, related: document.querySelectorAll('.span-row.related').length, panel: !document.getElementById('panel').hidden }; })()`);
+  check('a person route selects their row, scrolls it into view and dims strangers', sel.id === 'smith-bob' && sel.inView && sel.dim >= 1 && sel.related >= 1 && sel.panel, JSON.stringify(sel));
+  await goto('#/timeline/lone-person');
+  check('an undated person opens the panel and the undated list', (await ev(`!document.getElementById('panel').hidden && document.getElementById('undated').open`)) === true);
+  check('timeline colours come from tokens', (await ev(`getComputedStyle(document.documentElement).getPropertyValue('--ev-birth').trim().length > 0`)) === true);
   await shot('timeline-person');
   await goto('#/timeline/nobody-here');
   check('unknown person is reported, not crashed', /No such person/.test(await ev(`document.getElementById('timeline-head').textContent`)));

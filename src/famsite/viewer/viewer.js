@@ -87,26 +87,6 @@
   }
 
   // Greedy interval packing: returns a lane index for each item so items in one lane never overlap.
-  function packLanes(items, gap) {
-    var order = items.map(function (_, i) { return i; }).sort(function (a, b) {
-      return items[a].start - items[b].start || a - b;
-    });
-    var laneEnds = [];
-    var lanes = new Array(items.length);
-    order.forEach(function (i) {
-      for (var lane = 0; lane < laneEnds.length; lane++) {
-        if (items[i].start >= laneEnds[lane] + gap) {
-          lanes[i] = lane;
-          laneEnds[lane] = items[i].end;
-          return;
-        }
-      }
-      lanes[i] = laneEnds.length;
-      laneEnds.push(items[i].end);
-    });
-    return lanes;
-  }
-
   function parseRoute(hash) {
     var parts = String(hash || '').replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
     if (!parts.length) return { view: 'tree', id: null };
@@ -370,8 +350,6 @@
     return via ? 'half-sibling via ' + via : 'half-sibling';
   }
 
-  var GLYPH = { birth: '●', marriage: '⚭', partnership: '⚭', divorce: '⚮', death: '✝' };
-
   // ------------------------------------------------------------------ browser app
 
   function init() {
@@ -420,7 +398,7 @@
       try { return localStorage.getItem('famsite.colourMode') === 'family' ? 'family' : 'lineage'; } catch (e) { return 'lineage'; }
     }
     var state = {
-      view: 'tree', selected: null, layout: null, index: null, timeline: null, personEvents: {},
+      view: 'tree', selected: null, layout: null, index: null, timeline: null,
       colourMode: savedColourMode()
     };
     var people = new Map();
@@ -1148,120 +1126,142 @@
 
     var timeline = (function () {
       var AXIS_H = 34;
-      var LANE_H = 24;
+      var PAD = 40;
       var focus = null;
-      var items = [];
-      var lanes = [];
       var pxPerYear = 14;
-      var originYear = 0;
-      var tx = 40, ty = 0;
+      var tx = PAD, ty = 0; // ty is the vertical scroll: 0 or negative
+      var bounds = { min: 0, max: 1 };
+      var nowYear = 0;
+      var rowIndex = new Map();
+      var marks = new Map(); // person id -> partnership events that belong on their bar
+      var ready = false;
       var drag = null;
       var moved = false;
       var loading = null;
+      var defs = svgEl('defs');
+      [['tl-fade', 'var(--muted)'], ['tl-fade-accent', 'var(--accent)']].forEach(function (pair) {
+        var grad = svgEl('linearGradient', { id: pair[0], x1: 0, x2: 1, y1: 0, y2: 0 });
+        grad.appendChild(svgEl('stop', { offset: 0, style: 'stop-color:' + pair[1] + ';stop-opacity:1' }));
+        grad.appendChild(svgEl('stop', { offset: 1, style: 'stop-color:' + pair[1] + ';stop-opacity:0' }));
+        defs.appendChild(grad);
+      });
+      var gridLayer = svgEl('g');
+      var rowLayer = svgEl('g');
       var axisLayer = svgEl('g');
-      var stemLayer = svgEl('g');
-      var eventLayer = svgEl('g');
-      var rootG = svgEl('g');
-      rootG.appendChild(stemLayer);
-      rootG.appendChild(eventLayer);
+      tlSvg.appendChild(defs);
+      tlSvg.appendChild(gridLayer);
+      tlSvg.appendChild(rowLayer);
       tlSvg.appendChild(axisLayer);
-      tlSvg.appendChild(rootG);
+      var emptyEl = document.createElement('p');
+      emptyEl.id = 'timeline-empty';
+      emptyEl.textContent = 'No dated events yet.';
+      emptyEl.hidden = true;
+      tlSection.insertBefore(emptyEl, tlSvg);
 
-      function xOf(ev) { return (yearPosition(ev) - originYear) * pxPerYear + tx; }
+      function viewWidth() { return tlSvg.getBoundingClientRect().width; }
+      function viewHeight() { return tlSvg.getBoundingClientRect().height; }
+      function rows() { return state.timeline ? state.timeline.rows : []; }
+      function xOfYear(year) { return (year - bounds.min) * pxPerYear + tx; }
+      function maxScroll() { return Math.max(0, rows().length * ROW_H - (viewHeight() - AXIS_H)); }
 
-      function buildItems() {
-        var data = state.timeline;
-        var rows;
-        if (focus) {
-          // a person's rows come from their own payload: timeline.json does not repeat them per person
-          rows = (state.personEvents[focus] || []).map(function (r) {
-            return { event: r, role: r.role, text: r.text, age: r.age, approx: r.age_approx };
-          });
-        } else {
-          rows = data.events.map(function (ev) { return { event: ev, role: null, text: ev.text }; });
-        }
-        items = rows.map(function (row) {
-          var ev = row.event;
-          var text = row.text;
-          if (row.age !== null && row.age !== undefined) text += ' (age ' + (row.approx ? '~' : '') + row.age + ')';
-          var label = GLYPH[ev.type] + ' ' + text;
-          if (row.role && row.role !== 'self') label = label + ' · ' + row.role;
-          var measure = row.role === 'self' ? measureLabelBold : measureLabel;
-          return { ev: ev, role: row.role, label: label, width: measure(label) + 16 };
-        });
+      function clampView() {
+        var minTx = Math.min(PAD, viewWidth() - (bounds.max - bounds.min) * pxPerYear - PAD);
+        tx = Math.min(PAD, Math.max(minTx, tx));
+        ty = Math.min(0, Math.max(-maxScroll(), ty));
       }
 
-      function layoutLanes() {
-        lanes = packLanes(
-          items.map(function (it) {
-            var x = (yearPosition(it.ev) - originYear) * pxPerYear;
-            return { start: x, end: x + it.width };
-          }),
-          6
-        );
-      }
+      function totalRange() { return { min: bounds.min, max: bounds.max }; }
 
-      function ticks(minX, maxX) {
+      function ticks() {
         var steps = [1, 2, 5, 10, 20, 50, 100, 200, 500];
         var step = steps[steps.length - 1];
         for (var i = 0; i < steps.length; i++) {
           if (steps[i] * pxPerYear >= 70) { step = steps[i]; break; }
         }
-        var first = Math.floor(((minX - tx) / pxPerYear + originYear) / step) * step;
-        var last = Math.ceil(((maxX - tx) / pxPerYear + originYear) / step) * step;
         var out = [];
-        for (var y = first; y <= last; y += step) out.push(y);
+        for (var y = Math.ceil(bounds.min / step) * step; y <= bounds.max; y += step) out.push(y);
         return out;
       }
 
+      function relatedSet(id) {
+        var info = state.timeline.people[id];
+        var set = new Set();
+        if (!info) return set;
+        [info.parents, info.spouses, info.children, info.siblings].forEach(function (list) {
+          (list || []).forEach(function (pid) { set.add(pid); });
+        });
+        return set;
+      }
+
+      function drawRow(index, id, related) {
+        var info = state.timeline.people[id];
+        var span = info.span;
+        var cls = 'span-row';
+        if (id === state.selected) cls += ' selected';
+        else if (state.selected) cls += related.has(id) ? ' related' : ' dim';
+        var g = svgEl('g', { 'class': cls, 'data-id': id, transform: 'translate(0 ' + (AXIS_H + index * ROW_H + ty) + ')' });
+        var bar = spanBar(span, nowYear);
+        var startX = null;
+        if (bar) {
+          var rect = barRect(bar, bounds.min, pxPerYear);
+          startX = rect.x + tx;
+          var kind = span.open === 'living' ? ' open-living' : span.open === 'unknown' ? ' open-unknown' : '';
+          g.appendChild(svgEl('rect', { x: startX, y: 15, width: rect.w, height: BAR_H, rx: 4, 'class': 'bar' + kind }));
+          g.appendChild(svgEl('circle', { cx: startX + 2, cy: 15 + BAR_H / 2, r: 4, 'class': 'cap birth' }));
+          if (span.end !== null) {
+            g.appendChild(svgEl('circle', { cx: startX + rect.w - 2, cy: 15 + BAR_H / 2, r: 4, 'class': 'cap death' }));
+          }
+        } else if (span.end !== null) {
+          startX = xOfYear(span.end);
+          g.appendChild(svgEl('circle', { cx: startX, cy: 15 + BAR_H / 2, r: 4, 'class': 'cap death' }));
+        }
+        (marks.get(id) || []).forEach(function (ev) {
+          var x = xOfYear(yearPosition(ev)), y = 15 + BAR_H / 2;
+          var d = 'M' + x + ' ' + (y - 4) + 'l4 4l-4 4l-4 -4z';
+          var mark = svgEl('path', { d: d, 'class': 'mark ' + (ev.type === 'divorce' ? 'end' : 'partner') });
+          var tip = svgEl('title');
+          tip.textContent = ev.text + ' · ' + ev.year;
+          mark.appendChild(tip);
+          g.appendChild(mark);
+        });
+        var label = svgEl('text', { x: Math.max(startX === null ? 8 : startX, 8), y: 11, 'class': 'label' });
+        label.textContent = info.name;
+        var meta = people.get(id);
+        if (meta && meta.years) {
+          var years = svgEl('tspan', { dx: 6, 'class': 'years' });
+          years.textContent = meta.years;
+          label.appendChild(years);
+        }
+        g.appendChild(label);
+        g.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (!moved) selectRow(id);
+        });
+        rowLayer.appendChild(g);
+      }
+
       function render() {
-        if (!state.timeline) return;
+        if (!ready) return;
         var r = tlSvg.getBoundingClientRect();
+        clampView();
+        gridLayer.textContent = '';
+        rowLayer.textContent = '';
         axisLayer.textContent = '';
-        stemLayer.textContent = '';
-        eventLayer.textContent = '';
         axisLayer.appendChild(svgEl('rect', { x: 0, y: 0, width: r.width, height: AXIS_H, 'class': 'axis-bg' }));
-        ticks(-80, r.width + 80).forEach(function (year) {
-          var x = (year - originYear) * pxPerYear + tx;
-          axisLayer.appendChild(svgEl('line', { x1: x, x2: x, y1: AXIS_H - 8, y2: r.height, 'class': 'tick' }));
+        ticks().forEach(function (year) {
+          var x = xOfYear(year);
+          if (x < -40 || x > r.width + 40) return;
+          gridLayer.appendChild(svgEl('line', { x1: x, x2: x, y1: AXIS_H, y2: r.height, 'class': 'tick' }));
           var label = svgEl('text', { x: x + 4, y: AXIS_H - 12, 'class': 'tick-label' });
           label.textContent = String(year);
           axisLayer.appendChild(label);
         });
-        rootG.setAttribute('transform', 'translate(0 ' + ty + ')');
-        items.forEach(function (it, i) {
-          var x = xOf(it.ev);
-          if (x + it.width < -40 || x > r.width + 40) return;
-          var y = AXIS_H + 14 + lanes[i] * LANE_H;
-          var cls = 'ev ' + it.ev.type + (it.role === 'self' ? ' self' : '') +
-            (state.selected && it.ev.people.indexOf(state.selected) !== -1 ? ' selected' : '');
-          stemLayer.appendChild(svgEl('line', { x1: x, x2: x, y1: AXIS_H - ty, y2: y, 'class': 'stem' }));
-          var g = svgEl('g', { 'class': cls, transform: 'translate(' + x + ' ' + y + ')' });
-          g.appendChild(svgEl('rect', { x: -4, y: -11, width: it.width, height: 20, rx: 4 }));
-          var t = svgEl('text', { x: 2, y: 4 });
-          t.textContent = it.label;
-          g.appendChild(t);
-          var tip = svgEl('title');
-          tip.textContent = it.ev.date + (it.ev.place ? ' — ' + it.ev.place : '');
-          g.appendChild(tip);
-          g.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (!moved) showPanel(it.ev.people[0]);
-            refresh();
-          });
-          eventLayer.appendChild(g);
-        });
+        var list = rows();
+        var win = rowWindow(-ty, r.height - AXIS_H, ROW_H, list.length);
+        var related = state.selected ? relatedSet(state.selected) : new Set();
+        for (var i = win.first; i < win.last; i++) drawRow(i, list[i], related);
         updateControls();
       }
-
-      // ---- movement: every way of panning/zooming goes through these two
-      function totalRange() {
-        if (!items.length) return { min: originYear, max: originYear + 1 };
-        var years = items.map(function (it) { return it.ev.year; });
-        return { min: Math.min.apply(null, years) - 1, max: Math.max.apply(null, years) + 2 };
-      }
-
-      function viewWidth() { return tlSvg.getBoundingClientRect().width; }
 
       function panBy(dx) {
         tx += dx;
@@ -1270,23 +1270,28 @@
 
       function zoomBy(factor, anchorX) {
         var anchor = anchorX === undefined ? viewWidth() / 2 : anchorX;
-        var yearAt = (anchor - tx) / pxPerYear + originYear;
+        var yearAt = (anchor - tx) / pxPerYear + bounds.min;
         pxPerYear = Math.min(200, Math.max(1, pxPerYear * factor));
-        tx = anchor - (yearAt - originYear) * pxPerYear;
-        layoutLanes();
+        tx = anchor - (yearAt - bounds.min) * pxPerYear;
         render();
       }
 
       function centerOnYear(year) {
-        tx = viewWidth() / 2 - (year - originYear) * pxPerYear;
+        tx = viewWidth() / 2 - (year - bounds.min) * pxPerYear;
         render();
+      }
+
+      function fit() {
+        pxPerYear = Math.min(60, Math.max(1, (viewWidth() - 2 * PAD) / Math.max(1, bounds.max - bounds.min)));
+        tx = PAD;
+        ty = 0;
       }
 
       function updateControls() {
         var readout = $('tl-range');
         var scroll = $('timeline-scroll');
-        if (!readout || !scroll || !items.length) return;
-        var vis = visibleRange(tx, pxPerYear, originYear, viewWidth());
+        if (!readout || !scroll || !rows().length) return;
+        var vis = visibleRange(tx, pxPerYear, bounds.min, viewWidth());
         readout.textContent = Math.round(vis.from) + ' – ' + Math.round(vis.to) +
           '  ·  ' + Math.round(vis.to - vis.from) + ' years in view';
         var geo = thumbGeometry(totalRange(), vis);
@@ -1306,33 +1311,11 @@
         return b;
       }
 
-      function fit() {
-        var r = tlSvg.getBoundingClientRect();
-        var years = items.map(function (it) { return it.ev.year; });
-        var min = Math.min.apply(null, years), max = Math.max.apply(null, years);
-        originYear = min - 1;
-        var span = Math.max(max - min + 2, 2);
-        // leave room for the widest label among the latest events, not a fixed guess
-        var tail = items.reduce(function (w, it) { return it.ev.year >= max - 1 ? Math.max(w, it.width) : w; }, 0);
-        pxPerYear = Math.min(60, Math.max(3, (r.width - 40 - tail - 24) / span));
-        tx = 40;
-        ty = 0;
-      }
-
       function header() {
         tlHead.textContent = '';
         var h = document.createElement('h2');
-        if (focus) {
-          var person = state.timeline.people[focus];
-          h.textContent = (person ? person.name : focus) + ' — timeline';
-          tlHead.appendChild(h);
-          var back = link(routeHash('timeline', null), '← All family events');
-          back.className = 'back';
-          tlHead.appendChild(back);
-        } else {
-          h.textContent = 'Family timeline';
-          tlHead.appendChild(h);
-        }
+        h.textContent = 'Family timeline';
+        tlHead.appendChild(h);
         var controls = document.createElement('span');
         controls.className = 'tl-controls';
         controls.appendChild(button('tl-left', '◀', 'Earlier (←)', function () { panBy(viewWidth() * 0.25); }));
@@ -1341,7 +1324,6 @@
         controls.appendChild(button('tl-zoom-in', '+', 'Zoom in (+)', function () { zoomBy(1.4); }));
         controls.appendChild(button('tl-fit', 'Fit', 'Fit everything (Home)', function () {
           fit();
-          layoutLanes();
           render();
         }));
         var readout = document.createElement('span');
@@ -1349,7 +1331,7 @@
         readout.className = 'hint';
         controls.appendChild(readout);
         tlHead.appendChild(controls);
-        undated.hidden = !!focus || !state.timeline.undated.length;
+        undated.hidden = !state.timeline.undated.length;
         if (!undated.hidden) {
           undated.textContent = '';
           var summary = document.createElement('summary');
@@ -1363,6 +1345,35 @@
           });
           undated.appendChild(ul);
         }
+      }
+
+      function scrollToRow(index) {
+        var top = index * ROW_H, view = viewHeight() - AXIS_H;
+        if (top + ty >= 0 && top + ROW_H + ty <= view) return;
+        ty = -(top - (view - ROW_H) / 2);
+        clampView();
+      }
+
+      function selectRow(id) {
+        history.replaceState(null, '', routeHash('timeline', id));
+        showPanel(id);
+        render();
+      }
+
+      function prepare() {
+        var d = new Date();
+        nowYear = yearPosition({ year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() });
+        bounds = axisBounds(state.timeline.range.min, nowYear);
+        rowIndex = new Map();
+        rows().forEach(function (id, i) { rowIndex.set(id, i); });
+        marks = new Map();
+        state.timeline.events.forEach(function (ev) {
+          if (ev.type !== 'marriage' && ev.type !== 'partnership' && ev.type !== 'divorce') return;
+          ev.people.forEach(function (pid) {
+            if (!marks.has(pid)) marks.set(pid, []);
+            marks.get(pid).push(ev);
+          });
+        });
       }
 
       function show(id) {
@@ -1388,32 +1399,35 @@
         }
         if (focus && !state.timeline.people[focus]) {
           tlHead.textContent = 'No such person: ' + focus;
-          items = [];
-          render();
+          ready = false;
           return;
         }
-        if (focus && !state.personEvents[focus]) {
-          var wanted = focus;
-          tlHead.textContent = 'Loading…';
-          fetch('data/people/' + wanted + '.json')
-            .then(function (r) { return r.json(); })
-            .then(function (p) {
-              state.personEvents[wanted] = p.events || [];
-              if (focus === wanted) show(wanted);
-            })
-            .catch(function () { tlHead.textContent = 'Could not load this person.'; });
-          return;
-        }
+        prepare();
         header();
-        $('timeline-scroll').hidden = false;
-        buildItems();
-        if (!items.length) {
-          tlHead.appendChild(document.createTextNode(' No dated events to show.'));
+        var empty = !rows().length;
+        emptyEl.hidden = !empty;
+        setHidden(tlSvg, empty);
+        $('timeline-scroll').hidden = empty;
+        tlHead.querySelector('.tl-controls').hidden = empty;
+        ready = !empty;
+        if (empty) {
+          if (focus) showPanel(focus);
+          return;
         }
-        fit();
-        layoutLanes();
+        if (!shown) {
+          fit();
+          shown = true;
+        }
+        if (focus) {
+          state.selected = focus;
+          var at = rowIndex.get(focus);
+          if (at !== undefined) scrollToRow(at);
+          else undated.open = true;
+          showPanel(focus);
+        }
         render();
       }
+      var shown = false;
 
       function refresh() {
         if (state.view === 'timeline' && state.timeline) render();
@@ -1428,7 +1442,7 @@
         var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
         if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
         tx = drag.tx + dx;
-        ty = Math.min(0, drag.ty + dy);
+        ty = drag.ty + dy;
         render();
       });
       function endDrag() {
@@ -1448,7 +1462,8 @@
         } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
           panBy(-(e.deltaX || e.deltaY)); // sideways swipe / Shift+wheel
         } else {
-          zoomBy(Math.exp(-e.deltaY * 0.0015), px);
+          ty -= e.deltaY; // a plain wheel scrolls the rows
+          render();
         }
       }, { passive: false });
 
@@ -1459,15 +1474,13 @@
         var handled = true;
         if (e.key === 'ArrowLeft') panBy(viewWidth() * 0.2);
         else if (e.key === 'ArrowRight') panBy(-viewWidth() * 0.2);
+        else if (e.key === 'ArrowUp') { ty += ROW_H * 3; render(); }
+        else if (e.key === 'ArrowDown') { ty -= ROW_H * 3; render(); }
         else if (e.key === '+' || e.key === '=') zoomBy(1.4);
         else if (e.key === '-' || e.key === '_') zoomBy(1 / 1.4);
-        else if (e.key === 'Home') {
-          var t = totalRange();
-          centerOnYear(t.min + (viewWidth() / 2) / pxPerYear);
-        } else if (e.key === 'End') {
-          var t2 = totalRange();
-          centerOnYear(t2.max - (viewWidth() / 2) / pxPerYear);
-        } else handled = false;
+        else if (e.key === 'Home') centerOnYear(bounds.min + (viewWidth() / 2) / pxPerYear);
+        else if (e.key === 'End') centerOnYear(bounds.max - (viewWidth() / 2) / pxPerYear);
+        else handled = false;
         if (handled) e.preventDefault();
       });
 
@@ -1477,8 +1490,7 @@
       function scrollTo(e) {
         var rect = scrollEl.getBoundingClientRect();
         var frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-        var t = totalRange();
-        centerOnYear(t.min + frac * (t.max - t.min));
+        centerOnYear(bounds.min + frac * (bounds.max - bounds.min));
       }
       scrollEl.addEventListener('pointerdown', function (e) {
         scrollDrag = true;
@@ -1531,7 +1543,6 @@
     queryGrid: queryGrid,
     boundsOf: boundsOf,
     wrapName: wrapName,
-    packLanes: packLanes,
     parseRoute: parseRoute,
     visibleRange: visibleRange,
     spanBar: spanBar,

@@ -33,24 +33,6 @@ test('wrapName tolerates empty input', () => {
   assert.deepStrictEqual(v.wrapName('', MAX, measure), { lines: [''], truncated: false });
 });
 
-test('packLanes puts overlapping items in different lanes and reuses free lanes', () => {
-  const lanes = v.packLanes(
-    [
-      { start: 0, end: 100 },
-      { start: 50, end: 150 },
-      { start: 120, end: 200 },
-      { start: 300, end: 400 },
-    ],
-    10
-  );
-  assert.deepStrictEqual(lanes, [0, 1, 0, 0]);
-});
-
-test('packLanes respects the gap between neighbours', () => {
-  const lanes = v.packLanes([{ start: 0, end: 100 }, { start: 105, end: 200 }], 10);
-  assert.deepStrictEqual(lanes, [0, 1]);
-});
-
 test('parseRoute understands views, ids and the legacy bare id', () => {
   assert.deepStrictEqual(v.parseRoute(''), { view: 'tree', id: null });
   assert.deepStrictEqual(v.parseRoute('#/tree'), { view: 'tree', id: null });

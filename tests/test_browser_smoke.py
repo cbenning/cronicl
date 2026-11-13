@@ -44,6 +44,13 @@ def test_viewer_in_a_real_browser(tmp_path, sample_ged):
         "birth: 1925\ndeath: 1990\nparents: [smith-john, brown-mary]\n---\n",
         encoding="utf-8",
     )
+    (data / "people" / "kid-now.md").write_text(
+        "---\nid: kid-now\nname:\n  given: Kid\n  surname: Now\nbirth: 2000-05-05\nparents: [smith-bob]\n---\n",
+        encoding="utf-8",
+    )
+    (data / "people" / "old-open.md").write_text(
+        "---\nid: old-open\nname:\n  given: Old\n  surname: Open\nbirth: 1850\n---\n", encoding="utf-8"
+    )
     (data / "people" / "lone-person.md").write_text(
         "---\nid: lone-person\nname:\n  given: Lone\n  surname: Person\n---\n", encoding="utf-8"
     )
