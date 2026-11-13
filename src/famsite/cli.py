@@ -14,9 +14,11 @@ from pathlib import Path
 from .check import check_tree
 from .edit import EditError, apply_living
 from .fix import apply_plan, plan_fix
+from .gaps import find_gaps
 from .gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
 from .layout import LayoutError
 from .privacy import is_living
+from .relations import build_relations
 from .render import build_site, dumps
 from .schema import PERSON_SCHEMA
 from .search import search_people
@@ -187,6 +189,22 @@ def cmd_edit_living(args) -> int:
     return 0
 
 
+def cmd_gaps(args) -> int:
+    tree, _ = load_tree(Path(args.dir))
+    privacy = tree.site.get("privacy", {}) or {}
+    gaps = find_gaps(
+        tree, build_relations(tree), today=date.today(), cutoff_years=int(privacy.get("cutoff_years", 100))
+    )
+    if args.limit is not None:
+        gaps = gaps[: args.limit]
+    if args.format == "json":
+        print(json.dumps([g.to_dict() for g in gaps], indent=2, ensure_ascii=False))
+    else:
+        for g in gaps:
+            print(f"{g.id}  {g.name}  missing: {', '.join(g.missing)}")
+    return 0
+
+
 def cmd_search(args) -> int:
     tree, _ = load_tree(Path(args.dir))
     try:
@@ -255,6 +273,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--limit", type=int, default=20)
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.set_defaults(func=cmd_search)
+
+    p = sub.add_parser("gaps", parents=[common], help="list people with missing facts, best-connected first (read-only)")
+    p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--format", choices=["text", "json"], default="text")
+    p.set_defaults(func=cmd_gaps)
 
     p = sub.add_parser("fix", parents=[common], help="repair filenames and ids (preview unless --apply)")
     _add_apply(p)
