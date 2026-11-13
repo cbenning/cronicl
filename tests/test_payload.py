@@ -1,8 +1,10 @@
 from datetime import date
 
+import pytest
+
 from famsite.model import Event, Partnership
 from famsite.privacy import redact
-from famsite.render import person_payload
+from famsite.render import life_summary, person_payload
 
 
 def p(pid, given, surname=None, **kw):
@@ -102,3 +104,27 @@ def test_payload_carries_worded_dates(make_tree):
     assert payload["death"]["when"] == "APR 4 TH 2020"
     assert [e["when"] for e in payload["events"]] == ["12 March 1941", "20 June 1955", "February 1990"]
     assert payload["spouses"][0]["partnerships"][0]["text"] == "Married 20 June 1955 – divorced February 1990"
+
+
+def pl(birth=None, death=None, age=None, approx=False):
+    return {"birth": birth, "death": death, "age_at_death": age, "age_at_death_approx": approx}
+
+
+@pytest.mark.parametrize("payload, expected", [
+    (pl({"when": "12 March 1941", "place": "Guelph, Ontario"}, {"when": "4 June 2021", "place": None}, 80),
+     "Born 12 March 1941 in Guelph, Ontario. Died 4 June 2021, aged 80."),
+    (pl({"when": "about 1907", "place": None}), "Born about 1907."),
+    (pl({"when": "", "place": "Guelph"}), "Born in Guelph."),
+    (pl({"when": "about 1907", "place": None}, {"when": "1990", "place": "Surrey, BC"}, 83, True),
+     "Born about 1907. Died 1990 in Surrey, BC, aged about 83."),
+    (pl(None, {"when": "APR 4 TH 2020", "place": None}), "Died APR 4 TH 2020."),
+    (pl({"when": "", "place": None}, None), ""),
+    (pl(), ""),
+])
+def test_life_summary(payload, expected):
+    assert life_summary(payload) == expected
+
+
+def test_payload_has_summary(make_tree):
+    tree = make_tree([{"id": "a", "given": "Ann", "birth": Event(date="1941-03-12", place="Guelph")}])
+    assert person_payload(tree, "a")["summary"] == "Born 12 March 1941 in Guelph."

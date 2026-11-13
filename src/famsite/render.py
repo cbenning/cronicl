@@ -119,6 +119,26 @@ def _partnership(entry) -> dict:
     }
 
 
+def life_summary(payload: dict) -> str:
+    """One or two sentences about a life, in words: "Born 12 March 1941 in Guelph. Died 2021, aged 80." """
+
+    def clause(word: str, event: dict | None) -> str:
+        if not event or not (event.get("when") or event.get("place")):
+            return ""
+        text = word
+        if event.get("when"):
+            text += f" {event['when']}"
+        if event.get("place"):
+            text += f" in {event['place']}"
+        return text
+
+    born = clause("Born", payload.get("birth"))
+    died = clause("Died", payload.get("death"))
+    if died and payload.get("age_at_death") is not None:
+        died += ", aged " + ("about " if payload.get("age_at_death_approx") else "") + str(payload["age_at_death"])
+    return " ".join(f"{part}." for part in (born, died) if part)
+
+
 def person_payload(tree: Tree, pid: str, relations: Relations | None = None, timeline: dict | None = None) -> dict:
     rel = relations or build_relations(tree)
     timeline = timeline if timeline is not None else build_timeline(tree, rel)
@@ -149,11 +169,12 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
         entry["when"] = format_date(source["date"])
         entry.update(role=row["role"], text=row["text"], age=row["age"], age_approx=row["age_approx"])
         events.append(entry)
-    return {
+    payload = {
         "id": pid,
         "name": person.display_name,
         "sex": person.sex,
         "years": format_years(birth_date, death_date),
+        "summary": "",
         "birth": _event(person.birth),
         "death": _event(person.death),
         "bodyHtml": _markdown.render(person.body) if person.body.strip() else "",
@@ -167,6 +188,8 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
         "spouses": spouses,
         "children": children,
     }
+    payload["summary"] = life_summary(payload)
+    return payload
 
 
 def _asset_version(name: str) -> str:
