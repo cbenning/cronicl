@@ -184,3 +184,8 @@ def test_build_is_quiet_when_redaction_is_on(tmp_path, write, capsys):
     write(root, "people/kid.md", "---\nname:\n  given: Kid\nbirth: 1990\n---\n")
     assert main(["build", "--dir", str(root)]) == 0
     assert "W-PRIVACY-OFF" not in capsys.readouterr().out
+
+
+def test_init_creates_media_folder(tmp_path):
+    assert main(["init", "--dir", str(tmp_path / "fam")]) == 0
+    assert (tmp_path / "fam" / "media" / ".gitkeep").exists()

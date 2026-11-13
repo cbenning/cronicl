@@ -63,7 +63,7 @@ def cmd_init(args) -> int:
     if site.exists():
         print(f"error: {site} already exists", file=sys.stderr)
         return 2
-    for folder in ("people", "archive"):
+    for folder in ("people", "archive", "media"):
         (root / folder).mkdir(parents=True, exist_ok=True)
         (root / folder / ".gitkeep").touch()
     site.write_text(SITE_YML.format(salt=secrets.token_hex(8)), encoding="utf-8")

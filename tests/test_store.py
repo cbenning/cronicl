@@ -211,3 +211,18 @@ def test_bad_partnership_shape_is_a_frontmatter_error(tmp_path, write):
     tree, issues = load_tree(tmp_path)
     assert [i.code for i in issues if i.severity == "error"] == ["E-BAD-FRONTMATTER"]
     assert tree.people == {}
+
+
+def test_portrait_round_trips(tmp_path, write):
+    write(tmp_path, "people/a.md", "---\nid: a\nname:\n  given: Ann\nliving: false\nportrait: scans/ann 1.jpg\nparents: []\n---\nBio.\n")
+    tree, _ = load_tree(tmp_path)
+    person = tree.people["a"]
+    assert person.portrait == "scans/ann 1.jpg" and "portrait" not in person.extra
+    text = dump_person(person)
+    assert "living: false\nportrait: scans/ann 1.jpg\n" in text
+
+
+def test_portrait_must_be_text(tmp_path, write):
+    write(tmp_path, "people/a.md", "---\nname: A\nportrait: [a.jpg, b.jpg]\n---\n")
+    _, issues = load_tree(tmp_path)
+    assert [i.code for i in issues if i.severity == "error"] == ["E-BAD-FRONTMATTER"]

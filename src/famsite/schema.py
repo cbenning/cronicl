@@ -27,6 +27,7 @@ PERSON_SCHEMA = {
         "birth": _EVENT,
         "death": _EVENT,
         "living": {"type": "boolean"},
+        "portrait": {"type": "string", "description": "file under media/ shown as this person's picture"},
         "parents": {
             "type": "array",
             "items": {"type": "string"},
@@ -76,7 +77,7 @@ PERSON_SCHEMA = {
         },
         "gedcom_id": {"type": "string"},
         "gedcom_extra": {"type": "string"},
-        "media": {"description": "reserved; preserved but ignored in v0.1"},
+        "media": {"description": "reserved for the gallery; preserved and ignored"},
     },
     "additionalProperties": True,
 }
