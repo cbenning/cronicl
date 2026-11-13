@@ -15,13 +15,13 @@ from .focus import focus_people, focus_tree, hidden_counts
 from .home import home_person
 from .kin import build_kin
 from .layout import compute_layout
+from .lineage import ancestor_tree, count_descendants, descendant_outline
 from .model import Event, Tree
 from .places import place_index
 from .privacy import is_living, redact
 from .relations import Relations, build_relations
 from .slug import slugify
 from .stats import site_stats
-from .svgviews import lifeline_svg, tree_svg
 from .timeline import build_timeline, event_text
 
 _PACKAGE = Path(__file__).parent
@@ -334,24 +334,19 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
     )
     put("tree.html", env.get_template("tree.html").render(title=title, people=index, v=versions, home=home, root=""))
     person_template = env.get_template("person.html")
-    people_info = {pid: {"name": pl["name"], "years": pl["years"]} for pid, pl in payloads.items()}
-    page_svgs: dict[str, tuple[str, str]] = {}
     for pid in sorted(visible.people):
         focused = compute_layout(focus_tree(visible, relations, pid))
         focused["focus"] = pid
         focused["hidden"] = hidden_counts(relations, focus_people(visible, relations, pid))
         put(f"focus/{pid}.json", dumps(focused))
-        name = payloads[pid]["name"]
-        page_svgs[pid] = (
-            tree_svg(focused, people_info, pid, lambda other: f"../{other}/", f"Family tree of {name}"),
-            lifeline_svg(payloads[pid]["events"], f"../../tree.html#/timeline/{pid}", name),
-        )
     for pid, payload in payloads.items():
         put(f"data/people/{pid}.json", dumps(payload))
+        outline = descendant_outline(visible, relations, pid)
         put(
             f"p/{pid}/index.html",
             person_template.render(
-                title=title, person=payload, gallery=None, tree_svg=page_svgs[pid][0], lifeline_svg=page_svgs[pid][1],
+                title=title, person=payload, ancestors=ancestor_tree(visible, relations, pid),
+                descendants=outline, descendant_count=count_descendants(outline),
                 v=versions, home=home, root="../../"
             ),
         )

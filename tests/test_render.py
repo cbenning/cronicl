@@ -80,7 +80,7 @@ def test_static_person_page_links_relatives_and_back(tmp_path, make_tree):
     build_site(sample(make_tree), tmp_path, today=TODAY)
     page = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
     assert 'href="../smith-john/"' in page
-    assert 'href="../../tree.html#/tree/smith-bob"' in page
+    assert 'href="../../tree.html#/focus/smith-bob"' in page
 
 
 def test_build_is_deterministic(tmp_path, make_tree):
@@ -197,7 +197,7 @@ def test_person_page_has_hero_facts_events_and_family(tmp_path, make_tree):
     assert "<h1>John Smith</h1>" in html
     assert 'class="avatar avatar-lg"' in html and ">JS<" in html
     assert "Halifax, NS" in html and "Toronto, ON" in html
-    assert "Age" in html and "69" in html
+    assert "aged 69" in html
     assert "Bob Smith born" in html
     assert 'data-slot="gallery"' not in html  # nothing configured yet
     assert "../smith-bob/" in html
@@ -234,24 +234,6 @@ def test_living_relatives_stay_hidden_on_the_page_end_to_end(tmp_path, make_tree
         text = data.decode("utf-8", errors="ignore")
         assert "Qqme" not in text and "Wwsib" not in text, rel
     assert (tmp_path / "p/old/index.html").exists()
-
-
-def test_person_page_embeds_lifeline_and_tree_and_is_deterministic(tmp_path, make_tree):
-    def build(target):
-        tree = make_tree(
-            [
-                p("smith-john", "John", "Smith", birth=Event(date="1920"), death=Event(date="1990")),
-                p("brown-mary", "Mary", "Brown", birth=Event(date="1925")),
-                p("smith-bob", "Bob", "Smith", birth=Event(date="1950"), parents=["smith-john", "brown-mary"]),
-            ]
-        )
-        build_site(tree, target, today=TODAY)
-        return (target / "p/smith-bob/index.html").read_bytes()
-
-    first = build(tmp_path / "one")
-    assert b'class="mini-tree"' in first and b'class="lifeline"' in first
-    assert b'href="../smith-john/"' in first
-    assert first == build(tmp_path / "two")
 
 
 def test_timeline_json_does_not_repeat_every_persons_events(tmp_path, make_tree):
@@ -387,3 +369,62 @@ def test_relate_page_lists_everyone(tmp_path, make_tree):
     assert "needs JavaScript" in page  # inside <noscript>
     person = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
     assert 'href="../../relate/index.html?b=smith-bob"' in person
+
+
+def page_of(tmp_path, make_tree, pid):
+    build_site(sample(make_tree), tmp_path, today=TODAY)
+    return (tmp_path / f"p/{pid}/index.html").read_text(encoding="utf-8")
+
+
+def test_person_page_structure(tmp_path, make_tree):
+    page = page_of(tmp_path, make_tree, "smith-bob")
+    assert '<p class="summary">Born 1950. Died 2020, aged 70.</p>' in page
+    for gone in ('class="lifeline"', 'class="mini-tree"', 'class="facts"', 'class="side-col"'):
+        assert gone not in page
+    parents = page[page.index('class="fam-parents"'):page.index('class="fam-partners"')]
+    assert 'href="../smith-john/"' in parents and 'href="../brown-mary/"' in parents
+    assert 'href="../jones-jane/"' in page[page.index('class="fam-partners"'):page.index('class="fam-children"')]
+    assert 'class="fam-siblings"' not in page  # Bob has none: no empty block
+
+
+def test_person_page_pedigree_and_outline(tmp_path, make_tree):
+    amy = page_of(tmp_path, make_tree, "smith-amy")
+    ped = amy[amy.index('class="pedigree"'):]
+    assert 'href="../smith-john/"' in ped and "<summary>Ancestors</summary>" in ped
+    assert 'class="outline"' not in amy
+    john = page_of(tmp_path / "j", make_tree, "smith-john")
+    assert "<summary>Descendants (2)</summary>" in john and 'class="pedigree"' not in john
+
+
+def test_a_bare_person_page_has_no_empty_parts(tmp_path, make_tree):
+    build_site(make_tree([p("a", "Ann", None)]), tmp_path, today=TODAY)
+    page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
+    for absent in ('class="summary"', 'class="years"', 'class="bio"', 'class="family"', 'class="life"', "<details"):
+        assert absent not in page
+    assert "<h1>Ann</h1>" in page
+
+
+def test_a_redacted_placeholder_page_says_nothing(tmp_path, make_tree):
+    tree = make_tree([
+        p("old", "Old", "X", birth=Event(date="1800")),
+        p("kid", "Kid", "X", birth=Event(date="2000", place="Secretville"), parents=["old"]),
+    ])
+    tree.site = {"privacy": {"living": "placeholder", "id_salt": "s"}}
+    build_site(tree, tmp_path, today=TODAY)
+    page = next(f for f in (tmp_path / "p").glob("living-*/index.html")).read_text(encoding="utf-8")
+    for absent in ('class="summary"', 'class="years"', "Secretville", "2000", "<img"):
+        assert absent not in page
+
+
+def test_person_page_is_deterministic(tmp_path, make_tree):
+    def build(target):
+        build_site(sample(make_tree), target, today=TODAY)
+        return (target / "p/smith-bob/index.html").read_bytes()
+
+    assert build(tmp_path / "one") == build(tmp_path / "two")
+
+
+def test_svgviews_is_gone():
+    import importlib.util
+
+    assert importlib.util.find_spec("famsite.svgviews") is None

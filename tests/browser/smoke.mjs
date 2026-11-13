@@ -332,10 +332,10 @@ async function main() {
   check('person page has no horizontal overflow at 390px', (await ev(`document.documentElement.scrollWidth <= window.innerWidth`)) === true);
   await send('Emulation.clearDeviceMetricsOverride');
   check('relative chips link to their pages', (await ev(`[...document.querySelectorAll('.chip')].every((a) => /^\\.\\.\\/[a-z0-9-]+\\/$/.test(a.getAttribute('href')))`)) === true);
-  check('person page embeds the lifeline and the family tree', (await ev(`!!document.querySelector('.lifeline') && !!document.querySelector('.mini-tree a')`)) === true);
+  check('the person page leads with a sentence', /^Born /.test(await ev("document.querySelector('.summary').textContent")));
   check('person page has no horizontal overflow at 1280px', (await ev(`document.documentElement.scrollWidth <= window.innerWidth`)) === true);
-  const nodeHref = await ev(`(() => { const a = [...document.querySelectorAll('.mini-tree a')].find((x) => x.getAttribute('href') !== '../smith-bob/'); return a ? a.getAttribute('href') : null; })()`);
-  check('a family tree node links to a relative page', /^\.\.\/[a-z0-9-]+\/$/.test(nodeHref || ''), nodeHref);
+  const nodeHref = await ev(`(() => { const a = document.querySelector('.family a.chip'); return a ? a.getAttribute('href') : null; })()`);
+  check('a family chip links to a relative page', /^\.\.\/[a-z0-9-]+\/$/.test(nodeHref || ''), nodeHref);
   await send('Page.navigate', { url: base + '/p/' + (nodeHref || '../smith-bob/').replace(/^\.\.\//, '') });
   await sleep(600);
   check('the relative page opens with its own name', (await ev(`document.querySelector('.hero h1')?.textContent`)) !== 'Bob Smith' && !!(await ev(`document.querySelector('.hero h1')?.textContent`)));
