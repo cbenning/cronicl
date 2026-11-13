@@ -356,6 +356,8 @@
     var tabs = Array.prototype.slice.call(document.querySelectorAll('#tabs a'));
     var focusBar = $('focus-bar');
     var legendEl = $('legend');
+    var home = (document.querySelector('meta[name="famsite-home"]') || {}).content || null;
+    var treeTab = document.querySelector('#tabs a[data-view="focus"]');
 
     var canvas = document.createElement('canvas').getContext('2d');
     function measureWith(font) {
@@ -406,15 +408,22 @@
       if (!treeLike || view !== 'focus') setHidden(focusBar, true);
       if (!treeLike) legendEl.hidden = true;
       tabs.forEach(function (a) {
-        var active = a.getAttribute('data-view') === (treeLike ? 'tree' : view);
+        var active = a.getAttribute('data-view') === view;
         if (active) a.setAttribute('aria-current', 'page');
         else a.removeAttribute('aria-current');
       });
     }
 
+    // The Tree tab always leads to a focused tree: the selected person's, else the home person's.
+    function updateTreeTab(id) {
+      if (treeTab) treeTab.setAttribute('href', id ? routeHash('focus', id) : '#/tree');
+    }
+
     function route() {
+      if (!location.hash && home) history.replaceState(null, '', routeHash('focus', home));
       var r = parseRoute(location.hash);
       showView(r.view);
+      updateTreeTab(r.id || state.selected || home);
       if (r.view === 'focus' && r.id) {
         tree.ensure();
         tree.showFocus(r.id);
@@ -822,7 +831,12 @@
           var target = routeHash('tree', id);
           if (location.hash !== target) history.replaceState(null, '', target);
         }
+        if (scale < READABLE_SCALE) {
+          scale = 1;
+          center = true;
+        }
         if (center) centerOn(id);
+        updateTreeTab(id);
         rebuild();
         showPanel(id);
       }
@@ -858,7 +872,12 @@
           boxes.push({ id: 'l:' + i, x: l.x, y: l.y - 16, w: 320, h: 24 });
         });
         grid = buildGrid(boxes, CELL);
-        fit();
+        var box = treeSvg.getBoundingClientRect();
+        var view = initialView(layout.bounds, { w: box.width, h: box.height },
+          nodes.get(focusId || state.selected || home) || null);
+        scale = view.scale;
+        tx = view.tx;
+        ty = view.ty;
         rebuild();
       }
 

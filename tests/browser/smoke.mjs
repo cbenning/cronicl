@@ -158,7 +158,7 @@ async function main() {
   check('focused tree leaves siblings out', !focusIds.includes('smith-tom'));
   check('focus bar names the person', /Focused on Amy Smith/.test(await ev(`document.getElementById('focus-bar').textContent`)));
   check('focus person is marked', (await ev(`document.querySelectorAll('.node.focus').length`)) === 1);
-  check('tree tab stays current in focus', (await ev(`document.querySelector('#tabs a[data-view="tree"]').getAttribute('aria-current')`)) === 'page');
+  check('tree tab is current in focus', (await ev(`document.querySelector('#tabs a[data-view="focus"]').getAttribute('aria-current')`)) === 'page');
   await shot('tree-focus');
   await click('.node[data-id="smith-bob"]');
   await sleep(500);
@@ -267,6 +267,21 @@ async function main() {
   await ev(`(() => { const s = document.getElementById('search'); s.value = 'tom'; s.dispatchEvent(new Event('input')); })()`);
   await sleep(200);
   check('search lists matches', (await ev(`document.querySelectorAll('#results li').length`)) >= 1);
+
+  // ---- opening view
+  await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
+  await send('Page.navigate', { url: base + '/' }); await sleep(1500);
+  const home = await ev(`document.querySelector('meta[name="famsite-home"]').content`);
+  check('with no route the viewer opens the home person\'s focused tree', (await ev('location.hash')) === '#/focus/' + home, await ev('location.hash'));
+  check('the Tree tab is current in a focused tree', (await ev(`document.querySelector('#tabs a[aria-current="page"]').textContent`)) === 'Tree');
+  const openH = await ev(`document.querySelector('.node rect').getBoundingClientRect().height`);
+  check('nodes open at a readable size', openH >= 64 * 0.6, openH);
+  await goto('#/tree');
+  for (let i = 0; i < 12; i++) await ev(`document.getElementById('tree').dispatchEvent(new WheelEvent('wheel', { deltaY: 600, clientX: 600, clientY: 400, bubbles: true, cancelable: true }))`);
+  check('the tree can be zoomed far out', (await ev(`document.querySelector('.node rect').getBoundingClientRect().height`)) < 64 * 0.35);
+  await goto('#/tree/smith-bob');
+  const selH = await ev(`document.querySelector('.node.selected rect').getBoundingClientRect().height`);
+  check('selecting a person from far out zooms in to them', Math.abs(selH - 64) < 1, selH);
 
   check('no script errors', errors.length === 0, errors.join(' | '));
 
