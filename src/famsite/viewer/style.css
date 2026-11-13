@@ -209,3 +209,10 @@ main { flex: 1; display: flex; min-height: 0; }
   main:has(#panel:not([hidden])) #legend { display: none; }
   #timeline-head { flex-wrap: wrap; }
 }
+
+/* Tree zoom controls */
+#tree-controls { position: absolute; right: var(--space-3); bottom: var(--space-3); z-index: 3; display: flex; flex-direction: column; gap: var(--space-1); }
+#tree-controls[hidden], #tree-controls button[hidden] { display: none; }
+#tree-controls button { min-width: 36px; min-height: 36px; padding: 0 var(--space-2); border: 1px solid var(--node-line); border-radius: 6px; background: var(--node); color: inherit; font: inherit; cursor: pointer; }
+#tree-controls button:hover { border-color: var(--sel); color: var(--sel); }
+@media (max-width: 40rem) { main:has(#panel:not([hidden])) #tree-controls { bottom: calc(60vh + var(--space-3)); } }

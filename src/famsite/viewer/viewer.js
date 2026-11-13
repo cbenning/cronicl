@@ -356,6 +356,7 @@
     var tabs = Array.prototype.slice.call(document.querySelectorAll('#tabs a'));
     var focusBar = $('focus-bar');
     var legendEl = $('legend');
+    var controls = $('tree-controls');
     var home = (document.querySelector('meta[name="famsite-home"]') || {}).content || null;
     var treeTab = document.querySelector('#tabs a[data-view="focus"]');
 
@@ -407,6 +408,7 @@
       setHidden(tlSection, view !== 'timeline');
       if (!treeLike || view !== 'focus') setHidden(focusBar, true);
       if (!treeLike) legendEl.hidden = true;
+      controls.hidden = !treeLike;
       tabs.forEach(function (a) {
         var active = a.getAttribute('data-view') === view;
         if (active) a.setAttribute('aria-current', 'page');
@@ -810,7 +812,7 @@
       function fit() {
         var r = treeSvg.getBoundingClientRect();
         var b = state.layout.bounds;
-        scale = Math.min(r.width / b.w, r.height / b.h, 1);
+        scale = Math.max(MIN_SCALE, Math.min(r.width / b.w, r.height / b.h, 1));
         if (!isFinite(scale) || scale <= 0) scale = 1;
         tx = (r.width - b.w * scale) / 2;
         ty = Math.max(0, (r.height - b.h * scale) / 2);
@@ -953,11 +955,49 @@
         });
       }
 
+      // Active pointers on the tree: one pans, two pinch.
+      var pointers = new Map();
+      var pinchDist = 0;
+
+      function spread() {
+        var pts = Array.from(pointers.values());
+        return { dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y), x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+      }
+
+      function applyView(v) {
+        scale = v.scale;
+        tx = v.tx;
+        ty = v.ty;
+        render();
+      }
+
+      function zoomBy(factor) {
+        var r = treeSvg.getBoundingClientRect();
+        applyView(zoomAt({ scale: scale, tx: tx, ty: ty }, factor, r.width / 2, r.height / 2));
+      }
+
       treeSvg.addEventListener('pointerdown', function (e) {
-        drag = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         moved = false;
+        if (pointers.size === 1) {
+          drag = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
+        } else if (pointers.size === 2) {
+          drag = null;
+          pinchDist = spread().dist;
+        }
       });
       window.addEventListener('pointermove', function (e) {
+        if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size >= 2) {
+          var s = spread();
+          var r = treeSvg.getBoundingClientRect();
+          if (pinchDist > 0 && s.dist > 0) {
+            applyView(zoomAt({ scale: scale, tx: tx, ty: ty }, s.dist / pinchDist, s.x - r.left, s.y - r.top));
+          }
+          pinchDist = s.dist;
+          moved = true;
+          return;
+        }
         if (!drag) return;
         var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
         if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
@@ -965,23 +1005,48 @@
         ty = drag.ty + dy;
         render();
       });
-      window.addEventListener('pointerup', function () {
-        drag = null;
+      function releasePointer(e) {
+        pointers.delete(e.pointerId);
+        pinchDist = 0;
+        if (pointers.size === 1) {
+          var rest = Array.from(pointers.values())[0];
+          drag = { x: rest.x, y: rest.y, tx: tx, ty: ty };
+        } else {
+          drag = null;
+        }
         setTimeout(function () { moved = false; }, 0);
-      });
+      }
+      window.addEventListener('pointerup', releasePointer);
+      window.addEventListener('pointercancel', releasePointer);
       treeSvg.addEventListener('click', function () {
         if (!moved && !panel.hidden) closePanel();
       });
       treeSvg.addEventListener('wheel', function (e) {
         e.preventDefault();
         var r = treeSvg.getBoundingClientRect();
-        var px = e.clientX - r.left, py = e.clientY - r.top;
-        var next = Math.min(3, Math.max(0.1, scale * Math.exp(-e.deltaY * 0.0015)));
-        tx = px - (px - tx) * (next / scale);
-        ty = py - (py - ty) * (next / scale);
-        scale = next;
-        render();
+        applyView(zoomAt({ scale: scale, tx: tx, ty: ty }, Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top));
       }, { passive: false });
+      controls.addEventListener('click', function (e) {
+        var act = e.target && e.target.getAttribute && e.target.getAttribute('data-act');
+        if (act === 'zoom-in') zoomBy(ZOOM_STEP);
+        else if (act === 'zoom-out') zoomBy(1 / ZOOM_STEP);
+        else if (act === 'fit') {
+          fit();
+          render();
+        } else if (act === 'home' && home) go('focus', home);
+      });
+      if (!home) controls.querySelector('[data-act="home"]').hidden = true;
+      document.addEventListener('keydown', function (e) {
+        if (state.view !== 'tree' && state.view !== 'focus') return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
+        if (e.key === '+' || e.key === '=') zoomBy(ZOOM_STEP);
+        else if (e.key === '-') zoomBy(1 / ZOOM_STEP);
+        else if (e.key === '0') {
+          fit();
+          render();
+        }
+      });
       window.addEventListener('resize', function () { if (state.view === 'tree' || state.view === 'focus') render(); });
 
       return {

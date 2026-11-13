@@ -22,6 +22,12 @@
   <div id="views">
     <div id="focus-bar" hidden></div>
     <div id="legend" hidden role="group" aria-label="What the colours mean"></div>
+    <div id="tree-controls" role="group" aria-label="Zoom" hidden>
+      <button type="button" data-act="zoom-in" aria-label="Zoom in">+</button>
+      <button type="button" data-act="zoom-out" aria-label="Zoom out">−</button>
+      <button type="button" data-act="fit" aria-label="Fit the whole tree">Fit</button>
+      <button type="button" data-act="home" aria-label="Go to the home person">Home</button>
+    </div>
     <svg id="tree" role="img" aria-label="Family tree"></svg>
     <section id="timeline" hidden>
       <div id="timeline-head"></div>

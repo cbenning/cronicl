@@ -283,6 +283,24 @@ async function main() {
   const selH = await ev(`document.querySelector('.node.selected rect').getBoundingClientRect().height`);
   check('selecting a person from far out zooms in to them', Math.abs(selH - 64) < 1, selH);
 
+  // ---- controls
+  await goto('#/tree');
+  const h0 = await ev(`document.querySelector('.node rect').getBoundingClientRect().height`);
+  await click('#tree-controls [data-act="zoom-in"]');
+  const h1 = await ev(`document.querySelector('.node rect').getBoundingClientRect().height`);
+  check('the + button zooms in by one step', Math.abs(h1 / h0 - 1.4) < 0.02 || h1 === 64 * 3, h0 + ' -> ' + h1);
+  await click('#tree-controls [data-act="home"]');
+  check('Home opens the home person\'s focused tree', (await ev('location.hash')) === '#/focus/' + home);
+  await goto('#/tree/smith-bob');
+  const p0 = await ev(`document.querySelector('.node.selected rect').getBoundingClientRect().height`);
+  await ev(`(() => { const t = document.getElementById('tree'); const pe = (type, id, x, target) => (target || t).dispatchEvent(new PointerEvent(type, { pointerId: id, clientX: x, clientY: 400, bubbles: true })); pe('pointerdown', 1, 500); pe('pointerdown', 2, 600); pe('pointermove', 2, 800, window); pe('pointerup', 1, 500, window); pe('pointerup', 2, 800, window); })()`);
+  await sleep(100);
+  const p1 = await ev(`document.querySelector('.node.selected rect').getBoundingClientRect().height`);
+  check('two pointers moving apart zoom in, and the panel stays open', p1 > p0 * 1.5 && (await ev(`!document.getElementById('panel').hidden`)) === true, p0 + ' -> ' + p1);
+  await ev(`document.dispatchEvent(new KeyboardEvent('keydown', { key: '0', bubbles: true }))`);
+  check('the 0 key fits the tree', (await ev(`document.querySelector('.node.selected rect').getBoundingClientRect().height`)) < p1);
+  check('controls are hidden on the timeline', (await goto('#/timeline'), await ev(`document.getElementById('tree-controls').hidden`)) === true);
+
   check('no script errors', errors.length === 0, errors.join(' | '));
 
   // ---- full person page (static, no JS)
