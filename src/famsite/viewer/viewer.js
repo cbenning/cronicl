@@ -320,6 +320,38 @@
     return { old: words(up, 'up'), young: words(down, 'down') };
   }
 
+  var ROW_H = 30;
+  var BAR_H = 8;
+  var UNKNOWN_FADE_YEARS = 8;
+  var ROW_OVERSCAN = 5;
+
+  // The bar for one person: from birth to death, to today when living, or a short fading stub when the end is
+  // unknown. Null when there is no birth date.
+  function spanBar(span, nowYear) {
+    if (span.start === null || span.start === undefined) return null;
+    if (span.end !== null && span.end !== undefined) return { from: span.start, to: span.end, fade: false };
+    if (span.open === 'living') return { from: span.start, to: nowYear, fade: false };
+    return { from: span.start, to: Math.min(span.start + UNKNOWN_FADE_YEARS, nowYear), fade: true };
+  }
+
+  // Pixel position and width of a bar; never negative and never thinner than 2px.
+  function barRect(bar, originYear, pxPerYear) {
+    return { x: (bar.from - originYear) * pxPerYear, w: Math.max(2, (bar.to - bar.from) * pxPerYear) };
+  }
+
+  // The time axis starts on a decade before the earliest year and ends next year, never in the far future.
+  function axisBounds(minYear, nowYear) {
+    var min = minYear === null || minYear === undefined ? Math.floor(nowYear) - 100 : Math.floor((minYear - 5) / 10) * 10;
+    return { min: min, max: Math.floor(nowYear) + 1 };
+  }
+
+  // Which rows exist in the DOM: those in view plus a few above and below. `last` is exclusive.
+  function rowWindow(scrollTop, viewHeight, rowHeight, count) {
+    var first = Math.max(0, Math.floor(scrollTop / rowHeight) - ROW_OVERSCAN);
+    var last = Math.min(count, Math.ceil((scrollTop + viewHeight) / rowHeight) + ROW_OVERSCAN);
+    return { first: first, last: last };
+  }
+
   function visibleRange(tx, pxPerYear, originYear, width) {
     return { from: originYear + (0 - tx) / pxPerYear, to: originYear + (width - tx) / pxPerYear };
   }
@@ -1502,6 +1534,10 @@
     packLanes: packLanes,
     parseRoute: parseRoute,
     visibleRange: visibleRange,
+    spanBar: spanBar,
+    barRect: barRect,
+    axisBounds: axisBounds,
+    rowWindow: rowWindow,
     initialView: initialView,
     lodFor: lodFor,
     zoomAt: zoomAt,

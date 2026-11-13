@@ -238,3 +238,25 @@ test('legendEnds says how far the line runs in words', () => {
   assert.deepStrictEqual(v.legendEnds(1, 3), { old: '1 generation up', young: '3 generations down' });
   assert.deepStrictEqual(v.legendEnds(0, 0), { old: '', young: '' });
 });
+
+test('spanBar', () => {
+  assert.deepStrictEqual(v.spanBar({ start: 1900.5, end: 1980.5, open: null }, 2026.9), { from: 1900.5, to: 1980.5, fade: false });
+  assert.deepStrictEqual(v.spanBar({ start: 1990.5, end: null, open: 'living' }, 2026.9), { from: 1990.5, to: 2026.9, fade: false });
+  assert.deepStrictEqual(v.spanBar({ start: 1850.5, end: null, open: 'unknown' }, 2026.9), { from: 1850.5, to: 1858.5, fade: true });
+  assert.deepStrictEqual(v.spanBar({ start: 2024.5, end: null, open: 'unknown' }, 2026.9), { from: 2024.5, to: 2026.9, fade: true });
+  assert.strictEqual(v.spanBar({ start: null, end: 1970.5, open: null }, 2026.9), null);
+});
+test('barRect never has a negative or invisible width', () => {
+  assert.deepStrictEqual(v.barRect({ from: 1900, to: 1950 }, 1800, 10), { x: 1000, w: 500 });
+  assert.deepStrictEqual(v.barRect({ from: 1950, to: 1900 }, 1800, 10), { x: 1500, w: 2 });
+  assert.deepStrictEqual(v.barRect({ from: 1950, to: 1950 }, 1800, 10), { x: 1500, w: 2 });
+});
+test('axisBounds starts on a decade and ends next year', () => {
+  assert.deepStrictEqual(v.axisBounds(1843, 2026.9), { min: 1830, max: 2027 });
+  assert.deepStrictEqual(v.axisBounds(null, 2026.9), { min: 1926, max: 2027 });
+});
+test('rowWindow keeps five rows of overscan', () => {
+  assert.deepStrictEqual(v.rowWindow(0, 300, 30, 100), { first: 0, last: 15 });
+  assert.deepStrictEqual(v.rowWindow(600, 300, 30, 100), { first: 15, last: 35 });
+  assert.deepStrictEqual(v.rowWindow(0, 300, 30, 4), { first: 0, last: 4 });
+});
