@@ -3,6 +3,7 @@ from pathlib import Path
 from famsite.check import check_tree, has_errors
 from famsite.issues import Issue
 from famsite.model import Event, Partnership
+from famsite.store import load_tree
 
 
 def codes(issues):
@@ -130,3 +131,20 @@ def test_unknown_home_is_reported(make_tree):
     tree = make_tree([{"id": "a", "given": "A"}])
     tree.site = {"home": "nobody"}
     assert "W-HOME-UNKNOWN" in [i.code for i in check_tree(tree)]
+
+
+def test_portrait_checks(tmp_path, write):
+    write(tmp_path, "site.yml", "title: T\n")
+    (tmp_path / "media").mkdir()
+    (tmp_path / "media" / "big.png").write_bytes(b"0" * 1_000_001)
+    (tmp_path / "media" / "doc.svg").write_bytes(b"<svg/>")
+    (tmp_path / "secret.jpg").write_bytes(b"s")
+    (tmp_path / "media" / "link.jpg").symlink_to(tmp_path / "secret.jpg")
+    for pid, value in (("a", "../x.jpg"), ("b", "gone.jpg"), ("c", "big.png"), ("d", "doc.svg"), ("e", "link.jpg")):
+        write(tmp_path, f"people/{pid}.md", f"---\nname: {pid}\nportrait: {value}\n---\n")
+    tree, load_issues = load_tree(tmp_path)
+    codes_by_path = {i.path: i.code for i in check_tree(tree, load_issues) if "PORTRAIT" in i.code}
+    assert codes_by_path == {
+        "people/a.md": "E-PORTRAIT-PATH", "people/b.md": "W-PORTRAIT-MISSING", "people/c.md": "W-PORTRAIT-LARGE",
+        "people/d.md": "W-PORTRAIT-TYPE", "people/e.md": "E-PORTRAIT-PATH",
+    }

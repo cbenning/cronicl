@@ -3,6 +3,7 @@ from __future__ import annotations
 from .dates import parse_date
 from .issues import Issue
 from .layout import generation_conflict
+from .media import ALLOWED, MAX_BYTES, resolve, safe_relative
 from .model import END_REASONS, PARTNERSHIP_TYPES, Person, Tree
 from .relations import build_relations
 from .slug import is_valid_id
@@ -17,6 +18,30 @@ def _check_date(value: str | None, label: str, person: Person, out: list[Issue])
         out.append(
             Issue("W-DATE-UNPARSED", f"{person.id}: {label} date {value!r} is not a recognised date", person.location)
         )
+
+
+def _check_portrait(person: Person, out: list[Issue]) -> None:
+    """One issue at most, in this order: unsafe path, wrong type, missing file, oversized file."""
+    value, where = person.portrait, person.location
+    if not safe_relative(value):
+        out.append(Issue("E-PORTRAIT-PATH", f"{person.id}: portrait {value!r} must be a path inside media/", where))
+        return
+    if not value.lower().endswith(ALLOWED):
+        out.append(Issue("W-PORTRAIT-TYPE", f"{person.id}: portrait {value!r} is not one of {', '.join(ALLOWED)}", where))
+        return
+    if person.path is None:
+        return
+    media = person.path.parent.parent / "media"
+    found = resolve(media, value)
+    if found is None:
+        candidate = media / value
+        if candidate.exists() or candidate.is_symlink():
+            out.append(Issue("E-PORTRAIT-PATH", f"{person.id}: portrait {value!r} leaves media/", where))
+        else:
+            out.append(Issue("W-PORTRAIT-MISSING", f"{person.id}: portrait file {value!r} is not in media/", where))
+        return
+    if found.stat().st_size > MAX_BYTES:
+        out.append(Issue("W-PORTRAIT-LARGE", f"{person.id}: portrait {value!r} is over 1 MB; shrink it before publishing", where))
 
 
 def _cycle_members(parents: dict[str, list[str]]) -> set[str]:
@@ -62,6 +87,8 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
             issues.append(Issue("W-NO-NAME", f"{person.id}: person has no name", where))
         if person.sex not in ("M", "F", "U"):
             issues.append(Issue("W-BAD-SEX", f"{person.id}: sex {person.sex!r} is not M, F or U", where))
+        if person.portrait:
+            _check_portrait(person, issues)
         if person.birth:
             _check_date(person.birth.date, "birth", person, issues)
         if person.death:
