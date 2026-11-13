@@ -103,7 +103,7 @@ main { flex: 1; display: flex; min-height: 0; }
 .panel-title { flex: 1; min-width: 0; }
 .panel-head h2 { margin: 0; font-size: 1.25rem; line-height: 1.25; overflow-wrap: anywhere; }
 .panel-head .years { margin: 2px 0 0; color: var(--muted); }
-.panel-head .places { margin: 2px 0 0; color: var(--muted); font-size: .85rem; }
+.panel-head .summary { margin: 2px 0 0; color: var(--muted); font-size: .85rem; }
 .panel-head .close { border: 0; background: none; font-size: 1.6rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 0 var(--space-1); }
 .panel-head .close:hover { color: var(--accent); }
 .avatar { display: inline-flex; align-items: center; justify-content: center; flex: none; border-radius: 50%; background: var(--surface-2); color: var(--muted); font-weight: 600; letter-spacing: .02em; user-select: none; }

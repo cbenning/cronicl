@@ -575,10 +575,7 @@
           kinLine.hidden = true;
           titleBox.appendChild(kinLine);
           fillKin(kinLine, id);
-          var places = [];
-          if (p.birth && p.birth.place) places.push('Born ' + p.birth.place);
-          if (p.death && p.death.place) places.push('Died ' + p.death.place);
-          para('places', places.join(' · '));
+          para('summary', p.summary);
           var pills = document.createElement('div');
           pills.className = 'pills';
           function pill(href, text) {

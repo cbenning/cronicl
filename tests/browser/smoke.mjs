@@ -376,6 +376,9 @@ async function main() {
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
   await shot('person-page-light');
 
+  await send('Page.navigate', { url: base + '/tree.html#/tree/smith-bob' }); await sleep(1500);
+  check('the panel shows the life summary and no separate places line', (await ev(`(() => { const s = document.querySelector('#panel .summary'); return !!s && /^Born /.test(s.textContent) && !document.querySelector('#panel .places'); })()`)) === true);
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });
