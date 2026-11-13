@@ -418,6 +418,22 @@ def _shifted(layout: dict, dx: float) -> dict:
     }
 
 
+def _island_label(tree: Tree, group: list[str], nodes: list[dict]) -> dict:
+    """The label for one island: its commonest surname (ties: alphabetical) and size, at the centre of its boxes."""
+    counts: dict[str, int] = {}
+    for pid in group:
+        surname = (tree.people[pid].surname or "").strip()
+        if surname:
+            counts[surname] = counts.get(surname, 0) + 1
+    best = min(counts, key=lambda name: (-counts[name], name)) if counts else None
+    text = f"{best} family · {len(group)}" if best else f"Family · {len(group)}"
+    left = min(n["x"] for n in nodes)
+    right = max(n["x"] + n["w"] for n in nodes)
+    top = min(n["y"] for n in nodes)
+    bottom = max(n["y"] + n["h"] for n in nodes)
+    return {"kind": "island", "text": text, "x": _num((left + right) / 2), "y": _num((top + bottom) / 2)}
+
+
 def compute_layout(tree: Tree) -> dict:
     """Lay out every connected family as its own island, largest first, left to right.
 
@@ -442,9 +458,12 @@ def compute_layout(tree: Tree) -> dict:
     edges: list[dict] = []
     cursor = float(MARGIN)  # where the next island's left edge goes
     bottom = float(MARGIN)
+    island_labels: list[dict] = []
     for group in islands:
         sub = _layout_connected(Tree(people={pid: tree.people[pid] for pid in group}, site=dict(tree.site)))
         moved = _shifted(sub, cursor - MARGIN)
+        if len(group) > 1:
+            island_labels.append(_island_label(tree, group, moved["nodes"]))
         nodes += moved["nodes"]
         out_unions += moved["unions"]
         edges += moved["edges"]
@@ -453,6 +472,7 @@ def compute_layout(tree: Tree) -> dict:
     right = max((n["x"] + n["w"] for n in nodes), default=float(MARGIN))
 
     layout: dict = {"version": 1}
+    labels: list[dict] = list(island_labels)
     if loners:
         columns = max(1, min(len(loners), LONER_COLUMNS, max(4, int((right - MARGIN) // (NODE_W + H_GAP)))))
         label_y = bottom + (BLOCK_GAP if nodes else 0) + 12
@@ -468,7 +488,11 @@ def compute_layout(tree: Tree) -> dict:
                     "h": NODE_H,
                 }
             )
-        layout["labels"] = [{"id": "unconnected", "text": "Not connected to anyone", "x": MARGIN, "y": _num(label_y)}]
+        labels.append(
+            {"id": "unconnected", "kind": "loners", "text": "Not connected to anyone", "x": MARGIN, "y": _num(label_y)}
+        )
+    if labels:
+        layout["labels"] = labels
     nodes.sort(key=lambda n: n["id"])
     out_unions.sort(key=lambda u: u["id"])
     edges.sort(key=lambda e: (e["from"], e["to"], e["kind"]))

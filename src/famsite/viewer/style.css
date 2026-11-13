@@ -216,3 +216,9 @@ main { flex: 1; display: flex; min-height: 0; }
 #tree-controls button { min-width: 36px; min-height: 36px; padding: 0 var(--space-2); border: 1px solid var(--node-line); border-radius: 6px; background: var(--node); color: inherit; font: inherit; cursor: pointer; }
 #tree-controls button:hover { border-color: var(--sel); color: var(--sel); }
 @media (max-width: 40rem) { main:has(#panel:not([hidden])) #tree-controls { bottom: calc(60vh + var(--space-3)); } }
+
+/* Level of detail: names give way to family labels as the tree shrinks */
+#tree.lod-mid .node .years, #tree.lod-far .node text { display: none; }
+.group-label.island { display: none; fill: var(--text); }
+#tree.lod-far .group-label.island { display: inline; }
+#tree.lod-far .node rect { fill: var(--surface-2); }

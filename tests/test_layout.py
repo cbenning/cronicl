@@ -353,7 +353,7 @@ def test_people_without_relatives_sit_in_a_labelled_grid_below_everything_else(m
     assert len(loners) == 3
     assert min(n["y"] for n in loners) >= max(n["y"] + n["h"] for n in others) + 56
     assert [n["id"] for n in sorted(loners, key=lambda n: (n["y"], n["x"]))] == ["loner-a", "loner-b", "loner-c"]
-    labels = layout["labels"]
+    labels = [l for l in layout["labels"] if l["kind"] == "loners"]
     assert [l["text"] for l in labels] == ["Not connected to anyone"]
     assert labels[0]["y"] < min(n["y"] for n in loners)
 
@@ -382,3 +382,27 @@ def test_only_unconnected_people_still_lays_out(make_tree):
 def test_islands_keep_every_connector_clear_of_foreign_boxes(make_tree):
     layout = compute_layout(islands_tree(make_tree))
     assert segments_crossing_foreign_boxes(layout) == []
+
+
+def test_each_island_is_labelled_with_its_commonest_surname(make_tree):
+    tree = make_tree([
+        {"id": "a", "given": "A", "surname": "Smith"},
+        {"id": "b", "given": "B", "surname": "Smith", "parents": ["a"]},
+        {"id": "c", "given": "C", "surname": "Jones", "parents": ["a"]},
+        {"id": "x", "given": "X", "surname": "Lee"},
+        {"id": "y", "given": "Y", "surname": "Abel", "parents": ["x"]},
+        {"id": "m", "given": "M"},
+        {"id": "n", "given": "N", "parents": ["m"]},
+        {"id": "z", "given": "Z", "surname": "Solo"},
+    ])
+    layout = compute_layout(tree)
+    assert sorted((l["kind"], l["text"]) for l in layout["labels"]) == [
+        ("island", "Abel family · 2"),  # a tie goes to the alphabetically first surname
+        ("island", "Family · 2"),  # nobody in the island has a surname
+        ("island", "Smith family · 3"),
+        ("loners", "Not connected to anyone"),
+    ]
+    by_id = {n["id"]: n for n in layout["nodes"]}
+    smith = next(l for l in layout["labels"] if l["text"].startswith("Smith"))
+    xs = [by_id[i]["x"] for i in "abc"]
+    assert min(xs) <= smith["x"] <= max(xs) + 160

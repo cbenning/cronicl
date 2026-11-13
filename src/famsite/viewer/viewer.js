@@ -682,7 +682,9 @@
         }
         if (kind === 'l:') {
           var label = state.layout.labels[Number(ref)];
-          var text = svgEl('text', { x: label.x, y: label.y, 'class': 'group-label', 'font-size': labelSize() });
+          var kind = label.kind || 'loners';
+          var text = svgEl('text', { x: label.x, y: label.y, 'class': 'group-label ' + kind, 'font-size': labelSize() * (kind === 'island' ? 1.4 : 1) });
+          if (kind === 'island') text.setAttribute('text-anchor', 'middle');
           text.textContent = label.text;
           nodeLayer.appendChild(text);
           return text;
@@ -729,11 +731,12 @@
           if (!live.has(key)) live.set(key, make(key));
         });
         viewport.setAttribute('transform', 'translate(' + tx + ' ' + ty + ') scale(' + scale + ')');
+        ['near', 'mid', 'far'].forEach(function (lod) { treeSvg.classList.toggle('lod-' + lod, lod === lodFor(scale)); });
         var radius = dotRadius();
         var size = labelSize();
         live.forEach(function (el, key) {
           if (key.slice(0, 2) === 'u:') el.setAttribute('r', radius);
-          else if (key.slice(0, 2) === 'l:') el.setAttribute('font-size', size);
+          else if (key.slice(0, 2) === 'l:') el.setAttribute('font-size', size * (el.classList.contains('island') ? 1.4 : 1));
         });
       }
 
@@ -871,7 +874,8 @@
           boxes.push({ id: 'e:' + i, x: b.x, y: b.y, w: b.w, h: b.h });
         });
         (layout.labels || []).forEach(function (l, i) {
-          boxes.push({ id: 'l:' + i, x: l.x, y: l.y - 16, w: 320, h: 24 });
+          if (l.kind === 'island') boxes.push({ id: 'l:' + i, x: l.x - 160, y: l.y - 40, w: 320, h: 80 });
+          else boxes.push({ id: 'l:' + i, x: l.x, y: l.y - 16, w: 320, h: 24 });
         });
         grid = buildGrid(boxes, CELL);
         var box = treeSvg.getBoundingClientRect();

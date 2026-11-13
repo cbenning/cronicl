@@ -301,6 +301,13 @@ async function main() {
   check('the 0 key fits the tree', (await ev(`document.querySelector('.node.selected rect').getBoundingClientRect().height`)) < p1);
   check('controls are hidden on the timeline', (await goto('#/timeline'), await ev(`document.getElementById('tree-controls').hidden`)) === true);
 
+  // ---- level of detail
+  await goto('#/tree');
+  for (let i = 0; i < 12; i++) await ev(`document.getElementById('tree').dispatchEvent(new WheelEvent('wheel', { deltaY: 600, clientX: 600, clientY: 400, bubbles: true, cancelable: true }))`);
+  check('far out, names give way to family labels', (await ev(`(() => { const t = document.getElementById('tree'); const name = document.querySelector('.node text'); const label = document.querySelector('.group-label.island'); return t.classList.contains('lod-far') && getComputedStyle(name).display === 'none' && !!label && getComputedStyle(label).display !== 'none'; })()`)) === true);
+  await click('#tree-controls [data-act="fit"]');
+  check('island labels are hidden when names are readable', (await ev(`(() => { const l = document.querySelector('.group-label.island'); return document.getElementById('tree').classList.contains('lod-near') && (!l || getComputedStyle(l).display === 'none'); })()`)) === true);
+
   check('no script errors', errors.length === 0, errors.join(' | '));
 
   // ---- full person page (static, no JS)
