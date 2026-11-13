@@ -13,6 +13,7 @@ from markdown_it import MarkdownIt
 from .dates import age_between, date_year, format_date, format_years, parse_date
 from .focus import focus_people, focus_tree, hidden_counts
 from .home import home_person
+from .kin import build_kin
 from .layout import compute_layout
 from .model import Event, Tree
 from .places import place_index
@@ -179,7 +180,7 @@ def _write(path: Path, text: str) -> None:
 
 
 _GENERATED_DIRS = ("data", "p", "focus", "people", "places")
-_GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js")
+_GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.json")
 
 
 def _clear_generated(out_dir: Path) -> None:
@@ -271,6 +272,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
     env = _env()
     put("layout.json", dumps(layout))
     put("index.json", dumps(index))
+    put("kin.json", dumps(build_kin(visible, relations)))
     # Each person's own event rows live in data/people/<id>.json; repeating them here would grow this file with the
     # number of people squared-ish, and the Timeline tab downloads it whole.
     public_timeline = {
