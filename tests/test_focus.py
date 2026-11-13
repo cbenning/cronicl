@@ -1,7 +1,7 @@
 import json
 from datetime import date
 
-from famsite.focus import focus_people, focus_tree
+from famsite.focus import focus_people, focus_tree, hidden_counts
 from famsite.layout import compute_layout
 from famsite.model import Event
 from famsite.relations import build_relations
@@ -124,3 +124,16 @@ def test_focus_layout_keeps_the_ended_flag_of_the_parents(make_tree):
     layout = compute_layout(focus_tree(tree, rel, "kid"))
     unions = {u["id"]: u for u in layout["unions"]}
     assert unions["dad+mum"]["ended"] is True
+
+
+def test_hidden_counts_say_how_many_relatives_a_focused_tree_leaves_out(make_tree):
+    tree = make_tree([
+        {"id": "g", "given": "G"},
+        {"id": "p", "given": "P", "parents": ["g"]},
+        {"id": "u", "given": "U", "parents": ["g"]},
+        {"id": "me", "given": "Me", "parents": ["p"]},
+    ])
+    rel = build_relations(tree)
+    keep = focus_people(tree, rel, "me")
+    assert keep == {"g", "p", "me"}
+    assert hidden_counts(rel, keep) == {"g": 1, "p": 1}  # g's child u; p's sibling u

@@ -11,7 +11,7 @@ import jinja2
 from markdown_it import MarkdownIt
 
 from .dates import age_between, date_year, format_date, format_years, parse_date
-from .focus import focus_tree
+from .focus import focus_people, focus_tree, hidden_counts
 from .layout import compute_layout
 from .model import Event, Tree
 from .home import home_person
@@ -235,6 +235,7 @@ def build_site(tree: Tree, out_dir: Path, *, today: date) -> BuildSummary:
     for pid in sorted(visible.people):
         focused = compute_layout(focus_tree(visible, relations, pid))
         focused["focus"] = pid
+        focused["hidden"] = hidden_counts(relations, focus_people(visible, relations, pid))
         put(f"focus/{pid}.json", dumps(focused))
         name = payloads[pid]["name"]
         page_svgs[pid] = (

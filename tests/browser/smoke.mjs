@@ -111,7 +111,7 @@ async function main() {
   check('oldest and youngest are different colours', (await ev(`(() => { const c = (sel) => getComputedStyle(document.querySelector(sel + ' rect')).stroke; return c('.node.lin-old') !== c('.node.lin-new'); })()`)) === true);
   check('relatives off the line fade', (await ev(`document.querySelector('.node[data-id="ellsworth-maude"]').classList.contains('dim')`)) === true);
   check('the selected person keeps their own outline', (await ev(`document.querySelectorAll('.node.selected').length`)) === 1);
-  check('the legend shows the ramp and its ends', (await ev(`(() => { const l = document.getElementById('legend'); return !l.hidden && !!l.querySelector('.legend-ramp') && /Oldest/.test(l.textContent) && /Youngest/.test(l.textContent); })()`)) === true);
+  check('the legend shows the ramp and its ends', (await ev(`(() => { const l = document.getElementById('legend'); return !l.hidden && !!l.querySelector('.legend-ramp') && /generations? (up|down)/.test(l.textContent); })()`)) === true);
   check('node tooltips say how many generations away someone is', (await ev(`[...document.querySelectorAll('.node.lin-old title')].some((t) => /generations? above/.test(t.textContent))`)) === true);
   check('the legend offers both colour modes', (await ev(`!!document.querySelector('#legend [data-mode="family"]') && !!document.querySelector('#legend [data-mode="lineage"]')`)) === true);
   // ---- relationship colours, one click away
@@ -307,6 +307,13 @@ async function main() {
   check('far out, names give way to family labels', (await ev(`(() => { const t = document.getElementById('tree'); const name = document.querySelector('.node text'); const label = document.querySelector('.group-label.island'); return t.classList.contains('lod-far') && getComputedStyle(name).display === 'none' && !!label && getComputedStyle(label).display !== 'none'; })()`)) === true);
   await click('#tree-controls [data-act="fit"]');
   check('island labels are hidden when names are readable', (await ev(`(() => { const l = document.querySelector('.group-label.island'); return document.getElementById('tree').classList.contains('lod-near') && (!l || getComputedStyle(l).display === 'none'); })()`)) === true);
+
+  // ---- focus extras
+  await goto('#/focus/smith-bob');
+  const badge = await ev(`(() => { const b = document.querySelector('.node .more'); return b ? b.textContent : null; })()`);
+  check('a focused tree marks nodes with relatives it leaves out', /^\+\d+$/.test(badge || ''), badge);
+  check('the focus node and a selected node share one accent', (await ev(`(() => { const f = getComputedStyle(document.querySelector('.node.focus rect')).stroke; document.querySelector('.node:not(.focus)').dispatchEvent(new MouseEvent('click', { bubbles: true })); return f === getComputedStyle(document.querySelector('.node.selected rect')).stroke; })()`)) === true);
+  check('the legend counts generations in words', /generations? (up|down)/.test(await ev(`document.getElementById('legend').textContent`)));
 
   check('no script errors', errors.length === 0, errors.join(' | '));
 

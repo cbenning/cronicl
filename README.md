@@ -73,6 +73,13 @@ read-only utilities. There is deliberately no bulk form.
 - **Person timeline:** `#/timeline/<id>`, or "Their timeline" in the side panel: that person's own events plus
   their relatives' (parents' deaths, spouses' deaths, children's and siblings' births and deaths), with ages.
 
+- **Tree, Overview and zoom:** the **Tree** tab opens a focused tree on the home person (or the selected
+  person); **Overview** (`#/tree`) draws everyone. The tree opens at a readable size, and picking a person
+  while zoomed far out zooms in on them. Zoom with the buttons at bottom right (**+**, **−**, **Fit**,
+  **Home**), the keys `+`, `-` and `0`, the mouse wheel, or a two-finger pinch. Zoomed far out, names give way
+  to one label per family ("Smith family · 12"). In a focused tree, a person with relatives that are not drawn
+  shows **+N**; double-click a person to focus on them.
+
 Clicking a person opens the side panel; close it with **×**, **Esc**, or by clicking empty canvas (this also
 deselects). URLs are `#/tree[/<id>]`, `#/focus/<id>` and `#/timeline[/<id>]`.
 

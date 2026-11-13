@@ -89,7 +89,8 @@ main { flex: 1; display: flex; min-height: 0; }
 .union.hi { fill: var(--sel); }
 .union.dim { opacity: .12; }
 .node.dim { opacity: .35; }
-.node.focus rect { stroke: #b7791f; stroke-width: 2px; }
+.node.focus rect { stroke: var(--sel); stroke-width: 2px; }
+.node .more { font-size: 10px; fill: var(--muted); }
 #focus-bar { display: flex; align-items: baseline; gap: 1rem; padding: .4rem 1rem; border-bottom: 1px solid var(--node-line); background: var(--node); }
 #focus-bar[hidden] { display: none; }
 #focus-bar .back { margin-left: auto; }

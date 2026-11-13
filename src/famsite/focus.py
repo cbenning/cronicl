@@ -37,6 +37,27 @@ def focus_people(tree: Tree, relations: Relations, pid: str) -> set[str]:
     return ancestors | descendants | spouses | {pid}
 
 
+def hidden_counts(relations: Relations, keep: set[str]) -> dict[str, int]:
+    """For each kept person, how many parents, partners, children and siblings a focused tree leaves out.
+
+    Only counts above zero are returned.
+    """
+    counts: dict[str, int] = {}
+    for pid in keep:
+        kin = set(relations.parents.get(pid, []))
+        for cid in relations.couples_of.get(pid, []):
+            kin.update(relations.couples[cid].partners)
+            kin.update(relations.kids.get(cid, []))
+        for parent in relations.parents.get(pid, []):
+            for cid in relations.couples_of.get(parent, []):
+                kin.update(relations.kids.get(cid, []))
+        kin.discard(pid)
+        missing = len(kin - keep)
+        if missing:
+            counts[pid] = missing
+    return counts
+
+
 def focus_tree(tree: Tree, relations: Relations, pid: str) -> Tree:
     """A copy of the tree restricted to the focus set, with relationships rebuilt from the derived couples."""
     keep = focus_people(tree, relations, pid)

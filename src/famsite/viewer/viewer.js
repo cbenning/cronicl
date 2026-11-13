@@ -652,9 +652,19 @@
         });
         years.textContent = info.years;
         g.appendChild(years);
+        var more = state.layout.hidden && state.layout.hidden[id];
+        if (more) {
+          var badge = svgEl('text', { x: n.x + n.w - 6, y: n.y + 14, 'text-anchor': 'end', 'class': 'more' });
+          badge.textContent = '+' + more;
+          g.appendChild(badge);
+        }
         g.addEventListener('click', function (e) {
           e.stopPropagation();
           if (!moved) select(id, false, false);
+        });
+        g.addEventListener('dblclick', function (e) {
+          e.stopPropagation();
+          go('focus', id);
         });
         return g;
       }
@@ -777,11 +787,8 @@
           legendEl.appendChild(ramp);
           var ends = document.createElement('div');
           ends.className = 'legend-ends';
-          [
-            lin.up ? 'Oldest · −' + lin.up : '',
-            'Selected',
-            lin.down ? 'Youngest · +' + lin.down : ''
-          ].forEach(function (text) {
+          var legendWords = legendEnds(lin.up, lin.down);
+          [legendWords.old, 'Selected', legendWords.young].forEach(function (text) {
             var span = document.createElement('span');
             span.textContent = text;
             ends.appendChild(span);
