@@ -286,6 +286,20 @@ async function main() {
   await send('Page.navigate', { url: base + '/p/' + (nodeHref || '../smith-bob/').replace(/^\.\.\//, '') });
   await sleep(600);
   check('the relative page opens with its own name', (await ev(`document.querySelector('.hero h1')?.textContent`)) !== 'Bob Smith' && !!(await ev(`document.querySelector('.hero h1')?.textContent`)));
+
+  // ---- phone
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await send('Page.navigate', { url: base + '/#/tree/ellsworth-maude' });
+  await sleep(1500);
+  const phone = await ev(`(() => { const p = document.getElementById('panel').getBoundingClientRect(); const h = document.querySelector('#panel h2').getBoundingClientRect(); const s = document.getElementById('search').getBoundingClientRect(); return { panelW: p.width, panelBottom: p.bottom, panelH: p.height, titleW: h.width, searchRight: s.right, pageW: document.documentElement.scrollWidth }; })()`);
+  check('phone: the panel is a full-width bottom sheet', phone.panelW === 390 && Math.round(phone.panelBottom) === 844 && phone.panelH <= 844 * 0.6 + 1, JSON.stringify(phone));
+  check('phone: the panel title has room to read', phone.titleW >= 200, JSON.stringify(phone));
+  check('phone: nothing is wider than the screen', phone.searchRight <= 390 && phone.pageW <= 390, JSON.stringify(phone));
+  await ev(`document.querySelector('#panel h2').textContent = 'W'.repeat(40)`);
+  check('phone: a long unbroken name wraps inside the sheet', (await ev(`document.documentElement.scrollWidth <= 390 && document.getElementById('panel').scrollWidth <= 390`)) === true);
+  await shot('phone-panel');
+  await send('Emulation.setDeviceMetricsOverride', { width: 1400, height: 820, deviceScaleFactor: 1, mobile: false });
+
   ws.close();
 }
 
