@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="famsite-home" content="{{ home or '' }}">
+<title>Places — {{ title }}</title>
+<link rel="stylesheet" href="{{ root }}style.css?v={{ v.css }}">
+</head>
+<body class="site-page places-page">
+{% include "_header.html" %}
+<main class="index">
+  <h1>Places</h1>
+  {% if not places %}
+  <p>No places recorded yet.</p>
+  {% endif %}
+  {% for pl in places %}
+  <section id="pl-{{ pl.slug }}">
+    <h2>{{ pl.place }} <span class="count">{{ pl.entries | length }}</span></h2>
+    <ul>
+      {% for e in pl.entries %}<li><a href="{{ root }}p/{{ e.id }}/">{{ e.name }}</a> — {{ e.what }}{% if e.when %} {{ e.when }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</main>
+</body>
+</html>

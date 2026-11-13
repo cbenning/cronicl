@@ -355,3 +355,15 @@ def test_people_index_groups_by_surname(tmp_path, make_tree):
 def test_people_index_of_an_empty_site(tmp_path, make_tree):
     build_site(make_tree([]), tmp_path, today=TODAY)
     assert "No people yet" in (tmp_path / "people/index.html").read_text(encoding="utf-8")
+
+
+def test_places_page_is_written_even_when_empty(tmp_path, make_tree):
+    build_site(make_tree([p("a", "Ann", "X")]), tmp_path, today=TODAY)
+    assert "No places recorded yet" in (tmp_path / "places/index.html").read_text(encoding="utf-8")
+
+
+def test_places_page_lists_people_under_each_place(tmp_path, make_tree):
+    tree = make_tree([p("a", "Ann", "X", birth=Event(date="1900-02-03", place="Guelph"))])
+    build_site(tree, tmp_path, today=TODAY)
+    page = (tmp_path / "places/index.html").read_text(encoding="utf-8")
+    assert 'id="pl-guelph"' in page and 'href="../p/a/"' in page and "born 3 February 1900" in page

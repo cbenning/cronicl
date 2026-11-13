@@ -15,6 +15,7 @@ from .focus import focus_people, focus_tree, hidden_counts
 from .home import home_person
 from .layout import compute_layout
 from .model import Event, Tree
+from .places import place_index
 from .privacy import redact
 from .relations import Relations, build_relations
 from .slug import slugify
@@ -285,6 +286,20 @@ def build_site(tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | N
         env.get_template("people.html").render(
             title=title, v=versions, home=home, root="../", groups=_people_groups(visible, index)
         ),
+    )
+    places = [
+        {
+            **place,
+            "entries": [
+                {**entry, "name": visible.people[entry["id"]].display_name, "when": format_date(entry["date"])}
+                for entry in place["entries"]
+            ],
+        }
+        for place in place_index(visible, relations)
+    ]
+    put(
+        "places/index.html",
+        env.get_template("places.html").render(title=title, v=versions, home=home, root="../", places=places),
     )
     put("tree.html", env.get_template("tree.html").render(title=title, people=index, v=versions, home=home, root=""))
     person_template = env.get_template("person.html")

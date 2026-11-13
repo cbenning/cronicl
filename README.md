@@ -44,7 +44,17 @@ read-only utilities. There is deliberately no bulk form.
 
 ## Views
 
-`serve` / `build` produce a single-page site with tabs:
+`serve` / `build` produce a static site:
+
+- `index.html` is the **home page**: a heading and optional `intro:` text (Markdown, from `site.yml`), a
+  search box, the home person, the numbers (people, generations, years), the commonest surnames, an
+  "On this day" list (filled in by the browser) and recently updated people (from the data folder's git history,
+  when it is a repository).
+- `people/index.html` lists everyone grouped by surname; any page's search box filters it (`?q=`).
+- `places/index.html` lists every place named in the files and who was born, died or married there.
+- `tree.html` is the viewer, described next; old `index.html#/...` links are forwarded to it.
+
+The viewer has tabs:
 
 - **Tree:** every person on a pan-and-zoom canvas (only what is on screen is drawn). Long names wrap onto two
   lines; siblings and half-siblings always share a row.
@@ -86,7 +96,7 @@ deselects). URLs are `#/tree[/<id>]`, `#/focus/<id>` and `#/timeline[/<id>]`.
 ## Data layout
 
 ```
-site.yml            title, home, schema_version, privacy settings
+site.yml            title, intro, home, schema_version, privacy settings
 people/<id>.md      one file per person -- the only record type
 archive/            original .ged files, unmodified
 ```
