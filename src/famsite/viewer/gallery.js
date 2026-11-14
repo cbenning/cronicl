@@ -9,12 +9,15 @@
   var MAX_PHOTOS = 6;
   var SPECIAL = { 'ß': 'ss', 'æ': 'ae', 'œ': 'oe', 'ø': 'o', 'đ': 'd', 'ł': 'l', 'þ': 'th' };
 
-  // An http(s) address with no query or fragment, ending in exactly one slash; else null.
+  // An http(s) address with no credentials, query, fragment or whitespace, ending in exactly one slash; else null.
+  // It is the canonical form (lower-case host, default port dropped, escaped path), because confine compares
+  // against addresses the browser has canonicalised.
   function normalizeBase(url) {
-    if (typeof url !== 'string') return null;
-    var m = /^(https?):\/\/([^\/?#\s]+)([^?#\s]*)$/i.exec(url.trim());
-    if (!m) return null;
-    return url.trim().replace(/\/+$/, '') + '/';
+    if (typeof url !== 'string' || /[\s\\?#]/.test(url)) return null;
+    var parsed;
+    try { parsed = new URL(url); } catch (e) { return null; }
+    if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || parsed.username || parsed.password) return null;
+    return parsed.origin + parsed.pathname.replace(/\/+$/, '') + '/';
   }
 
   // The absolute address of ref under base, or null when ref could point anywhere else.
@@ -27,10 +30,17 @@
     return href.indexOf(base) === 0 ? href : null;
   }
 
-  // Lower-case words without accents, so "Zoë  Müller" and "zoe muller" compare equal.
+  var NON_ASCII_LETTER;
+  try { NON_ASCII_LETTER = new RegExp('(?![\\x00-\\x7f])\\p{L}', 'u'); } catch (e) { NON_ASCII_LETTER = /[^\x00-\x7f]/; }
+
+  // Lower-case words without accents, so "Zoë  Müller" and "zoe muller" compare equal. A name with a letter
+  // that cannot be folded ("Иван Smith") folds to '' so it never matches by name: the rest of it
+  // could match someone else.
   function fold(text) {
     var lowered = String(text == null ? '' : text).toLowerCase().replace(/[ßæœøđłþ]/g, function (c) { return SPECIAL[c]; });
-    return lowered.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+    var plain = lowered.normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (NON_ASCII_LETTER.test(plain)) return '';
+    return plain.replace(/[^a-z0-9]+/g, ' ').trim();
   }
 
   function isObject(value) { return value !== null && typeof value === 'object'; }

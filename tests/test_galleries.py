@@ -94,3 +94,14 @@ def test_check_tree_reports_gallery_issues(make_tree):
     tree = make_tree([{"id": "a", "given": "A", "surname": "B"}])
     tree.site = {"gallery": {"type": "nope"}}
     assert "E-GALLERY-TYPE" in codes(check_tree(tree))
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["https://[::1/", "https://ex\u2100mple.com/", "https://user:pw@host/p", "https://:pw@host/p", "https://host/p/?", "https://host/p/#",
+     "https://host/a b/", "https://ho st/p/", "https://host/p\\q/", "https://host/p/\t"],
+)
+def test_urls_the_browser_would_reject_are_errors_and_never_crash(url):
+    value = {"type": "fussel", "url": url}
+    assert codes(issues_for(value)) == ["E-GALLERY-URL"]
+    assert gallery_config({"gallery": value}) is None

@@ -25,7 +25,7 @@ from .model import Event, Tree
 from .places import group_places, place_index
 from .privacy import is_living, redact
 from .relations import Relations, build_relations
-from .slug import fold_slug, slugify
+from .slug import fold_slug, folds_cleanly, slugify
 from .stats import site_stats
 from .store import cites_of
 from .timeline import build_timeline, event_text
@@ -235,11 +235,12 @@ def _gallery_person(tree: Tree, pid: str, name: str, gallery: dict | None) -> di
     """What the browser needs to find this person in the gallery; None when the page must carry no gallery block.
 
     Only people who exist in the original tree and have a name qualify, so a redacted living person never does.
+    A name with letters that cannot be folded to ASCII has no derived key (it could match the wrong person); it needs gallery_id.
     """
     original = tree.people.get(pid)
     if gallery is None or original is None or not (original.given or original.surname):
         return None
-    key = original.gallery_id or fold_slug(name)
+    key = original.gallery_id or (fold_slug(name) if folds_cleanly(name) else "")
     if not key:
         return None
     return {"key": key, "explicit": bool(original.gallery_id), "name": name}

@@ -36,13 +36,20 @@ GALLERY_TYPES: dict[str, GalleryType] = {
 
 
 def _normal_url(value) -> str | None:
-    """An http(s) address with a host, no query or fragment, ending in exactly one slash; else None."""
-    if not isinstance(value, str):
+    """An http(s) address with a host, no credentials, query, fragment or whitespace, ending in one slash; else None.
+
+    Stricter than urlsplit on purpose: whatever passes here must also be accepted by the browser-side check in gallery.js.
+    """
+    if not isinstance(value, str) or any(c.isspace() or c in "\\?#" for c in value):
         return None
-    parts = urlsplit(value.strip())
-    if parts.scheme not in ("http", "https") or not parts.netloc or parts.query or parts.fragment:
+    try:
+        parts = urlsplit(value)
+        parts.port  # a bad port raises here
+    except ValueError:
         return None
-    return value.strip().rstrip("/") + "/"
+    if parts.scheme not in ("http", "https") or not parts.netloc or "@" in parts.netloc:
+        return None
+    return value.rstrip("/") + "/"
 
 
 def _label(value) -> str:

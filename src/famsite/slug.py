@@ -20,6 +20,11 @@ def fold_slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", ascii_text).strip("-")
 
 
+def folds_cleanly(text: str) -> bool:
+    """True when folding drops no letter, so the slug still stands for the whole text (not "Иван Smith" -> "smith")."""
+    return all(not char.isalpha() or fold_slug(char) for char in text)
+
+
 def slugify(text: str) -> str:
     """Fold to lowercase ASCII words joined by single hyphens, at most MAX_ID_LEN long."""
     return fold_slug(text)[:MAX_ID_LEN].strip("-")

@@ -257,9 +257,11 @@ gallery:
   gallery is added to the top bar of every page. Thumbnails and links open the gallery in a new tab.
 - Your browser fetches `people.json` from the gallery when the page opens. If the gallery is down, slow, or has no
   photos of that person, the page looks exactly as it would without a gallery.
-- People are found by their name, turned into the same lowercase-latin slug Fussel uses (`Zoë Müller` is
-  `zoe-muller`). If a person is tagged differently in the gallery, put its slug in their file:
-  `gallery_id: jane-doe`. Two people with the same name need this too, because Fussel numbers the second one.
+- People are found by their name, turned into a lowercase-latin slug (`Zoë Müller` is `zoe-muller`), or, if that
+  fails, by the one gallery entry with the same name. If a person is tagged differently in the gallery, put its slug
+  in their file: `gallery_id: jane-doe`. Two people with the same name need this too, because Fussel numbers the
+  second one. So do names with letters that have no plain-ASCII form (Cyrillic, Chinese, `ð`): Fussel transliterates
+  those its own way, so famsite does not guess and shows no photos for them until `gallery_id` is set.
 - People hidden or replaced by privacy redaction never get a photos block.
 - It needs a Fussel that writes `people.json` (gallery option `gallery.people.enable: true`, on by default).
 - A gallery on a different domain can only be read if its host sends an `Access-Control-Allow-Origin` header

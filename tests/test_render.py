@@ -646,3 +646,14 @@ def test_gallery_styles_exist(tmp_path, make_tree):
     assert ".gallery-thumbs" in css and ".site-gallery" in css
     printed = css.split("@media print", 1)[1].split("}", 1)[0]
     assert ".gallery" in printed
+
+
+def test_names_that_do_not_fold_cleanly_get_no_derived_key(tmp_path, make_tree):
+    tree = _gallery_site(
+        make_tree,
+        [p("a", "\u0418\u0432\u0430\u043d", "Smith"), p("b", "Zo\u00eb", "M\u00fcller"), p("c", "\u0418\u0432\u0430\u043d", "Smith", gallery_id="ivan-smith")],
+    )
+    build_site(tree, tmp_path, today=TODAY)
+    assert 'id="gallery"' not in _page(tmp_path, "a")
+    assert 'data-gallery-key="zoe-muller"' in _page(tmp_path, "b")
+    assert 'data-gallery-key="ivan-smith"' in _page(tmp_path, "c") and 'data-gallery-explicit="1"' in _page(tmp_path, "c")

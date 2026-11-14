@@ -141,3 +141,30 @@ test('init shows the block on success and leaves it hidden on failure', async ()
 
   await g.init(Object.assign(fakeDoc(), { getElementById: () => null }), noTimers);
 });
+
+
+test('normalizeBase gives the canonical address the browser will compare against', () => {
+  assert.strictEqual(g.normalizeBase('https://Example.com/photos'), 'https://example.com/photos/');
+  assert.strictEqual(g.normalizeBase('HTTPS://host/photos/'), 'https://host/photos/');
+  assert.strictEqual(g.normalizeBase('https://host:443/photos/'), 'https://host/photos/');
+  assert.strictEqual(g.normalizeBase('http://host:80/p'), 'http://host/p/');
+  assert.strictEqual(g.normalizeBase('https://b\u00fccher.de/p/'), 'https://xn--bcher-kva.de/p/');
+  assert.strictEqual(g.normalizeBase('https://host/\u00e9/'), 'https://host/%C3%A9/');
+  assert.strictEqual(g.normalizeBase('https://host/a/../b/'), 'https://host/b/');
+  for (const bad of ['https://u:p@host/p', 'https://host/p/?', 'https://host/p/#', 'https://host/a b/']) assert.strictEqual(g.normalizeBase(bad), null, bad);
+});
+
+test('a non-canonical gallery address still shows photos', async () => {
+  const deps = Object.assign({ fetch: (url) => { assert.strictEqual(url, 'https://example.com/photos/people.json'); return Promise.resolve(okResponse(manifest())); } }, noTimers);
+  const s = await g.load({ type: 'fussel', url: 'https://Example.com:443/photos' }, { key: 'jane-doe', explicit: false, name: 'Jane Doe' }, deps);
+  assert.strictEqual(s.photos[0].thumbSrc, 'https://example.com/photos/static/_gallery/p1.jpg');
+});
+
+test('names with letters that cannot be folded never match by name', () => {
+  assert.strictEqual(g.fold('\u0418\u0432\u0430\u043d Smith'), '');
+  assert.strictEqual(g.fold('O\u2019Brien'), 'o brien');
+  assert.strictEqual(g.fold('Zo\u00eb'), 'zoe');
+  const people = [{ name: '\u041c\u0430\u0440\u0438\u044f Smith', slug: 'maria-smith' }];
+  assert.strictEqual(g.pickEntry(people, 'smith', false, '\u0418\u0432\u0430\u043d Smith'), null);
+  assert.strictEqual(g.pickEntry(people, 'maria-smith', true, ''), people[0]);
+});

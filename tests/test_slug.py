@@ -74,3 +74,12 @@ def test_fold_slug_does_not_truncate_but_slugify_does():
     long_word = "a" * 70
     assert fold_slug(long_word) == long_word
     assert slugify(long_word) == "a" * MAX_ID_LEN
+
+
+def test_folds_cleanly_is_false_when_a_letter_would_be_dropped():
+    from famsite.slug import folds_cleanly
+
+    assert folds_cleanly("Zo\u00eb M\u00fcller") and folds_cleanly("Stra\u00dfe \u00d8rsted") and folds_cleanly("O'Brien 3rd")
+    assert not folds_cleanly("\u0418\u0432\u0430\u043d Smith")  # Cyrillic
+    assert not folds_cleanly("\u738b\u4f1f")
+    assert not folds_cleanly("Sigur\u00f0ur")  # eth has no ASCII fold
