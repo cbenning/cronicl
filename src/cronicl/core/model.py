@@ -27,6 +27,7 @@ class Partnership:
     end_reason: str | None = None
     place: str | None = None
     note: str | None = None
+    cite: list[str] = field(default_factory=list)
     extra: dict = field(default_factory=dict)
 
 
@@ -51,7 +52,12 @@ class Person:
     given: str | None = None
     surname: str | None = None
     name_extra: dict = field(default_factory=dict)
+    prefix: str | None = None
+    suffix: str | None = None
+    nickname: str | None = None
+    also: list[str] = field(default_factory=list)  # other names (a married name, ...), searchable
     sex: str = "U"
+    sex_text: str | None = None  # the `sex` value as written in family.yml, for validation only
     birth: Event | None = None
     death: Event | None = None
     living: bool | None = None
@@ -69,10 +75,13 @@ class Person:
     extra: dict = field(default_factory=dict)
     path: Path | None = None
     id_pinned: bool = False
+    source: str | None = None  # family.yml (or family/x.yml), relative to the data folder; None for the legacy layout
+    line: int | None = None  # the line of this person's record in `source`
+    raw: object = None  # the record as loaded from family.yml (a yamltext.Mapping), for validation; never written back
 
     @property
     def display_name(self) -> str:
-        return " ".join(part for part in (self.given, self.surname) if part) or self.id
+        return " ".join(part for part in (self.prefix, self.given, self.surname, self.suffix) if part) or self.id
 
     @property
     def initials(self) -> str:
@@ -81,6 +90,8 @@ class Person:
 
     @property
     def location(self) -> str | None:
+        if self.source is not None:
+            return self.source
         if self.path is None:
             return None
         return f"{self.path.parent.name}/{self.path.name}"

@@ -36,3 +36,21 @@ def make_tree():
         return tree
 
     return _make
+
+
+@pytest.fixture
+def write_family():
+    """Write a family.yml (and a minimal site.yml) under root: write_family(root, "alder-ada:\\n  name: ...")."""
+
+    def _write(root: Path, text: str, name: str = "family.yml") -> Path:
+        root = Path(root)
+        root.mkdir(parents=True, exist_ok=True)
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(text.encode("utf-8"))
+        site = root / "site.yml"
+        if not site.exists():
+            site.write_text("title: T\nschema_version: 3\n", encoding="utf-8")
+        return path
+
+    return _write

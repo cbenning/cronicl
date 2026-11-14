@@ -37,7 +37,8 @@ class Sequence(list):
 @dataclass
 class LoadResult:
     data: object = None
-    duplicates: list = field(default_factory=list)  # (key, line of the repeat)
+    duplicates: list = field(default_factory=list)  # (key, line of the repeat), at every depth
+    top_duplicates: list = field(default_factory=list)  # the same, for the top-level mapping only
     merge_keys: list = field(default_factory=list)  # lines
     error: str | None = None
     error_line: int | None = None
@@ -47,7 +48,9 @@ class _Loader(yaml.BaseLoader):
     def __init__(self, stream):
         super().__init__(stream)
         self.duplicates: list = []
+        self.top_duplicates: list = []
         self.merge_keys: list = []
+        self.root = None
 
     def construct_mapping(self, node, deep=False):
         out = Mapping()
@@ -65,6 +68,8 @@ class _Loader(yaml.BaseLoader):
                 self.merge_keys.append(line)
             if key in out:
                 self.duplicates.append((key, line))
+                if node is self.root:
+                    self.top_duplicates.append((key, line))
             out[key] = self.construct_object(value_node, deep=deep)
             out.lines[key] = line
         return out
@@ -84,9 +89,12 @@ def load_text(raw: str) -> LoadResult:
     loader = None
     try:
         loader = _Loader(text)
-        data = loader.get_single_data()
+        node = loader.get_single_node()
+        loader.root = node
+        data = loader.construct_document(node) if node is not None else None
         result.data = Mapping() if data is None or data == "" else data
         result.duplicates = loader.duplicates
+        result.top_duplicates = loader.top_duplicates
         result.merge_keys = loader.merge_keys
     except yaml.YAMLError as exc:
         result.error = " ".join(str(exc).split())

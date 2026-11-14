@@ -124,7 +124,7 @@ def test_missing_site_yml_is_a_warning(tmp_path):
 
 
 def test_site_yml_schema_version_is_checked(tmp_path, write):
-    write(tmp_path, "site.yml", "schema_version: 3\n")
+    write(tmp_path, "site.yml", "schema_version: 4\n")
     _, issues = load_tree(tmp_path)
     assert "E-SCHEMA-VERSION" in [i.code for i in issues]
 
@@ -301,7 +301,7 @@ def test_site_yml_values_stay_text(tmp_path, write):
     assert site["privacy"]["cutoff_years"] == "100" and site["schema_version"] == "2"
 
 
-@pytest.mark.parametrize("version", ["3", "[1]", "abc"])
+@pytest.mark.parametrize("version", ["4", "[1]", "abc"])
 def test_a_bad_schema_version_is_an_error(tmp_path, write, version):
     write(tmp_path, "site.yml", f"schema_version: {version}\n")
     _, issues = load_site(tmp_path)

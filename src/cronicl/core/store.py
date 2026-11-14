@@ -5,6 +5,7 @@ from pathlib import Path
 
 import yaml
 
+from .family import has_family, read_family
 from .issues import Issue
 from .model import Event, LifeEvent, Partnership, Person, Tree
 from .slug import FALLBACK_SLUG, slugify
@@ -324,7 +325,7 @@ def load_site(data_dir: Path) -> tuple[dict, list[Issue]]:
         Issue("W-DUPLICATE-KEY", f"duplicate key {key!r}; the later value is used", "site.yml") for key in duplicates
     ]
     version = data.get("schema_version")
-    if version is not None and not (isinstance(version, str) and version.strip() in ("1", "2")):
+    if version is not None and not (isinstance(version, str) and version.strip() in ("1", "2", "3")):
         issues.append(Issue("E-SCHEMA-VERSION", f"unsupported schema_version {version!r}", "site.yml"))
     return data, issues
 
@@ -332,7 +333,10 @@ def load_site(data_dir: Path) -> tuple[dict, list[Issue]]:
 def load_tree(data_dir: Path) -> tuple[Tree, list[Issue]]:
     data_dir = Path(data_dir)
     site, issues = load_site(data_dir)
-    people, record_issues = read_records(data_dir)
+    if has_family(data_dir):
+        people, record_issues = read_family(data_dir)
+    else:  # until the old layout is removed (see the family-file plan), an old folder still loads
+        people, record_issues = read_records(data_dir)
     issues = issues + record_issues
     tree = Tree(site=site)
     for person in people:
