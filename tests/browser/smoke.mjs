@@ -191,7 +191,7 @@ async function main() {
   check('timeline tab shows the timeline and really hides the tree', (await ev(`getComputedStyle(document.getElementById('timeline')).display !== 'none' && getComputedStyle(document.getElementById('tree')).display === 'none'`)) === true);
   check('the relationship legend never shows over the timeline', (await ev(`document.getElementById('legend').hidden`)) === true);
   check('timeline tab is marked current', (await ev(`document.querySelector('#tabs a[data-view="timeline"]').getAttribute('aria-current')`)) === 'page');
-  const tl = await ev(`(() => { const now = new Date().getFullYear(); const labels = [...document.querySelectorAll('#timeline-svg .tick-label')].map((t) => Number(t.textContent)); const r = (sel) => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect() : null; }; const bob = r('.span-row[data-id="smith-bob"] .bar'); const kid = r('.span-row[data-id="kid-now"] .bar'); const old = r('.span-row[data-id="old-open"] .bar'); const svg = r('#timeline-svg'); return { rows: document.querySelectorAll('.span-row').length, pills: document.querySelectorAll('.ev').length, maxLabel: Math.max.apply(null, labels), now, bobW: bob && bob.width, kidRight: kid && kid.right, oldW: old && old.width, svgRight: svg.right, living: !!document.querySelector('.span-row[data-id="kid-now"] .bar.open-living'), unknown: !!document.querySelector('.span-row[data-id="old-open"] .bar.open-unknown'), loneRow: !!document.querySelector('.span-row[data-id="lone-person"]') }; })()`);
+  const tl = await ev(`(() => { const now = new Date().getFullYear(); const labels = [...document.querySelectorAll('#timeline-axis .tick-label')].map((t) => Number(t.textContent)); const r = (sel) => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect() : null; }; const bob = r('.span-row[data-id="smith-bob"] .bar'); const kid = r('.span-row[data-id="kid-now"] .bar'); const old = r('.span-row[data-id="old-open"] .bar'); const svg = r('#timeline-svg'); return { rows: document.querySelectorAll('.span-row').length, pills: document.querySelectorAll('.ev').length, maxLabel: Math.max.apply(null, labels), now, bobW: bob && bob.width, kidRight: kid && kid.right, oldW: old && old.width, svgRight: svg.right, living: !!document.querySelector('.span-row[data-id="kid-now"] .bar.open-living'), unknown: !!document.querySelector('.span-row[data-id="old-open"] .bar.open-unknown'), loneRow: !!document.querySelector('.span-row[data-id="lone-person"]') }; })()`);
   check('one lifespan row per dated person, and no event pills', tl.rows >= 5 && tl.pills === 0 && !tl.loneRow, JSON.stringify(tl));
   check('the axis does not run past next year', tl.maxLabel <= tl.now + 1, JSON.stringify(tl));
   check('a living person\'s bar runs to today; an unknown end is a short fading stub', tl.living && tl.unknown && tl.kidRight > tl.svgRight - 80 && tl.oldW < tl.bobW, JSON.stringify(tl));
@@ -253,9 +253,20 @@ async function main() {
   await sleep(200);
   check('panel closes in the timeline too', (await ev(`document.getElementById('panel').hidden`)) === true);
 
+  // ---- vertical scrolling is the browser's own
+  await send('Emulation.setDeviceMetricsOverride', { width: 1400, height: 330, deviceScaleFactor: 1, mobile: false });
+  await goto('#/timeline');
+  const nat = await ev(`(() => { const box = document.getElementById('timeline-rows'); const svg = document.getElementById('timeline-svg'); const fire = (init) => { const e = new WheelEvent('wheel', Object.assign({ bubbles: true, cancelable: true }, init)); box.dispatchEvent(e); return e.defaultPrevented; }; return { overflow: getComputedStyle(box).overflowY, scrollable: box.scrollHeight > box.clientHeight, svgH: svg.getBoundingClientRect().height, rows: window.famsiteViewer ? 0 : 0, plainPrevented: fire({ deltaY: 60 }), ctrlPrevented: fire({ deltaY: 60, ctrlKey: true }), shiftPrevented: fire({ deltaY: 60, shiftKey: true }) }; })()`);
+  check('the rows scroll natively: a plain wheel is left to the browser, zoom and sideways are ours', nat.overflow === 'auto' && nat.scrollable && !nat.plainPrevented && nat.ctrlPrevented && nat.shiftPrevented, JSON.stringify(nat));
+  await ev(`document.getElementById('timeline-rows').scrollTop = 100000`);
+  await sleep(300);
+  const last = await ev(`(() => { const box = document.getElementById('timeline-rows'); const rows = [...document.querySelectorAll('.span-row')]; const b = box.getBoundingClientRect(); return { drawn: rows.length, visible: rows.some((r) => { const q = r.getBoundingClientRect(); return q.bottom > b.top && q.top < b.bottom; }) }; })()`);
+  check('scrolling to the bottom draws the last rows', last.visible, JSON.stringify(last));
+  await send('Emulation.setDeviceMetricsOverride', { width: 1400, height: 820, deviceScaleFactor: 1, mobile: false });
+
   // ---- a person's route in the timeline
   await goto('#/timeline/smith-bob');
-  const sel = await ev(`(() => { const row = document.querySelector('.span-row.selected'); const b = row && row.getBoundingClientRect(); const s = document.getElementById('timeline-svg').getBoundingClientRect(); return { id: row && row.dataset.id, inView: !!b && b.top >= s.top && b.bottom <= s.bottom, dim: document.querySelectorAll('.span-row.dim').length, related: document.querySelectorAll('.span-row.related').length, panel: !document.getElementById('panel').hidden }; })()`);
+  const sel = await ev(`(() => { const row = document.querySelector('.span-row.selected'); const b = row && row.getBoundingClientRect(); const s = document.getElementById('timeline-rows').getBoundingClientRect(); return { id: row && row.dataset.id, inView: !!b && b.top >= s.top && b.bottom <= s.bottom, dim: document.querySelectorAll('.span-row.dim').length, related: document.querySelectorAll('.span-row.related').length, panel: !document.getElementById('panel').hidden }; })()`);
   check('a person route selects their row, scrolls it into view and dims strangers', sel.id === 'smith-bob' && sel.inView && sel.dim >= 1 && sel.related >= 1 && sel.panel, JSON.stringify(sel));
   await goto('#/timeline/lone-person');
   check('an undated person opens the panel and the undated list', (await ev(`!document.getElementById('panel').hidden && document.getElementById('undated').open`)) === true);
@@ -278,7 +289,9 @@ async function main() {
   await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
   await send('Page.navigate', { url: base + '/tree.html' }); await sleep(1500);
   const home = await ev(`document.querySelector('meta[name="famsite-home"]').content`);
-  check('with no route the viewer opens the home person\'s focused tree', (await ev('location.hash')) === '#/focus/' + home, await ev('location.hash'));
+  check('with no route and nobody chosen the viewer opens the overall tree', (await ev('location.hash')) === '#/tree', await ev('location.hash'));
+  check('the Overview tab is current on the overall tree', (await ev(`document.querySelector('#tabs a[aria-current="page"]').textContent`)) === 'Overview');
+  await goto('#/focus/' + home);
   check('the Tree tab is current in a focused tree', (await ev(`document.querySelector('#tabs a[aria-current="page"]').textContent`)) === 'Tree');
   const openH = await ev(`document.querySelector('.node rect').getBoundingClientRect().height`);
   check('nodes open at a readable size', openH >= 64 * 0.6, openH);

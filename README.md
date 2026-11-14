@@ -91,8 +91,10 @@ The viewer has tabs:
   throughout; no web fonts are loaded.
 - **Ended partnerships:** a couple whose partnership has an `end` is drawn with dashed spouse lines and a
   hollow dot; the side panel shows "Married 1975 – divorced 1990".
-- **Tree, Overview and zoom:** the **Tree** tab opens a focused tree on the home person (or the selected
-  person); **Overview** (`#/tree`) draws everyone. The tree opens at a readable size, and picking a person
+- **Tree, Overview and zoom:** opening the viewer with no address shows the **Overview** (`#/tree`): everyone, fitted
+  to the screen. If you pressed "This is me" on a person page, it opens your own focused tree instead. The
+  **Tree** tab shows a focused tree on the selected person (or the home person). A focused tree opens at a
+  readable size, and picking a person
   while zoomed far out zooms in on them. Zoom with the buttons at bottom right (**+**, **−**, **Fit**,
   **Home**), the keys `+`, `-` and `0`, the mouse wheel, or a two-finger pinch. Zoomed far out, names give way
   to one label per family ("Smith family · 12"). In a focused tree, a person with relatives that are not drawn

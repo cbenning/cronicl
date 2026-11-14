@@ -32,7 +32,10 @@
     <svg id="tree" role="img" aria-label="Family tree"></svg>
     <section id="timeline" hidden>
       <div id="timeline-head"></div>
-      <svg id="timeline-svg" role="img" aria-label="Timeline"></svg>
+      <div id="timeline-body">
+        <svg id="timeline-axis" aria-hidden="true"></svg>
+        <div id="timeline-rows"><svg id="timeline-svg" role="img" aria-label="Timeline"></svg></div>
+      </div>
       <div id="timeline-scroll" hidden aria-hidden="true"><div class="thumb"></div></div>
       <details id="undated" hidden></details>
     </section>

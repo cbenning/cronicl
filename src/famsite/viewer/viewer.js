@@ -282,6 +282,13 @@
     return { scale: 1, tx: size.w / 2 - bounds.w / 2, ty: 0 };
   }
 
+  // The whole layout in view, as far out as the zoom range allows.
+  function fitView(bounds, size) {
+    var fit = Math.max(MIN_SCALE, Math.min(size.w / bounds.w, size.h / bounds.h, 1));
+    if (!isFinite(fit) || fit <= 0) fit = 1;
+    return { scale: fit, tx: (size.w - bounds.w * fit) / 2, ty: Math.max(0, (size.h - bounds.h * fit) / 2) };
+  }
+
   function lodFor(scale) {
     if (scale >= READABLE_SCALE) return 'near';
     if (scale >= FAR_SCALE) return 'mid';
@@ -451,7 +458,8 @@
     }
 
     function route() {
-      if (!location.hash && home) history.replaceState(null, '', routeHash('focus', home));
+      // no route: the person who said "this is me" gets their own tree, everyone else the overall tree
+      if (!location.hash) history.replaceState(null, '', savedMe() ? routeHash('focus', savedMe()) : routeHash('tree', null));
       var r = parseRoute(location.hash);
       showView(r.view);
       updateTreeTab(r.id || state.selected || home);
@@ -999,8 +1007,9 @@
         var box = treeSvg.getBoundingClientRect();
         viewPending = box.width === 0 || box.height === 0;
         if (viewPending) return;
-        var view = initialView(state.layout.bounds, { w: box.width, h: box.height },
-          nodes.get(focusId || state.selected || home) || null);
+        var target = nodes.get(focusId || state.selected || '') || null;
+        var view = target ? initialView(state.layout.bounds, { w: box.width, h: box.height }, target)
+          : fitView(state.layout.bounds, { w: box.width, h: box.height });
         scale = view.scale;
         tx = view.tx;
         ty = view.ty;
@@ -1200,7 +1209,11 @@
       var PAD = 40;
       var focus = null;
       var pxPerYear = 14;
-      var tx = PAD, ty = 0; // ty is the vertical scroll: 0 or negative
+      var tx = PAD;
+      // Vertical scrolling is the browser's own (a scrolling box around a tall SVG), so it never waits on this script.
+      var bodyEl = $('timeline-body');
+      var axisSvg = $('timeline-axis');
+      var rowsBox = $('timeline-rows');
       var bounds = { min: 0, max: 1 };
       var nowYear = 0;
       var rowIndex = new Map();
@@ -1222,23 +1235,21 @@
       tlSvg.appendChild(defs);
       tlSvg.appendChild(gridLayer);
       tlSvg.appendChild(rowLayer);
-      tlSvg.appendChild(axisLayer);
+      axisSvg.appendChild(axisLayer);
       var emptyEl = document.createElement('p');
       emptyEl.id = 'timeline-empty';
       emptyEl.textContent = 'No dated events yet.';
       emptyEl.hidden = true;
-      tlSection.insertBefore(emptyEl, tlSvg);
+      tlSection.insertBefore(emptyEl, bodyEl);
 
-      function viewWidth() { return tlSvg.getBoundingClientRect().width; }
-      function viewHeight() { return tlSvg.getBoundingClientRect().height; }
+      function viewWidth() { return rowsBox.clientWidth; }
+      function viewHeight() { return rowsBox.clientHeight; }
       function rows() { return state.timeline ? state.timeline.rows : []; }
       function xOfYear(year) { return (year - bounds.min) * pxPerYear + tx; }
-      function maxScroll() { return Math.max(0, rows().length * ROW_H - (viewHeight() - AXIS_H)); }
 
       function clampView() {
         var minTx = Math.min(PAD, viewWidth() - (bounds.max - bounds.min) * pxPerYear - PAD);
         tx = Math.min(PAD, Math.max(minTx, tx));
-        ty = Math.min(0, Math.max(-maxScroll(), ty));
       }
 
       function totalRange() { return { min: bounds.min, max: bounds.max }; }
@@ -1270,7 +1281,7 @@
         var cls = 'span-row';
         if (id === state.selected) cls += ' selected';
         else if (state.selected) cls += related.has(id) ? ' related' : ' dim';
-        var g = svgEl('g', { 'class': cls, 'data-id': id, transform: 'translate(0 ' + (AXIS_H + index * ROW_H) + ')' });
+        var g = svgEl('g', { 'class': cls, 'data-id': id, transform: 'translate(0 ' + (index * ROW_H) + ')' });
         var bar = spanBar(span, nowYear);
         var startX = null;
         if (bar) {
@@ -1319,12 +1330,13 @@
 
       function render() {
         if (!ready) return;
-        var r = tlSvg.getBoundingClientRect();
+        var width = viewWidth(), height = viewHeight();
         clampView();
         var list0 = rows();
-        var win0 = rowWindow(-ty, r.height - AXIS_H, ROW_H, list0.length);
-        var key = [tx, pxPerYear, r.width, r.height, state.selected, nowYear, list0.length].join('|');
-        rowLayer.setAttribute('transform', 'translate(0 ' + ty + ')');
+        tlSvg.setAttribute('height', Math.max(list0.length * ROW_H, 1));
+        // draw a screenful of rows above and below what is visible, so a fast flick never shows a blank
+        var win0 = rowWindow(rowsBox.scrollTop - height / 2, height * 2, ROW_H, list0.length);
+        var key = [tx, pxPerYear, width, height, state.selected, nowYear, list0.length].join('|');
         if (key === drawnKey && win0.first === drawnFirst && win0.last === drawnLast) return;
         drawnKey = key;
         drawnFirst = win0.first;
@@ -1332,17 +1344,17 @@
         gridLayer.textContent = '';
         rowLayer.textContent = '';
         axisLayer.textContent = '';
-        axisLayer.appendChild(svgEl('rect', { x: 0, y: 0, width: r.width, height: AXIS_H, 'class': 'axis-bg' }));
+        axisLayer.appendChild(svgEl('rect', { x: 0, y: 0, width: width, height: AXIS_H, 'class': 'axis-bg' }));
         ticks().forEach(function (year) {
           var x = xOfYear(year);
-          if (x < -40 || x > r.width + 40) return;
-          gridLayer.appendChild(svgEl('line', { x1: x, x2: x, y1: AXIS_H, y2: r.height, 'class': 'tick' }));
+          if (x < -40 || x > width + 40) return;
+          gridLayer.appendChild(svgEl('line', { x1: x, x2: x, y1: 0, y2: list0.length * ROW_H, 'class': 'tick' }));
           var label = svgEl('text', { x: x + 4, y: AXIS_H - 12, 'class': 'tick-label' });
           label.textContent = String(year);
           axisLayer.appendChild(label);
         });
         var list = rows();
-        var win = rowWindow(-ty, r.height - AXIS_H, ROW_H, list.length);
+        var win = win0;
         var related = state.selected ? relatedSet(state.selected) : new Set();
         for (var i = win.first; i < win.last; i++) drawRow(i, list[i], related);
         updateControls();
@@ -1379,7 +1391,6 @@
       function fit() {
         pxPerYear = Math.min(60, Math.max(1, (viewWidth() - 2 * PAD) / Math.max(1, bounds.max - bounds.min)));
         tx = PAD;
-        ty = 0;
       }
 
       function updateControls() {
@@ -1443,10 +1454,9 @@
       }
 
       function scrollToRow(index) {
-        var top = index * ROW_H, view = viewHeight() - AXIS_H;
-        if (top + ty >= 0 && top + ROW_H + ty <= view) return;
-        ty = -(top - (view - ROW_H) / 2);
-        clampView();
+        var top = index * ROW_H, view = viewHeight();
+        if (top >= rowsBox.scrollTop && top + ROW_H <= rowsBox.scrollTop + view) return;
+        rowsBox.scrollTop = Math.max(0, top - (view - ROW_H) / 2);
       }
 
       function selectRow(id) {
@@ -1502,7 +1512,7 @@
         header();
         var empty = !rows().length;
         emptyEl.hidden = !empty;
-        setHidden(tlSvg, empty);
+        bodyEl.hidden = empty;
         $('timeline-scroll').hidden = empty;
         tlHead.querySelector('.tl-controls').hidden = empty;
         ready = !empty;
@@ -1529,16 +1539,18 @@
         if (state.view === 'timeline' && state.timeline) render();
       }
 
-      tlSvg.addEventListener('pointerdown', function (e) {
-        drag = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
+      rowsBox.addEventListener('pointerdown', function (e) {
+        if (e.offsetX >= rowsBox.clientWidth && e.target === rowsBox) return; // the scrollbar is the browser's
+        drag = { x: e.clientX, y: e.clientY, tx: tx, top: rowsBox.scrollTop };
         moved = false;
       });
+      rowsBox.addEventListener('scroll', renderSoon, { passive: true });
       window.addEventListener('pointermove', function (e) {
         if (!drag || state.view !== 'timeline') return;
         var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
         if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
         tx = drag.tx + dx;
-        ty = drag.ty + dy;
+        if (e.pointerType === 'mouse') rowsBox.scrollTop = drag.top - dy; // touch scrolls natively
         renderSoon();
       });
       function endDrag() {
@@ -1547,21 +1559,20 @@
       }
       window.addEventListener('pointerup', endDrag);
       window.addEventListener('pointercancel', endDrag);
-      tlSvg.addEventListener('click', function () {
+      rowsBox.addEventListener('click', function () {
         if (!moved && !panel.hidden) closePanel();
       });
-      tlSvg.addEventListener('wheel', function (e) {
-        e.preventDefault();
-        var px = e.clientX - tlSvg.getBoundingClientRect().left;
+      // Only zoom and sideways movement are ours; a plain vertical wheel is left to the browser to scroll the rows.
+      bodyEl.addEventListener('wheel', function (e) {
         var dy = wheelPixels(e.deltaY, e.deltaMode, viewHeight());
         var dx = wheelPixels(e.deltaX, e.deltaMode, viewWidth());
+        var px = e.clientX - rowsBox.getBoundingClientRect().left;
         if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
           zoomBy(Math.exp(-dy * 0.01), px); // pinch / Ctrl+wheel
         } else if (e.shiftKey || Math.abs(dx) > Math.abs(dy)) {
+          e.preventDefault();
           panBy(-(dx || dy)); // sideways swipe / Shift+wheel
-        } else {
-          ty -= dy; // a plain wheel scrolls the rows
-          renderSoon();
         }
       }, { passive: false });
 
@@ -1572,8 +1583,8 @@
         var handled = true;
         if (e.key === 'ArrowLeft') panBy(viewWidth() * 0.2);
         else if (e.key === 'ArrowRight') panBy(-viewWidth() * 0.2);
-        else if (e.key === 'ArrowUp') { ty += ROW_H * 3; render(); }
-        else if (e.key === 'ArrowDown') { ty -= ROW_H * 3; render(); }
+        else if (e.key === 'ArrowUp') rowsBox.scrollTop -= ROW_H * 3;
+        else if (e.key === 'ArrowDown') rowsBox.scrollTop += ROW_H * 3;
         else if (e.key === '+' || e.key === '=') zoomBy(1.4);
         else if (e.key === '-' || e.key === '_') zoomBy(1 / 1.4);
         else if (e.key === 'Home') centerOnYear(bounds.min + (viewWidth() / 2) / pxPerYear);
