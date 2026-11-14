@@ -123,7 +123,8 @@ class _Reader:
         living = record.get("living")
         if isinstance(living, str):
             person.living_text = living.strip()
-            person.living = parse_bool(living)
+            # only `living: true` counts; anything else is reported (W-LIVING-FALSE) and ignored, so privacy fails closed
+            person.living = True if parse_bool(living) is True else None
         refs = record.get("refs")
         if isinstance(refs, Mapping):
             person.gedcom_id = _text(refs.get("gedcom"))
@@ -213,14 +214,16 @@ def partnerships_from_events(entries, other: str) -> list[Partnership]:
         kind, date = _text(entry.get("type")), _text(entry.get("date"))
         if kind in BEGIN:
             partnerships.append(
-                Partnership(with_id=other, type=kind, start=date, place=_text(entry.get("place")), note=_text(entry.get("note")),
+                Partnership(with_id=other, distinct=True, type=kind, start=date, place=_text(entry.get("place")), note=_text(entry.get("note")),
                             cite=_texts(entry.get("cite")))
             )
             continue
         open_ones = [p for p in partnerships if p.end is None]
         target = open_ones[-1] if open_ones else None
+        if target is None and partnerships and partnerships[-1].end_reason == "separation" and kind in ("divorce", "annulment"):
+            target = partnerships[-1]  # separated, then divorced: the same partnership, ended for its final reason
         if target is None:
-            target = Partnership(with_id=other)
+            target = Partnership(with_id=other, distinct=True)
             partnerships.append(target)
         target.end = date or "unknown"
         target.end_reason = kind if kind in ("divorce", "annulment", "separation") else None

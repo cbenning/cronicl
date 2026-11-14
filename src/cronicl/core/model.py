@@ -29,6 +29,7 @@ class Partnership:
     note: str | None = None
     cite: list[str] = field(default_factory=list)
     extra: dict = field(default_factory=dict)
+    distinct: bool = False  # read from a couple's events: one partnership of its own, never merged with another
 
 
 @dataclass

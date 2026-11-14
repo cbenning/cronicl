@@ -3,6 +3,7 @@ import subprocess
 import pytest
 
 from cronicl.cli import main
+from cronicl.core.migrate import apply_migration, plan_migration
 from cronicl.core.store import load_tree
 
 
@@ -204,3 +205,19 @@ def test_a_clean_migration_has_no_notes(tmp_path, write, capsys):
     old_folder(tmp_path, write, {"a": "name: A One\npartnerships:\n  - with: b\n    type: marriage\n    start: 1900\n    end: 1910\n    end_reason: divorce\n", "b": "name: B Two\n"})
     assert migrate(tmp_path) == 0
     assert "NOTE" not in capsys.readouterr().out
+
+
+def test_a_legacy_span_with_an_approximate_end_migrates_to_a_readable_span(tmp_path):
+    from cronicl.core.dates import parse_span
+
+    (tmp_path / "people").mkdir()
+    (tmp_path / "site.yml").write_text("title: T\nschema_version: 2\n", encoding="utf-8")
+    (tmp_path / "people" / "a.md").write_text(
+        "---\nid: a\nname: A\nevents:\n  - type: occupation\n    start: 1900\n    end: '~1910'\n---\n", encoding="utf-8"
+    )
+    plan = plan_migration(tmp_path)
+    apply_migration(tmp_path, plan)
+    text = (tmp_path / "family.yml").read_text(encoding="utf-8")
+    line = next(l for l in text.splitlines() if "FROM" in l)
+    value = line.split("date:")[1].strip(" },")
+    assert parse_span(value) is not None, line

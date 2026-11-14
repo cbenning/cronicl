@@ -78,6 +78,8 @@ def plan_migration(data_dir: Path) -> MigrationPlan:
         for event in person.events:
             if event.date and (event.start or event.end):
                 notes.append(f"{pid}: an event has both date and start/end; start/end is not carried over")
+            elif any(str(v).lstrip().upper().startswith(("~", "ABT", "CAL", "EST", "BEF", "AFT")) for v in (event.start, event.end) if v):
+                notes.append(f"{pid}: an event span had an approximate (~) end; it is written as a plain span")
 
     pairs: set[tuple[str, str]] = set()
     for person in tree.people.values():

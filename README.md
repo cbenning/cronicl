@@ -307,7 +307,7 @@ Warnings, and the rest:
 | `W-DUPLICATE-KEY` | the same key twice in one block; the later value wins |
 | `W-DATE-UNPARSED`, `W-DATE-SPAN`, `W-END-BEFORE-START` | a date that is not one of the forms above; a span where one date is meant; an end before its start |
 | `W-BAD-SEX` | `sex` is not `male`, `female`, `unknown` or `other` |
-| `W-LIVING-FALSE` | `living:` is anything but `true`; say `death: unknown` for someone who has died |
+| `W-LIVING-FALSE` | `living:` is not `true`; it is ignored (dates decide), so say `death: unknown` for someone who has died |
 | `W-EVENT-IS-FIELD`, `W-EVENT-ONCE`, `W-EVENT-PLACEMENT` | a birth or death in `events` (use the field); two burials or cremations; a marriage or divorce in a person's events (put it in the couple's record) |
 | `W-NO-NAME`, `W-TOO-MANY-PARENTS` | a person with no name; more than two parents |
 | `E-PRIVACY-MODE` | `privacy` is not a mapping, or `privacy.living` is not `full`, `placeholder` or `hidden` |

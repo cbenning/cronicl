@@ -70,8 +70,14 @@ def _record(body: str, pid: str):
 def _last_line_end(body: str, end_index: int) -> int:
     """The index just past the line holding the last real character before `end_index`."""
     i = end_index
-    while i > 0 and body[i - 1] in " \t\r\n":
-        i -= 1
+    while True:
+        while i > 0 and body[i - 1] in " \t\r\n":
+            i -= 1
+        start = body.rfind("\n", 0, i) + 1
+        if body[start:i].lstrip().startswith("#") and start > 0:  # a comment line that belongs to what follows
+            i = start
+            continue
+        break
     nl = body.find("\n", i)
     return len(body) if nl == -1 else nl + 1
 
@@ -133,7 +139,10 @@ def set_living(text: str, pid: str) -> str:
     if existing is not None:
         if not isinstance(existing, yaml.ScalarNode):
             raise InplaceError(f"{pid}: `living` is not a single value; edit it by hand")
-        start, end = _id_span(existing) if existing.value else (existing.start_mark.index, existing.start_mark.index)
+        if not existing.value:  # blank: `living:` or `living:   # note`
+            at = existing.start_mark.index
+            return bom + body[:at] + (" " if body[at - 1:at] == ":" else "") + "true" + body[at:]
+        start, end = _id_span(existing)
         return text if existing.value == "true" else bom + body[:start] + "true" + body[end:]
     at = _last_line_end(body, value_node.end_mark.index)
     return bom + _insert_line(body, at, indent, "living: true")

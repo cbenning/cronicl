@@ -173,3 +173,72 @@ def test_build_prints_warnings(tmp_path, write_family, capsys):
     capsys.readouterr()
     assert main(["build", "--dir", str(tmp_path), "--out", str(tmp_path / "out")]) == 0
     assert "W-DATE-UNPARSED" in capsys.readouterr().out
+
+
+# Final-review fixes ---------------------------------------------------------------------------------------
+
+
+def _couples(tmp_path, write_family, couple_events):
+    write_family(tmp_path, f"a:\n  name: {{given: A}}\nb:\n  name: {{given: B}}\na + b:\n  events:\n{couple_events}")
+    from cronicl.core.relations import build_relations
+
+    tree, _ = load_tree(tmp_path)
+    return build_relations(tree).couples["a+b"]
+
+
+def test_married_divorced_married_again_without_dates_is_two_partnerships_and_not_ended(tmp_path, write_family):
+    couple = _couples(tmp_path, write_family, "    - {type: marriage}\n    - {type: divorce}\n    - {type: marriage}\n")
+    assert len(couple.partnerships) == 2 and couple.ended is False
+
+
+def test_a_dated_second_marriage_keeps_its_own_dates(tmp_path, write_family):
+    couple = _couples(
+        tmp_path, write_family, "    - {type: marriage, place: Bath}\n    - {type: divorce, date: 1830}\n    - {type: marriage, date: 1840}\n"
+    )
+    assert [(p.start, p.end) for p in couple.partnerships] == [(None, "1830"), ("1840", None)] and couple.ended is False
+
+
+def test_separation_then_divorce_is_one_ended_partnership_with_no_conflict_warning(tmp_path, write_family):
+    couple = _couples(
+        tmp_path, write_family, "    - {type: marriage, date: 1820}\n    - {type: separation, date: 1826}\n    - {type: divorce, date: 1828}\n"
+    )
+    assert [(p.start, p.end, p.end_reason) for p in couple.partnerships] == [("1820", "1828", "divorce")]
+    tree, issues = load_tree(tmp_path)
+    assert "W-PARTNERSHIP-CONFLICT" not in codes(check_tree(tree, issues))
+
+
+def _edit(tmp_path, text, fn, pid="smith"):
+    from cronicl.core import inplace
+
+    return getattr(inplace, fn)(text, pid)
+
+
+@pytest.mark.parametrize("tail", ["", "   # todo"])
+def test_mark_living_on_a_blank_living_line_writes_valid_yaml(tmp_path, write_family, tail):
+    text = f"smith:\n  name: {{given: A}}\n  living:{tail}\n  bio: hi\n"
+    out = _edit(tmp_path, text, "set_living")
+    write_family(tmp_path, out)
+    tree, issues = load_tree(tmp_path)
+    assert "E-BAD-FAMILY" not in codes(issues) and tree.people["smith"].living is True
+
+
+def test_birth_with_swapped_bet_years_still_counts_as_the_later_year():
+    from cronicl.core.dates import latest_year
+
+    assert latest_year("BET 1990 AND 1900") == 1990
+
+
+def test_living_false_does_not_make_a_recently_born_person_public(tmp_path, write_family):
+    write_family(tmp_path, "kid:\n  name: {given: Kid}\n  birth: 1990\n  living: false\n")
+    tree, _ = load_tree(tmp_path)
+    from cronicl.core.living import is_living
+
+    assert is_living(tree.people["kid"], TODAY) is True
+
+
+def test_an_insert_lands_under_its_own_record_not_under_the_next_ones_comment(tmp_path):
+    text = "smith:\n  name: {given: A}\n  birth: 1950\n\n# ---- Jones line ----\njones:\n  name: {given: J}\n"
+    for fn, line in (("set_living", "living: true"), ("set_death_unknown", "death: unknown")):
+        out = _edit(tmp_path, text, fn)
+        lines = out.splitlines()
+        assert lines.index("  " + line) < lines.index("# ---- Jones line ----"), (fn, out)

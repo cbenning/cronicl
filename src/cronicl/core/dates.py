@@ -102,7 +102,7 @@ def latest_year(text: str | None) -> int | None:
     parsed = parse_date(text)
     if parsed is None or parsed.qualifier == "AFT":
         return None
-    return parsed.last_year if parsed.qualifier == "BET" else parsed.year
+    return max(parsed.year, parsed.last_year or parsed.year) if parsed.qualifier == "BET" else parsed.year
 
 
 def plain_form(text: str | None) -> str | None:

@@ -140,6 +140,7 @@ def build_relations(tree: Tree) -> Relations:
     # Spouse and marriage pairs, declared on either end.
     pairs: set[tuple[str, ...]] = set()
     merged: dict[tuple[str, ...], list[CouplePartnership]] = {}
+    in_order: set[tuple[str, ...]] = set()  # couples whose partnerships came from one record's events, already in order
     for pid in sorted(people):
         person = people[pid]
         for other in person.spouse:
@@ -163,8 +164,10 @@ def build_relations(tree: Tree) -> Relations:
                 key = tuple(sorted((pid, other)))
                 pairs.add(key)
                 groups = merged.setdefault(key, [])
+                if marriage.distinct:
+                    in_order.add(key)
                 for group in groups:
-                    if _same_partnership(group, marriage):
+                    if not marriage.distinct and _same_partnership(group, marriage):
                         _merge(group, marriage, key, issues)
                         break
                 else:
@@ -191,7 +194,7 @@ def build_relations(tree: Tree) -> Relations:
         cid = couple_id(list(key))
         couples.setdefault(cid, Couple(cid, list(key)))
     for key, groups in sorted(merged.items()):
-        couples[couple_id(list(key))].partnerships = sorted(groups, key=_start_key)
+        couples[couple_id(list(key))].partnerships = groups if key in in_order else sorted(groups, key=_start_key)
 
     kids: dict[str, list[str]] = {cid: [] for cid in couples}
     for child, cid in birth_couple.items():

@@ -96,12 +96,22 @@ def _bio(text: str, indent: str = "  ", key: str = "bio") -> list[str]:
     return [f"{indent}{key}: {head}"] + [f"{indent}  {line}" if line else "" for line in text.split("\n")]
 
 
+def _plain_end(text):
+    """A span's ends cannot carry a qualifier (`FROM 1900 TO ABT 1910` is not a date): keep the plain date."""
+    if not text:
+        return text
+    text = text.strip()
+    if text.startswith("~"):
+        return text[1:].strip()
+    return re.sub(r"^(?:ABT|CAL|EST|BEF|AFT)\s+", "", text, flags=re.I)
+
+
 def event_pairs(entry: dict) -> list[tuple[str, str]]:
     """An events entry (type, date | start/end, place, value, note, cite, extras) as ordered key/value text."""
     pairs = [("type", quote(entry.get("type") or ""))]
     date = entry.get("date")
     if not date and (entry.get("start") or entry.get("end")):
-        start, end = entry.get("start"), entry.get("end")
+        start, end = _plain_end(entry.get("start")), _plain_end(entry.get("end"))
         date = f"FROM {start} TO {end}" if start and end else (f"FROM {start}" if start else f"TO {end}")
     if date:
         pairs.append(("date", quote(date)))
