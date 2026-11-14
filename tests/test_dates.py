@@ -1,6 +1,6 @@
 import pytest
 
-from cronicl.dates import date_year, format_years, from_gedcom, parse_date
+from cronicl.core.dates import date_year, format_years, from_gedcom, parse_date
 
 
 def test_parse_full_partial_and_approximate():
@@ -50,7 +50,7 @@ def test_from_gedcom_keeps_unparsable_text(gedcom):
     assert from_gedcom(gedcom) == (gedcom, False)
 
 
-from cronicl.dates import age_between  # noqa: E402
+from cronicl.core.dates import age_between  # noqa: E402
 
 
 def age(born, at):
@@ -81,7 +81,7 @@ def test_age_is_none_before_birth():
     assert age("1990", "1980") is None
 
 
-from cronicl.dates import format_date
+from cronicl.core.dates import format_date
 
 
 @pytest.mark.parametrize("text, expected", [
@@ -112,7 +112,7 @@ def test_format_years_never_prints_an_open_dash(birth, death, expected):
     assert format_years(birth, death) == expected
 
 
-from cronicl.dates import year_position
+from cronicl.core.dates import year_position
 
 
 def test_year_position():

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .dates import date_year, format_years
-from .model import Tree
-from .relations import Relations
+from ..core.dates import date_year, format_years
+from ..core.model import Tree
+from ..core.relations import Relations
 
 
 def _node(tree: Tree, pid: str) -> dict:

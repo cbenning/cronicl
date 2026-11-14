@@ -249,7 +249,7 @@ def test_mode_words_and_text_numbers_in_site_yml_work(tmp_path, write):
 
 def test_warning_summary_formats():
     from cronicl.cli import warning_summary
-    from cronicl.issues import Issue
+    from cronicl.core.issues import Issue
 
     assert warning_summary([]) == ""
     assert warning_summary([Issue("W-A", "x")]) == "1 warning: 1 W-A (run cronicl check for details)"

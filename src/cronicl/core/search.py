@@ -8,7 +8,7 @@ from difflib import SequenceMatcher
 
 from .dates import date_year, format_years
 from .model import Person, Tree
-from .privacy import is_living
+from .living import is_living
 from .relations import build_relations
 
 _W_NAME, _W_ID, _W_YEAR, _W_PLACE = 3.0, 2.0, 2.0, 1.0

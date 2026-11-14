@@ -1,6 +1,6 @@
-from cronicl.model import Event, Partnership
-from cronicl.places import place_index
-from cronicl.relations import build_relations
+from cronicl.core.model import Event, Partnership
+from cronicl.site.places import place_index
+from cronicl.core.relations import build_relations
 
 
 def test_place_index(make_tree):
@@ -18,7 +18,7 @@ def test_place_index(make_tree):
     ]
 
 
-from cronicl.places import group_places
+from cronicl.site.places import group_places
 
 
 def _p(name):

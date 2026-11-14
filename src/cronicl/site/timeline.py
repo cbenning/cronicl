@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from .dates import ParsedDate, age_between, parse_date, year_position
+from ..core.dates import ParsedDate, age_between, parse_date, year_position
 from .facts import fact_text
-from .model import Tree
-from .relations import Relations
+from ..core.model import Tree
+from ..core.relations import Relations
 
 _TYPE_ORDER = {"birth": 0, "marriage": 1, "partnership": 1, "fact": 1, "divorce": 2, "death": 3}
 

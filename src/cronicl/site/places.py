@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .model import Tree
-from .relations import Relations
-from .slug import slugify, unique_id
+from ..core.model import Tree
+from ..core.relations import Relations
+from ..core.slug import slugify, unique_id
 
 
 def place_index(tree: Tree, relations: Relations) -> list[dict]:

@@ -1,7 +1,7 @@
 import pytest
 
-from cronicl.layout import H_GAP, NODE_H, NODE_W, LayoutError, compute_layout
-from cronicl.relations import build_relations
+from cronicl.site.layout import H_GAP, NODE_H, NODE_W, LayoutError, compute_layout
+from cronicl.core.relations import build_relations
 
 
 def person(pid, **kw):
@@ -240,7 +240,7 @@ def test_unions_list_their_members_so_the_viewer_can_highlight_a_family(make_tre
 
 
 def test_ended_partnership_is_flagged_on_the_union(make_tree):
-    from cronicl.model import Partnership
+    from cronicl.core.model import Partnership
 
     tree = make_tree(
         [

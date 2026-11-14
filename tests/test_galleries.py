@@ -1,7 +1,7 @@
 import pytest
 
-from cronicl.check import check_tree
-from cronicl.galleries import DEFAULT_LABEL, GalleryType, gallery_config, gallery_issues
+from cronicl.checks import check_all as check_tree
+from cronicl.site.galleries import DEFAULT_LABEL, GalleryType, gallery_config, gallery_issues
 
 
 def codes(issues):

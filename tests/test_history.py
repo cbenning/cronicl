@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from cronicl.history import recent_changes
+from cronicl.site.history import recent_changes
 
 
 def git(root, *args, when):

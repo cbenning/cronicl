@@ -1,8 +1,8 @@
 import pytest
 
-from cronicl.check import check_tree
-from cronicl.store import load_tree
-from cronicl.validate import is_extension, suggest
+from cronicl.checks import check_all as check_tree
+from cronicl.core.store import load_tree
+from cronicl.core.validate import is_extension, suggest
 
 
 def issues_of(tmp_path, write, person_front="", site_yml=None):
@@ -141,14 +141,14 @@ def test_a_rule_that_raises_is_reported_for_that_person_only(tmp_path, write, mo
     write(tmp_path, "people/a.md", "---\nid: a\nname: A One\n---\n")
     write(tmp_path, "people/b.md", "---\nid: b\nname: B Two\nbirth: 19x0\n---\n")
     tree, load = load_tree(tmp_path)
-    real = __import__("cronicl.check", fromlist=["x"]).person_issues
+    real = __import__("cronicl.core.check", fromlist=["x"]).person_issues
 
     def boom(person):
         if person.id == "a":
             raise RuntimeError("kaput")
         return real(person)
 
-    monkeypatch.setattr("cronicl.check.person_issues", boom)
+    monkeypatch.setattr("cronicl.core.check.person_issues", boom)
     found = check_tree(tree, load)
     (v,) = [i for i in found if i.code == "E-VALIDATOR"]
     assert "a: validation failed: kaput" in v.message and v.path == "people/a.md"
@@ -162,7 +162,7 @@ def test_a_whole_tree_step_that_raises_is_reported_without_a_file(tmp_path, writ
     def boom(_tree):
         raise RuntimeError("no relations")
 
-    monkeypatch.setattr("cronicl.check.build_relations", boom)
+    monkeypatch.setattr("cronicl.core.check.build_relations", boom)
     found = check_tree(tree, load)
     (v,) = [i for i in found if i.code == "E-VALIDATOR"]
     assert "relations" in v.message and "no relations" in v.message and v.path is None

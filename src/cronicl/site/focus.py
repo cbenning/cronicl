@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 
-from .model import Tree
-from .relations import Relations
+from ..core.model import Tree
+from ..core.relations import Relations
 
 
 def focus_people(tree: Tree, relations: Relations, pid: str) -> set[str]:

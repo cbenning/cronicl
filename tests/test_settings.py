@@ -1,6 +1,6 @@
 import pytest
 
-from cronicl.settings import MODES, parse_bool, parse_int, place_groups, privacy_settings, site_text
+from cronicl.site.settings import MODES, parse_bool, parse_int, place_groups, privacy_settings, site_text
 
 
 @pytest.mark.parametrize("value", ["true", " YES ", "On", "1", True])

@@ -1,9 +1,10 @@
 from pathlib import Path
 
-from cronicl.check import check_tree, has_errors
-from cronicl.issues import Issue
-from cronicl.model import Event, Partnership
-from cronicl.store import load_tree
+from cronicl.checks import check_all as check_tree
+from cronicl.core.check import has_errors
+from cronicl.core.issues import Issue
+from cronicl.core.model import Event, Partnership
+from cronicl.core.store import load_tree
 
 
 def codes(issues):
@@ -151,7 +152,7 @@ def test_portrait_checks(tmp_path, write):
 
 
 def test_event_checks(make_tree):
-    from cronicl.model import LifeEvent
+    from cronicl.core.model import LifeEvent
 
     tree = make_tree([{"id": "a", "given": "A", "events": [
         LifeEvent(type="", value="x"),

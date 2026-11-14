@@ -2,9 +2,9 @@ from datetime import date
 
 import pytest
 
-from cronicl.model import Event, LifeEvent, Partnership
-from cronicl.privacy import redact
-from cronicl.render import life_summary, person_payload
+from cronicl.core.model import Event, LifeEvent, Partnership
+from cronicl.site.privacy import redact
+from cronicl.site.render import life_summary, person_payload
 
 
 def p(pid, given, surname=None, **kw):

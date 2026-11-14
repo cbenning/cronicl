@@ -11,7 +11,7 @@ from urllib.parse import quote
 import jinja2
 from markdown_it import MarkdownIt
 
-from .dates import age_between, date_year, format_date, format_years, parse_date
+from ..core.dates import age_between, date_year, format_date, format_years, parse_date
 from .facts import fact_label
 from .focus import focus_people, focus_tree, hidden_counts
 from .galleries import gallery_config
@@ -20,15 +20,15 @@ from .kin import build_kin
 from .layout import compute_layout
 from .lineage import ancestor_tree, count_descendants, descendant_outline
 from .links import page_links
-from .media import ALLOWED, resolve
-from .model import Event, Tree
+from ..core.media import ALLOWED, resolve
+from ..core.model import Event, Tree
 from .places import group_places, place_index
 from .privacy import is_living, redact
-from .relations import Relations, build_relations
+from ..core.relations import Relations, build_relations
 from .settings import place_groups, privacy_settings, site_text
-from .slug import fold_slug, folds_cleanly, slugify
+from ..core.slug import fold_slug, folds_cleanly, slugify
 from .stats import site_stats
-from .store import cites_of
+from ..core.store import cites_of
 from .timeline import build_timeline, event_text
 
 _PACKAGE = Path(__file__).parent

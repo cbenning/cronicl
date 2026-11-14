@@ -1,9 +1,9 @@
 from datetime import date
 
-from cronicl.kin import build_kin
-from cronicl.model import Event
-from cronicl.relations import build_relations
-from cronicl.render import build_site
+from cronicl.site.kin import build_kin
+from cronicl.core.model import Event
+from cronicl.core.relations import build_relations
+from cronicl.site.render import build_site
 
 
 def test_build_kin(make_tree):

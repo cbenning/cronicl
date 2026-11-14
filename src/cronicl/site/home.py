@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .dates import date_year
-from .model import Tree
-from .relations import Relations
+from ..core.dates import date_year
+from ..core.model import Tree
+from ..core.relations import Relations
 
 
 def _descendants(relations: Relations, pid: str) -> int:

@@ -1,6 +1,6 @@
-from cronicl.lineage import ancestor_tree, count_descendants, descendant_outline
-from cronicl.model import Event
-from cronicl.relations import build_relations
+from cronicl.site.lineage import ancestor_tree, count_descendants, descendant_outline
+from cronicl.core.model import Event
+from cronicl.core.relations import build_relations
 
 
 def people():

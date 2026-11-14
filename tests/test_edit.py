@@ -1,8 +1,8 @@
 import pytest
 
 from cronicl.cli import main
-from cronicl.edit import EditError, apply_living, set_living_in_text
-from cronicl.store import load_tree
+from cronicl.core.edit import EditError, apply_living, set_living_in_text
+from cronicl.core.store import load_tree
 
 
 def test_replaces_an_existing_living_line():

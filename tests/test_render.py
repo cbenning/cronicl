@@ -1,8 +1,8 @@
 import json
 from datetime import date
 
-from cronicl.model import Event, LifeEvent
-from cronicl.render import build_site, dumps, page_links, person_payload
+from cronicl.core.model import Event, LifeEvent
+from cronicl.site.render import build_site, dumps, page_links, person_payload
 
 TODAY = date(2026, 10, 10)
 
@@ -114,7 +114,7 @@ def test_living_people_never_appear_in_any_output_file(tmp_path, make_tree):
 
 
 def test_ended_partnership_details_of_a_living_person_reach_no_output_file(tmp_path, make_tree):
-    from cronicl.model import Partnership
+    from cronicl.core.model import Partnership
 
     tree = make_tree(
         [
@@ -147,7 +147,7 @@ def test_no_privacy_setting_means_no_redaction(tmp_path, make_tree):
 
 
 def test_spouse_payload_carries_partnership_text(make_tree):
-    from cronicl.model import Partnership
+    from cronicl.core.model import Partnership
 
     tree = make_tree(
         [
@@ -168,7 +168,7 @@ def test_spouse_payload_carries_partnership_text(make_tree):
 
 
 def test_partnership_text_wording():
-    from cronicl.render import partnership_text
+    from cronicl.site.render import partnership_text
 
     assert partnership_text("marriage", "1975", None, None, None) == "Married 1975"
     assert partnership_text("marriage", "1975", "1990", None, None) == "Married 1975 – ended 1990"
@@ -260,7 +260,7 @@ def test_assets_are_versioned_by_content_so_a_rebuild_is_never_served_stale(tmp_
 
     tree = make_tree([p("a", "Al", "X")])
     build_site(tree, tmp_path, today=TODAY)
-    root = Path(cronicl.__file__).parent / "viewer"
+    root = Path(cronicl.__file__).parent / "site" / "viewer"
     js = hashlib.sha256((root / "viewer.js").read_bytes()).hexdigest()[:12]
     css = hashlib.sha256((root / "style.css").read_bytes()).hexdigest()[:12]
     index = (tmp_path / "tree/index.html").read_text(encoding="utf-8")

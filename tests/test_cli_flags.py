@@ -2,7 +2,7 @@
 import pytest
 
 from cronicl.cli import main
-from cronicl.store import load_tree
+from cronicl.core.store import load_tree
 
 
 def repo(tmp_path, write):

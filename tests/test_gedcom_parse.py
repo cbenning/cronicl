@@ -2,7 +2,7 @@ import codecs
 
 import pytest
 
-from cronicl.gedcom import GedcomError, decode_gedcom, parse_nodes
+from cronicl.core.gedcom import GedcomError, decode_gedcom, parse_nodes
 
 
 def test_parse_builds_tree_and_joins_continuations():

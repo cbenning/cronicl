@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { buildGrid, queryGrid, boundsOf } = require('../../src/cronicl/viewer/viewer.js');
+const { buildGrid, queryGrid, boundsOf } = require('../../src/cronicl/site/viewer/viewer.js');
 
 test('queryGrid returns only items intersecting the view', () => {
   const grid = buildGrid(

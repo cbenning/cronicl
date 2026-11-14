@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .model import Tree
-from .relations import Relations
+from ..core.model import Tree
+from ..core.relations import Relations
 
 
 def build_kin(tree: Tree, relations: Relations) -> dict:

@@ -11,21 +11,21 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from .check import check_tree
-from .edit import EditError, apply_living
-from .fix import apply_plan, plan_fix
-from .gaps import find_gaps
-from .gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
-from .history import recent_changes
-from .layout import LayoutError
-from .new import plan_new
-from .privacy import is_living
-from .settings import privacy_settings
-from .relations import build_relations
-from .render import build_site, dumps
-from .schema import PERSON_SCHEMA
-from .search import search_people
-from .store import dump_person, load_tree, write_person
+from .checks import check_all
+from .core.edit import EditError, apply_living
+from .core.fix import apply_plan, plan_fix
+from .core.gaps import find_gaps
+from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
+from .site.history import recent_changes
+from .core.generations import LayoutError
+from .core.new import plan_new
+from .core.living import is_living
+from .site.settings import privacy_settings
+from .core.relations import build_relations
+from .site.render import build_site, dumps
+from .core.schema import PERSON_SCHEMA
+from .core.search import search_people
+from .core.store import dump_person, load_tree, write_person
 
 SITE_YML = """\
 title: Family Tree
@@ -102,7 +102,7 @@ def cmd_init(args) -> int:
 
 def cmd_check(args) -> int:
     tree, load_issues = load_tree(Path(args.dir))
-    issues = check_tree(tree, load_issues)
+    issues = check_all(tree, load_issues)
     _print_issues(issues, args.format)
     failing = issues if args.strict else [i for i in issues if i.severity == "error"]
     return 1 if failing else 0
@@ -151,7 +151,7 @@ def cmd_import(args) -> int:
 def cmd_build(args) -> int:
     root = Path(args.dir)
     tree, load_issues = load_tree(root)
-    issues = check_tree(tree, load_issues)
+    issues = check_all(tree, load_issues)
     errors = [i for i in issues if i.severity == "error"]
     if errors and not args.ignore_errors:
         _print_issues(errors, "text")

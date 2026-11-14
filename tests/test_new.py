@@ -1,8 +1,8 @@
 import pytest
 
-from cronicl.check import check_tree
+from cronicl.checks import check_all as check_tree
 from cronicl.cli import main
-from cronicl.store import load_tree
+from cronicl.core.store import load_tree
 
 
 @pytest.fixture

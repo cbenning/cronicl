@@ -1,6 +1,6 @@
 import pytest
 
-from cronicl.media import resolve, safe_relative
+from cronicl.core.media import resolve, safe_relative
 
 
 @pytest.mark.parametrize("value, ok", [

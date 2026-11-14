@@ -2,16 +2,16 @@ import random
 
 import pytest
 
-from cronicl.gedcom import (
+from cronicl.core.gedcom import (
     ImportRefused,
     decode_gedcom,
     import_nodes,
     parse_nodes,
     write_import,
 )
-from cronicl.model import Partnership
-from cronicl.relations import build_relations
-from cronicl.store import load_tree
+from cronicl.core.model import Partnership
+from cronicl.core.relations import build_relations
+from cronicl.core.store import load_tree
 
 
 def load_result(path):

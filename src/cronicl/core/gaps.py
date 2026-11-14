@@ -5,7 +5,7 @@ from datetime import date
 
 from .dates import parse_date
 from .model import Tree
-from .privacy import is_living
+from .living import is_living
 from .relations import Relations
 
 

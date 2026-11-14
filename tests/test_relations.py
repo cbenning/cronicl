@@ -1,5 +1,5 @@
-from cronicl.model import Event, Partnership
-from cronicl.relations import CouplePartnership, build_relations, couple_id
+from cronicl.core.model import Event, Partnership
+from cronicl.core.relations import CouplePartnership, build_relations, couple_id
 
 
 def named(pid, **kw):

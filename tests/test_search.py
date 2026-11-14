@@ -2,8 +2,8 @@ import json
 from datetime import date
 
 from cronicl.cli import main
-from cronicl.model import Event, LifeEvent
-from cronicl.search import search_people
+from cronicl.core.model import Event, LifeEvent
+from cronicl.core.search import search_people
 
 TODAY = date(2026, 10, 10)
 
@@ -103,7 +103,7 @@ def test_cli_text_json_and_exit_codes(tmp_path, write, capsys):
 
 
 def test_partnership_years_and_places_are_searchable(make_tree):
-    from cronicl.model import Partnership
+    from cronicl.core.model import Partnership
 
     tree = make_tree(
         [

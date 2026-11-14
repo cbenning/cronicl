@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 from .dates import parse_date
-from .galleries import gallery_issues
 from .issues import Issue
-from .layout import generation_conflict
-from .links import valid_contact, valid_edit_url
+from .generations import generation_conflict
 from .media import ALLOWED, MAX_BYTES, resolve, safe_relative
 from .model import END_REASONS, PARTNERSHIP_TYPES, Person, Tree
 from .relations import build_relations
 from .slug import is_valid_id
-from .validate import person_issues, site_issues
+from .validate import person_issues
 
 
 def has_errors(issues: list[Issue]) -> bool:
@@ -137,27 +135,6 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
         issues.append(Issue("E-VALIDATOR", f"relations: validation failed: {exc}"))
         return sorted(issues, key=lambda i: (i.path or "", i.code, i.message))
     issues += relations.issues
-
-    def site_step() -> None:
-        for key, valid in (("edit_url", valid_edit_url), ("contact", valid_contact)):
-            value = (tree.site or {}).get(key)
-            if value and not valid(value):
-                issues.append(
-                    Issue(
-                        "W-BAD-LINK",
-                        f"{key} {str(value)!r} is not an allowed link (edit_url needs https://... and {{id}}; contact is mailto:, http:// or https://)",
-                        "site.yml",
-                    )
-                )
-
-        issues.extend(gallery_issues(tree.site or {}, tree.people))
-
-        home = (tree.site or {}).get("home")
-        if home and str(home) not in tree.people:
-            issues.append(Issue("W-HOME-UNKNOWN", f"home {str(home)!r} is not a person id; the default home person is used", "site.yml"))
-        issues.extend(site_issues(tree.site or {}, tree.people))
-
-    _guard("site.yml", site_step, issues, "site.yml")
 
     for person in tree.people.values():
         _guard(person.id, lambda person=person: _check_person(person, issues), issues, person.location)

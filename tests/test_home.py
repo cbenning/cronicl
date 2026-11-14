@@ -1,6 +1,6 @@
-from cronicl.home import home_person
-from cronicl.model import Event
-from cronicl.relations import build_relations
+from cronicl.site.home import home_person
+from cronicl.core.model import Event
+from cronicl.core.relations import build_relations
 
 
 def people():

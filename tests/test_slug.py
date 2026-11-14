@@ -1,4 +1,4 @@
-from cronicl.slug import (
+from cronicl.core.slug import (
     FALLBACK_SLUG,
     MAX_ID_LEN,
     is_valid_id,
@@ -61,7 +61,7 @@ def test_natural_key_orders_numbers_numerically():
 
 
 def test_fold_slug_folds_accents_and_special_letters():
-    from cronicl.slug import fold_slug
+    from cronicl.core.slug import fold_slug
 
     assert fold_slug("Zoë Müller") == "zoe-muller"
     assert fold_slug("Straße Ørsted") == "strasse-orsted"
@@ -69,7 +69,7 @@ def test_fold_slug_folds_accents_and_special_letters():
 
 
 def test_fold_slug_does_not_truncate_but_slugify_does():
-    from cronicl.slug import MAX_ID_LEN, fold_slug
+    from cronicl.core.slug import MAX_ID_LEN, fold_slug
 
     long_word = "a" * 70
     assert fold_slug(long_word) == long_word
@@ -77,7 +77,7 @@ def test_fold_slug_does_not_truncate_but_slugify_does():
 
 
 def test_folds_cleanly_is_false_when_a_letter_would_be_dropped():
-    from cronicl.slug import folds_cleanly
+    from cronicl.core.slug import folds_cleanly
 
     assert folds_cleanly("Zo\u00eb M\u00fcller") and folds_cleanly("Stra\u00dfe \u00d8rsted") and folds_cleanly("O'Brien 3rd")
     assert not folds_cleanly("\u0418\u0432\u0430\u043d Smith")  # Cyrillic

@@ -2,10 +2,10 @@ from datetime import date
 
 import pytest
 
-from cronicl.model import Event, LifeEvent, Partnership, Person
-from cronicl.privacy import is_living, redact
-from cronicl.relations import build_relations
-from cronicl.render import build_site
+from cronicl.core.model import Event, LifeEvent, Partnership, Person
+from cronicl.site.privacy import is_living, redact
+from cronicl.core.relations import build_relations
+from cronicl.site.render import build_site
 
 TODAY = date(2026, 10, 10)
 

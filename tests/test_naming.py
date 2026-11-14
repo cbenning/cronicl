@@ -23,7 +23,7 @@ def test_no_source_file_still_says_famsite():
 def test_built_pages_carry_the_new_names(tmp_path, make_tree):
     from datetime import date
 
-    from cronicl.render import build_site
+    from cronicl.site.render import build_site
 
     build_site(make_tree([{"id": "a", "given": "A"}]), tmp_path, today=date(2026, 10, 10))
     page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")

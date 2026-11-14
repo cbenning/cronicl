@@ -9,7 +9,7 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-from .issues import Issue
+from ..core.issues import Issue
 from .settings import is_extension, parse_bool
 
 CORE_KEYS = ("type", "label")

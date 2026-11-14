@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const v = require('../../src/cronicl/viewer/viewer.js');
+const v = require('../../src/cronicl/site/viewer/viewer.js');
 
 const measure = (s) => s.length * 7; // 7px per character
 const MAX = 140; // 20 characters
