@@ -53,9 +53,10 @@ def test_person_fields_are_mapped(sample_ged):
     assert bob.death.date == "2020-07-01" and bob.death.place == "Burnaby, BC"
     assert bob.parents == ["smith-john", "brown-mary"]
     assert bob.body == "Bob was a teacher\nwho loved the sea."
-    assert "1 OCCU Teacher" in bob.gedcom_extra
-    assert "2 DATE BET 1975 AND 1990" in bob.gedcom_extra
-    assert people["I2"].birth.date == "~1952"
+    occupation = [e for e in bob.events if e.type == "occupation"]
+    assert [(e.value, e.date) for e in occupation] == [("Teacher", "BET 1975 AND 1990")]
+    assert bob.gedcom_extra is None
+    assert people["I2"].birth.date == "ABT 1952"
     assert people["I3"].death is not None and people["I3"].death.is_empty()
     assert people["I3"].parents == ["smith-bob", "jones-jane"]
     assert people["I4"].parents == ["smith-bob", "jones-jane"]
@@ -86,8 +87,8 @@ def test_import_is_independent_of_record_order(sample_ged):
 
 
 def test_unparsable_dates_are_kept_and_warned():
-    result = from_text("0 @I1@ INDI\n1 NAME A /B/\n1 BIRT\n2 DATE BET 1900 AND 1910\n0 TRLR\n")
-    assert result.people[0].birth.date == "BET 1900 AND 1910"
+    result = from_text("0 @I1@ INDI\n1 NAME A /B/\n1 BIRT\n2 DATE 32 MAR 1950\n0 TRLR\n")
+    assert result.people[0].birth.date == "32 MAR 1950"
     assert [i.code for i in result.issues] == ["W-DATE-UNPARSED"]
 
 

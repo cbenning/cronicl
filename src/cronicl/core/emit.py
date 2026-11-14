@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from .dates import parse_span
+from .dates import parse_span, plain_form, to_modern
 
 _PLAIN_SAFE = re.compile(r"^[^\s\-?:,\[\]{}#&*!|>'\"%@`][^\n]*$")
 _NEEDS_QUOTES = re.compile(r"(: |:$| #|[,\[\]{}]|\t|^\s|\s$|[\x00-\x1f\x7f  ﻿])")
@@ -86,14 +86,14 @@ def _line(indent: str, key: str, pairs: list[tuple[str, str]], only_date: bool =
     return [f"{indent}{key}:"] + [f"{indent}  {k}: {v}" for k, v in pairs]
 
 
-def _bio(text: str, indent: str = "  ") -> list[str]:
+def _bio(text: str, indent: str = "  ", key: str = "bio") -> list[str]:
     text = text.replace("\r\n", "\n").replace("\r", "\n").strip("\n")
     if not text:
         return []
     if re.search(r"[\x00-\x08\x0b-\x1f\x7f  ﻿]", text) or any(line.endswith((" ", "\t")) for line in text.split("\n")):
-        return [f"{indent}bio: {quote(text)}"]
+        return [f"{indent}{key}: {quote(text)}"]
     head = "|" + ("2" if text[0] in " \t" else "")
-    return [f"{indent}bio: {head}"] + [f"{indent}  {line}" if line else "" for line in text.split("\n")]
+    return [f"{indent}{key}: {head}"] + [f"{indent}  {line}" if line else "" for line in text.split("\n")]
 
 
 def event_pairs(entry: dict) -> list[tuple[str, str]]:
@@ -211,17 +211,18 @@ def spec_from_person(p) -> dict:
             return None
         extra = dict(event.extra)
         note, cite = extra.pop("note", None), extra.pop("cite", None)
-        only_date = event.date and not (event.place or note or cite or extra)
+        date = to_modern(event.date)
+        only_date = date and not (event.place or note or cite or extra)
         if only_date:
-            return event.date
-        if not (event.date or event.place or note or cite or extra):
+            return date
+        if not (date or event.place or note or cite or extra):
             return None
-        return {"date": event.date, "place": event.place, "note": note, "cite": cite, "extra": extra}
+        return {"date": date, "place": event.place, "note": note, "cite": cite, "extra": extra}
 
     events = []
     for e in p.events:
         events.append(
-            {"type": e.type, "date": e.date, "start": e.start, "end": e.end, "place": e.place, "value": e.value,
+            {"type": e.type, "date": to_modern(e.date), "start": to_modern(e.start), "end": to_modern(e.end), "place": e.place, "value": e.value,
              "note": e.note, "cite": e.cite, "extra": e.extra}
         )
     return {
@@ -240,4 +241,19 @@ def spec_from_person(p) -> dict:
     }
 
 
-__all__ = ["quote", "person", "couple", "family", "spec_from_person", "event_pairs", "parse_span"]
+def partnership_events(partnerships) -> list[dict]:
+    """Couple `events` for a list of model Partnerships, in date order: a begin event, then its end event."""
+
+    def key(p):
+        return (p.start is None, plain_form(to_modern(p.start)) or "")
+
+    events: list[dict] = []
+    for p in sorted(partnerships, key=key):
+        kind = p.type if p.type and p.type != "unknown" else "partnership"
+        events.append({"type": kind, "date": to_modern(p.start), "place": p.place, "note": p.note, "cite": list(getattr(p, "cite", []) or [])})
+        if p.end is not None:
+            events.append({"type": p.end_reason or "end", "date": to_modern(p.end)})
+    return events
+
+
+__all__ = ["quote", "person", "couple", "family", "spec_from_person", "event_pairs", "partnership_events", "parse_span"]

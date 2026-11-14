@@ -89,7 +89,7 @@ def test_apply_has_the_same_short_form_on_every_writer(tmp_path, write):
     other = tmp_path / "other"
     other.mkdir()
     assert main(["import-gedcom", str(ged), "--dir", str(other), "-a"]) == 0
-    assert (other / "people" / "b-a.md").exists()
+    assert "b-a:" in (other / "family.yml").read_text(encoding="utf-8")
 
 
 def test_force_is_split_into_allow_dirty_and_ignore_errors(tmp_path, write):

@@ -474,3 +474,43 @@ def write_import(result: ImportResult, data_dir: Path, source: bytes, source_nam
     archive.parent.mkdir(parents=True, exist_ok=True)
     archive.write_bytes(source)
     return {"people": len(result.people), "families": result.families, "archive": str(archive)}
+
+
+def write_import_family(result: ImportResult, data_dir: Path, source: bytes, source_name: str) -> dict:
+    """Write the imported people and couples as family.yml, keep the source in archive/, set leftovers aside."""
+    from . import emit
+    from .family import has_family
+
+    data_dir = Path(data_dir)
+    if (data_dir / "family").is_dir():
+        raise ImportRefused("this family is split over a family/ folder; import into an empty family.yml instead")
+    existing, _ = load_tree(data_dir)
+    if existing.people:
+        raise ImportRefused("the family already has people; import into an empty family (re-import is not supported)")
+    specs = []
+    couples: dict[tuple[str, str], list] = {}
+    for person in result.people:
+        spec = emit.spec_from_person(person)
+        specs.append((person.id, spec))
+        for entry in person.partnerships:
+            if entry.with_id:
+                couples.setdefault(tuple(sorted((person.id, entry.with_id))), []).append(entry)
+        for other in person.spouse:
+            couples.setdefault(tuple(sorted((person.id, other))), [])
+    couple_specs = [(a, b, {"events": emit.partnership_events(entries)}) for (a, b), entries in couples.items()]
+    records = emit.family(specs, couple_specs)
+    target = data_dir / "family.yml"
+    previous = target.read_text(encoding="utf-8") if target.exists() else ""
+    target.write_text((previous.rstrip("\n") + "\n\n" if previous.strip() else "") + records, encoding="utf-8")
+    leftovers = [(person.id, person.gedcom_extra) for person in result.people if person.gedcom_extra]
+    if leftovers:
+        lines = ["# GEDCOM lines the import could not map, by person. Nothing reads this file."]
+        for pid, text in sorted(leftovers):
+            lines += emit._bio(text, indent="", key=pid)
+        (data_dir / "archive").mkdir(parents=True, exist_ok=True)
+        (data_dir / "archive" / "gedcom-extra.yml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    digest = hashlib.sha256(source).hexdigest()[:8]
+    archive = data_dir / "archive" / f"{Path(source_name).stem}-{digest}.ged"
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    archive.write_bytes(source)
+    return {"people": len(result.people), "families": result.families, "archive": str(archive)}

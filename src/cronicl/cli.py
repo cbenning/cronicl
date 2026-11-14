@@ -17,7 +17,7 @@ from .core.familyedit import plan_mark, plan_rename
 from .core.inplace import InplaceError
 from .core.fix import apply_plan, plan_fix
 from .core.gaps import find_gaps
-from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
+from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import, write_import_family
 from .site.history import recent_changes
 from .core.generations import LayoutError
 from .core.family import has_family
@@ -172,7 +172,9 @@ def cmd_import(args) -> int:
     if not args.apply:
         print("dry run; re-run with --apply (-a) to write files")
         return 0
-    summary = write_import(result, Path(args.dir), data, source.name)
+    root = Path(args.dir)
+    legacy = (root / "people").is_dir() and not has_family(root)  # until the old layout is removed
+    summary = (write_import if legacy else write_import_family)(result, root, data, source.name)
     print(f"wrote {summary['people']} people; archived source at {summary['archive']}")
     return 0
 

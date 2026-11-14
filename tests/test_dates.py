@@ -38,15 +38,15 @@ def test_format_years():
         ("12 MAR 1950", "1950-03-12"),
         ("MAR 1950", "1950-03"),
         ("1950", "1950"),
-        ("ABT 1850", "~1850"),
-        ("abt 12 mar 1850", "~1850-03-12"),
+        ("ABT 1850", "ABT 1850"),
+        ("abt 12 mar 1850", "ABT 1850-03-12"),
     ],
 )
 def test_from_gedcom_converts(gedcom, expected):
     assert from_gedcom(gedcom) == (expected, True)
 
 
-@pytest.mark.parametrize("gedcom", ["BET 1900 AND 1910", "32 MAR 1950", "@#DJULIAN@ 12 MAR 1750", "1750/51", "12 1950"])
+@pytest.mark.parametrize("gedcom", ["32 MAR 1950", "@#DJULIAN@ 12 MAR 1750", "1750/51", "12 1950"])
 def test_from_gedcom_keeps_unparsable_text(gedcom):
     assert from_gedcom(gedcom) == (gedcom, False)
 

@@ -9,7 +9,7 @@ _CRONICL = re.compile(r"^(~?)(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$")  # a plain dat
 _KEYWORD = re.compile(rf"^(ABT|CAL|EST|BEF|AFT)\s+{_PLAIN}$", re.I)
 _BETWEEN = re.compile(rf"^BET\s+{_PLAIN}\s+AND\s+{_PLAIN}$", re.I)
 _SPAN = re.compile(rf"^(?:FROM\s+({_PLAIN})(?:\s+TO\s+({_PLAIN}))?|TO\s+({_PLAIN}))$", re.I)
-_GEDCOM = re.compile(r"^(?:(ABT|CAL|EST)\s+)?(?:(\d{1,2})\s+)?(?:([A-Z]{3})\s+)?(\d{3,4})$")
+_GEDCOM_PLAIN = re.compile(r"^(?:(\d{1,2})\s+)?(?:([A-Z]{3})\s+)?(\d{3,4})$")
 _MONTHS = {
     m: i
     for i, m in enumerate(
@@ -200,24 +200,53 @@ def format_date(text: str | None) -> str:
     return prefix + _words(body)
 
 
-def from_gedcom(text: str) -> tuple[str, bool]:
-    """Convert a GEDCOM date to cronicl form. Returns (value, ok); on failure value is the original text."""
-    raw = text.strip()
-    match = _GEDCOM.match(raw.upper())
+def _gedcom_plain(text: str) -> str | None:
+    """A GEDCOM calendar date ('12 MAR 1950', 'MAR 1950', '1950') as YYYY[-MM[-DD]], or None."""
+    match = _GEDCOM_PLAIN.match(text.strip().upper())
     if not match:
-        return raw, False
-    qualifier, day, month, year = match.groups()
+        return None
+    day, month, year = match.groups()
     if day and not month:
-        return raw, False
+        return None
     if month and month not in _MONTHS:
-        return raw, False
+        return None
     out = f"{int(year):04d}"
     if month:
         out += f"-{_MONTHS[month]:02d}"
     if day:
         out += f"-{int(day):02d}"
-    if qualifier:
-        out = "~" + out
-    if parse_date(out) is None:
+    return out if parse_date(out) is not None else None
+
+
+def from_gedcom(text: str) -> tuple[str, bool]:
+    """Convert a GEDCOM date phrase to cronicl form. Returns (value, ok); on failure value is the original text."""
+    raw = text.strip()
+    up = " ".join(raw.upper().split())
+    keyword = re.match(r"^(ABT|CAL|EST|BEF|AFT)\s+(.+)$", up)
+    if keyword:
+        inner = _gedcom_plain(keyword.group(2))
+        return (f"{keyword.group(1)} {inner}", True) if inner else (raw, False)
+    between = re.match(r"^BET\s+(.+?)\s+AND\s+(.+)$", up)
+    if between:
+        first, last = _gedcom_plain(between.group(1)), _gedcom_plain(between.group(2))
+        return (f"BET {first} AND {last}", True) if first and last else (raw, False)
+    span = re.match(r"^FROM\s+(.+?)(?:\s+TO\s+(.+))?$", up)
+    if span:
+        first = _gedcom_plain(span.group(1))
+        last = _gedcom_plain(span.group(2)) if span.group(2) else None
+        if first and (last or not span.group(2)):
+            return ("FROM " + first + (f" TO {last}" if last else ""), True)
         return raw, False
-    return out, True
+    until = re.match(r"^TO\s+(.+)$", up)
+    if until:
+        last = _gedcom_plain(until.group(1))
+        return (f"TO {last}", True) if last else (raw, False)
+    plain = _gedcom_plain(up)
+    return (plain, True) if plain else (raw, False)
+
+
+def to_modern(text: str | None) -> str | None:
+    """The legacy `~1850` approximate form as `ABT 1850`; every other value unchanged."""
+    if text and text.startswith("~"):
+        return "ABT " + text[1:].strip()
+    return text
