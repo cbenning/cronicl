@@ -11,7 +11,6 @@ from .media import ALLOWED, MAX_BYTES, resolve, safe_relative
 from .model import END_REASONS, PARTNERSHIP_TYPES, Person, Tree
 from .relations import build_relations
 from .slug import is_valid_id
-from .validate import person_issues
 
 
 def has_errors(issues: list[Issue]) -> bool:
@@ -83,16 +82,14 @@ def _check_person(person: Person, issues: list[Issue]) -> None:
     where = person.location
     if not is_valid_id(person.id):
         issues.append(Issue("E-INVALID-ID", f"person id {person.id!r} is not a valid id", where))
-    legacy = person.source is None
-    if legacy and person.path is not None and person.path.name != f"{person.id}.md":
-        issues.append(Issue("W-FILENAME-DRIFT", f"file name does not match id {person.id!r}; run fix", where))
+    from_file = person.source is not None
     if not (person.given or person.surname):
         issues.append(Issue("W-NO-NAME", f"{person.id}: person has no name", where))
     if person.sex not in ("M", "F", "U"):
         issues.append(Issue("W-BAD-SEX", f"{person.id}: sex {person.sex!r} is not M, F or U", where))
     if person.portrait:
         _check_portrait(person, issues)
-    if not legacy:
+    if from_file:
         return  # dates, events and couples of a family.yml person are checked from the raw record (familycheck)
     if person.birth:
         _check_date(person.birth.date, "birth", person, issues)
@@ -153,7 +150,7 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
         local: list[Issue] = []
         _check_person(person, local)
         issues.extend(replace(i, line=person.line) if person.source and i.line is None else i for i in local)
-        issues.extend(person_issues(person) if person.source is None else family_person_issues(person))
+        issues.extend(family_person_issues(person))
 
     for person in tree.people.values():
         _guard(person.id, lambda person=person: person_step(person), issues, person.location)

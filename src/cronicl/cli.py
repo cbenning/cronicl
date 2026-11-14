@@ -12,16 +12,14 @@ from datetime import date
 from pathlib import Path
 
 from .checks import check_all
-from .core.edit import EditError, apply_living
+from .core.edit import EditError
 from .core.familyedit import plan_mark, plan_rename
 from .core.inplace import InplaceError
 from .core.migrate import MigrateRefused, apply_migration, plan_migration
-from .core.fix import apply_plan, plan_fix
 from .core.gaps import find_gaps
-from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import, write_import_family
+from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import_family
 from .core.generations import LayoutError
-from .core.family import has_family
-from .core.new import append_text, plan_new, plan_new_family
+from .core.new import append_text, plan_new_family
 from .core.show import describe
 from .core.living import is_living
 from .site.settings import privacy_settings
@@ -29,11 +27,11 @@ from .core.relations import build_relations
 from .site.render import build_site, dumps
 from .core.schema import FAMILY_SCHEMA
 from .core.search import search_people
-from .core.store import dump_person, load_tree, write_person
+from .core.store import load_tree
 
 SITE_YML = """\
 title: Family Tree
-schema_version: 2
+schema_version: 3
 privacy:
   living: full          # full (default: nothing hidden) | placeholder | hidden -- redaction is opt-in
   cutoff_years: 100
@@ -115,15 +113,12 @@ def cmd_init(args) -> int:
     if site.exists():
         print(f"error: {site} already exists", file=sys.stderr)
         return 2
-    legacy = getattr(args, "legacy_layout", False)  # temporary: removed together with the old per-person layout
-    for folder in (("people", "archive", "media") if legacy else ("archive", "media")):
+    for folder in ("archive", "media"):
         (root / folder).mkdir(parents=True, exist_ok=True)
         (root / folder / ".gitkeep").touch()
-    site_text = SITE_YML.format(salt=secrets.token_hex(8))
-    site.write_text(site_text if legacy else site_text.replace("schema_version: 2", "schema_version: 3"), encoding="utf-8")
-    if not legacy:
-        (root / "family.yml").write_text(FAMILY_YML, encoding="utf-8")
-        (root / "family.schema.json").write_text(dumps(FAMILY_SCHEMA), encoding="utf-8")
+    site.write_text(SITE_YML.format(salt=secrets.token_hex(8)), encoding="utf-8")
+    (root / "family.yml").write_text(FAMILY_YML, encoding="utf-8")
+    (root / "family.schema.json").write_text(dumps(FAMILY_SCHEMA), encoding="utf-8")
     gitignore = root / ".gitignore"
     if not gitignore.exists():
         gitignore.write_text("out/\n", encoding="utf-8")
@@ -137,27 +132,6 @@ def cmd_check(args) -> int:
     _print_issues(issues, args.format)
     failing = issues if args.strict else [i for i in issues if i.severity == "error"]
     return 1 if failing else 0
-
-
-def cmd_fix(args) -> int:
-    root = Path(args.dir)
-    plan = plan_fix(root)
-    for note in plan.notes:
-        print(note)
-    for issue in plan.unresolved:
-        print(f"UNRESOLVED {issue.code} {issue.path or '-'}: {issue.message}")
-    if plan.empty:
-        print("nothing to fix")
-        return 0
-    if not args.apply:
-        print("dry run; re-run with --apply (-a) to write these changes")
-        return 0
-    if _git_dirty(root) and not args.allow_dirty:
-        print("error: git working tree has uncommitted changes; commit them or use --allow-dirty", file=sys.stderr)
-        return 2
-    apply_plan(plan)
-    print(f"applied {len(plan.writes)} write(s), {len(plan.deletes)} delete(s)")
-    return 0
 
 
 def cmd_import(args) -> int:
@@ -174,9 +148,7 @@ def cmd_import(args) -> int:
     if not args.apply:
         print("dry run; re-run with --apply (-a) to write files")
         return 0
-    root = Path(args.dir)
-    legacy = (root / "people").is_dir() and not has_family(root)  # until the old layout is removed
-    summary = (write_import if legacy else write_import_family)(result, root, data, source.name)
+    summary = write_import_family(result, Path(args.dir), data, source.name)
     print(f"wrote {summary['people']} people; archived source at {summary['archive']}")
     return 0
 
@@ -208,7 +180,7 @@ def cmd_build(args) -> int:
                 "set it to placeholder or hidden before publishing"
             )
     out = Path(args.out) if args.out else root / "out"
-    for folder in ("people", "media"):
+    for folder in ("family", "media"):
         # a build clears what it generates in the output folder; never let that be the data itself
         data = (root / folder).resolve()
         if (out / folder).resolve() == data or out.resolve() == data or data in out.resolve().parents:
@@ -304,16 +276,7 @@ def cmd_rename(args) -> int:
 
 
 def cmd_edit_living(args) -> int:
-    if has_family(Path(args.dir)):
-        return _cmd_edit_family(args)
-    changes = apply_living(Path(args.dir), args.ids, args.living, dry_run=not args.apply)
-    word = "set" if args.apply else "would set"
-    for path, changed in changes:
-        status = f"{word} living: {'true' if args.living else 'false'}" if changed else "unchanged"
-        print(f"{path.parent.name}/{path.name}: {status}")
-    if not args.apply and any(changed for _, changed in changes):
-        print("dry run; re-run with --apply (-a) to write these changes")
-    return 0
+    return _cmd_edit_family(args)
 
 
 def cmd_gaps(args) -> int:
@@ -355,22 +318,7 @@ def _cmd_new_family(args) -> int:
 
 
 def cmd_new(args) -> int:
-    if has_family(Path(args.dir)):
-        return _cmd_new_family(args)
-    person = plan_new(
-        Path(args.dir), given=args.given, surname=args.surname, sex=args.sex,
-        birth=args.birth, birth_place=args.birth_place, death=args.death, death_place=args.death_place,
-        parents=args.parents or [], spouse=args.spouse or [], children=args.children or [],
-    )
-    rel = f"people/{person.id}.md"
-    if not args.apply:
-        print(rel)
-        print(dump_person(person), end="")
-        print("dry run; re-run with --apply (-a) to write this file")
-        return 0
-    write_person(Path(args.dir), person)
-    print(f"created {rel}")
-    return 0
+    return _cmd_new_family(args)
 
 
 def cmd_search(args) -> int:
@@ -429,7 +377,6 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("init", parents=[common], help="create a new cronicl folder")
-    p.add_argument("--legacy-layout", action="store_true", help=argparse.SUPPRESS)
     p.set_defaults(func=cmd_init)
 
     p = sub.add_parser("check", aliases=["validate"], parents=[common], help="report problems (read-only); also named validate")
@@ -463,7 +410,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.set_defaults(func=cmd_gaps)
 
-    p = sub.add_parser("new", parents=[common], help="create one person file (preview unless --apply)")
+    p = sub.add_parser("new", parents=[common], help="add one person record to family.yml (preview unless --apply)")
     p.add_argument("--given")
     p.add_argument("--surname")
     p.add_argument("--sex", choices=["M", "F", "U", "male", "female", "unknown", "other"], default="U")
@@ -475,22 +422,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--death", metavar="DATE")
     p.add_argument("--death-place", metavar="PLACE")
     p.add_argument("--parents", nargs="+", metavar="ID", help="one or two parent ids")
-    p.add_argument("--spouse", nargs="+", metavar="ID")
-    p.add_argument("--children", nargs="+", metavar="ID")
     _add_apply(p)
     p.set_defaults(func=cmd_new)
-
-    p = sub.add_parser("fix", parents=[common], help="repair filenames and ids (preview unless --apply)")
-    _add_apply(p)
-    p.add_argument("--allow-dirty", action="store_true", help="run even if the git tree has uncommitted changes")
-    p.set_defaults(func=cmd_fix)
 
     p = sub.add_parser("import-gedcom", parents=[common], help="import a GEDCOM file (preview unless --apply)")
     p.add_argument("file", help="the .ged file to import")
     _add_apply(p)
     p.set_defaults(func=cmd_import)
 
-    p = sub.add_parser("edit", parents=[common], help="state-changing helpers (edit person files)")
+    p = sub.add_parser("edit", parents=[common], help="state-changing helpers (edit person records)")
     edit_sub = p.add_subparsers(dest="edit_command", required=True)
     for name, living, helptext in (
         ("mark-deceased", False, "mark the named people deceased (`death: unknown` in family.yml)"),
@@ -512,7 +452,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--ignore-errors", action="store_true")
     p.set_defaults(func=cmd_serve)
 
-    p = sub.add_parser("schema", help="print the JSON Schema for frontmatter")
+    p = sub.add_parser("schema", help="print the JSON Schema for family.yml")
     p.set_defaults(func=cmd_schema)
     return parser
 

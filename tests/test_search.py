@@ -89,8 +89,8 @@ def test_living_flag_follows_the_existing_rules_without_inference(make_tree):
 
 
 def test_cli_text_json_and_exit_codes(tmp_path, write, capsys):
-    write(tmp_path, "site.yml", "title: T\nschema_version: 1\n")
-    write(tmp_path, "people/smith-bob.md", "---\nid: smith-bob\nname: Bob Smith\nbirth: 1950\n---\n")
+    write(tmp_path, "site.yml", "title: T\nschema_version: 3\n")
+    write(tmp_path, "family.yml", "smith-bob:\n  name: {given: Bob, surname: Smith}\n  birth: 1950\n")
     capsys.readouterr()
     assert main(["search", "bob", "--dir", str(tmp_path)]) == 0
     out = capsys.readouterr().out

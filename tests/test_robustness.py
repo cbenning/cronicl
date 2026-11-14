@@ -8,7 +8,7 @@ def run(*argv):
     return main([str(a) for a in argv])
 
 
-GOOD_PERSON = "---\nid: a\nname: Ann Lee\nbirth: 1950\n---\nBio.\n"
+GOOD_PERSON = "a:\n  name: {given: Ann, surname: Lee}\n  birth: 1950\n  bio: Bio.\n"
 
 SITES = {
     "empty": "",
@@ -45,44 +45,64 @@ SITES = {
 }
 
 PEOPLE = {
-    "empty-front": "---\n---\n",
-    "front-list": "---\n- a\n---\n",
-    "no-front": "just a bio\n",
-    "name-list": "---\nname: [a, b]\n---\n",
-    "name-map-list": "---\nname:\n  given: [a]\n---\n",
-    "birth-list": "---\nname: A\nbirth: [1950]\n---\n",
-    "death-map": "---\nname: A\ndeath:\n  date:\n    x: y\n---\n",
-    "events-string": "---\nname: A\nevents: hello\n---\n",
-    "events-list-of-strings": "---\nname: A\nevents: [a, b]\n---\n",
-    "partnerships-bad": "---\nname: A\npartnerships: [a]\n---\n",
-    "parents-map": "---\nname: A\nparents:\n  a: b\n---\n",
-    "living-maybe": "---\nname: A\nliving: maybe\n---\n",
-    "living-blank": "---\nname: A\nliving:\n---\n",
-    "living-list": "---\nname: A\nliving: [a]\n---\n",
-    "sex-word": "---\nname: A\nsex: female\n---\n",
-    "unknown-keys": "---\nname: A\nbirht: 1\nname2: x\nbirth:\n  palce: x\n---\n",
-    "dup-keys": "---\nname: A\nbirth: 1\nbirth: 2\n---\n",
-    "blank-name": "---\nname: '   '\n---\n",
-    "id-spaces": "---\nid: has spaces\nname: A\n---\n",
-    "id-emoji": "---\nid: 🌳\nname: A\n---\n",
-    "unicode-name": "---\nname: 山田 太郎\n---\n",
-    "emoji-name": "---\nname: 🌳 Tree\n---\n",
-    "huge-body": "---\nname: A\n---\n" + ("lorem ipsum " * 90000),
-    "gallery-id-list": "---\nname: A\ngallery_id: [a]\n---\n",
-    "portrait-list": "---\nname: A\nportrait: [a]\n---\n",
-    "tab-indent": "---\nname:\n\tgiven: A\n---\n",
-    "complex-key-list": "---\nname: A\n[note]: hello\n---\n",
-    "complex-key-map": "---\nname: A\n{a: b}: c\n---\n",
-    "merge-key": "---\nbase: &b\n  given: X\nname:\n  <<: *b\n---\n",
+    "empty-file": "",
+    "comments-only": "# nothing here\n",
+    "list-file": "- a\n- b\n",
+    "text-file": "just a bio\n",
+    "blank-record": "a:\n",
+    "record-text": "a: hello\n",
+    "record-list": "a: [x, y]\n",
+    "name-text": "a:\n  name: Bob Smith\n",
+    "name-list": "a:\n  name: [a, b]\n",
+    "name-map-list": "a:\n  name:\n    given: [a]\n",
+    "name-blank": "a:\n  name: {given: '   '}\n",
+    "birth-list": "a:\n  name: {given: A}\n  birth: [1950]\n",
+    "birth-map-list": "a:\n  name: {given: A}\n  birth:\n    date:\n      x: y\n",
+    "death-garbage": "a:\n  name: {given: A}\n  death: when the wind blew\n",
+    "events-text": "a:\n  name: {given: A}\n  events: hello\n",
+    "events-strings": "a:\n  name: {given: A}\n  events: [a, b]\n",
+    "events-nested": "a:\n  name: {given: A}\n  events: [[a], [b]]\n",
+    "parents-map": "a:\n  name: {given: A}\n  parents:\n    a: b\n",
+    "parents-text": "a:\n  name: {given: A}\n  parents: smith\n",
+    "parents-self": "a:\n  name: {given: A}\n  parents: [a]\n",
+    "parents-too-many": "a:\n  name: {given: A}\n  parents: [a, b, c]\nb:\n  name: {given: B}\nc:\n  name: {given: C}\n",
+    "living-maybe": "a:\n  name: {given: A}\n  living: maybe\n",
+    "living-blank": "a:\n  name: {given: A}\n  living:\n",
+    "living-list": "a:\n  name: {given: A}\n  living: [a]\n",
+    "sex-word": "a:\n  name: {given: A}\n  sex: woman\n",
+    "sex-list": "a:\n  name: {given: A}\n  sex: [male]\n",
+    "unknown-keys": "a:\n  name: {given: A}\n  birht: 1\n  name2: x\n  birth:\n    palce: x\n",
+    "dup-keys": "a:\n  name: {given: A}\n  birth: 1\n  birth: 2\n",
+    "dup-records": "a:\n  name: {given: A}\na:\n  name: {given: B}\n",
+    "bad-key": "Not A Key:\n  name: {given: A}\n",
+    "couple-self": "a + a: {}\n",
+    "couple-dangling": "a:\n  name: {given: A}\na + ghost: {}\n",
+    "couple-three": "a + b + c: {}\n",
+    "couple-garbage-events": "a:\n  name: {given: A}\nb:\n  name: {given: B}\na + b:\n  events: [[marriage]]\n",
+    "couple-note-list": "a:\n  name: {given: A}\nb:\n  name: {given: B}\na + b:\n  note: [x]\n",
+    "couple-dates": "a:\n  name: {given: A}\nb:\n  name: {given: B}\na + b:\n  events:\n    - {type: marriage, date: nonsense}\n    - {type: divorce, date: FROM 1 TO 2}\n",
+    "unicode-name": "a:\n  name: {given: 太郎, surname: 山田}\n",
+    "emoji-name": "a:\n  name: {given: 🌳, surname: Tree}\n",
+    "huge-bio": "a:\n  name: {given: A}\n  bio: |\n" + "".join(f"    lorem ipsum dolor {n}\n" for n in range(30000)),
+    "refs-list": "a:\n  name: {given: A}\n  refs: [a]\n",
+    "portrait-list": "a:\n  name: {given: A}\n  portrait: [a]\n",
+    "portrait-escape": "a:\n  name: {given: A}\n  portrait: ../../etc/passwd\n",
+    "tab-indent": "a:\n\tname: {given: A}\n",
+    "complex-key-list": "[note]: hello\n",
+    "complex-key-map": "{a: b}: c\n",
+    "merge-key": "base: &b\n  name: {given: X}\na:\n  <<: *b\n",
+    "comma-trap": "a:\n  name: {given: A}\n  birth: {date: 1850, place: London, England}\n",
+    "unclosed-flow": "a:\n  name: {given: A\n",
+    "binary": "a:\n  name: \x00\x01\n",
 }
 
 
 def make(tmp_path, write, site=None, person=GOOD_PERSON):
     data = tmp_path / "data"
-    assert run("init", "--legacy-layout", "--dir", data) == 0
+    assert run("init", "--dir", data) == 0
     if site is not None:
         write(data, "site.yml", site)
-    write(data, "people/a.md", person)
+    write(data, "family.yml", person)
     return data
 
 
@@ -92,6 +112,7 @@ def check_and_build(tmp_path, data):
     assert checked in (0, 1, 2) and built in (0, 1, 2)
     if checked == 0:
         assert built == 0 and (tmp_path / "out" / "index.html").exists()
+    assert run("check", "--dir", data, "--format", "json") in (0, 1, 2)
 
 
 @pytest.mark.parametrize("name", sorted(SITES))

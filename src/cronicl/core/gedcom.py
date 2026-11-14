@@ -10,7 +10,7 @@ from .dates import from_gedcom
 from .issues import Issue
 from .model import Event, LifeEvent, Partnership, Person
 from .slug import natural_key, person_slug, slugify, unique_id
-from .store import load_tree, person_path, write_person
+from .store import load_tree
 
 
 class GedcomError(Exception):
@@ -455,25 +455,6 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
                 target.gedcom_extra = "\n".join(filter(None, [target.gedcom_extra, block]))
 
     return ImportResult(people=people, families=len(fam_nodes), issues=issues, skipped=skipped)
-
-
-def write_import(result: ImportResult, data_dir: Path, source: bytes, source_name: str) -> dict:
-    data_dir = Path(data_dir)
-    existing, _ = load_tree(data_dir)
-    if any(p.gedcom_id for p in existing.people.values()):
-        raise ImportRefused(
-            "data directory already contains imported records (gedcom_id set); re-import is not supported in v0.1"
-        )
-    for person in result.people:
-        if person_path(data_dir, person.id).exists():
-            raise ImportRefused(f"{person_path(data_dir, person.id)} already exists")
-    for person in result.people:
-        write_person(data_dir, person)
-    digest = hashlib.sha256(source).hexdigest()[:8]
-    archive = data_dir / "archive" / f"{Path(source_name).stem}-{digest}.ged"
-    archive.parent.mkdir(parents=True, exist_ok=True)
-    archive.write_bytes(source)
-    return {"people": len(result.people), "families": result.families, "archive": str(archive)}
 
 
 def write_import_family(result: ImportResult, data_dir: Path, source: bytes, source_name: str) -> dict:

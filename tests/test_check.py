@@ -35,18 +35,6 @@ def test_invalid_id(make_tree):
     assert "E-INVALID-ID" in codes(check_tree(tree))
 
 
-def test_filename_drift_is_a_warning(make_tree):
-    tree = make_tree([named("smith-bob", path=Path("/d/people/bob.md"))])
-    issues = check_tree(tree)
-    assert codes(issues) == ["W-FILENAME-DRIFT"]
-    assert not has_errors(issues)
-
-
-def test_matching_filename_is_clean(make_tree):
-    tree = make_tree([named("smith-bob", path=Path("/d/people/smith-bob.md"))])
-    assert check_tree(tree) == []
-
-
 def test_missing_name_is_a_warning(make_tree):
     tree = make_tree([{"id": "x"}])
     assert codes(check_tree(tree)) == ["W-NO-NAME"]
@@ -135,20 +123,18 @@ def test_unknown_home_is_reported(make_tree):
 
 
 def test_portrait_checks(tmp_path, write):
-    write(tmp_path, "site.yml", "title: T\n")
+    write(tmp_path, "site.yml", "title: T\nschema_version: 3\n")
     (tmp_path / "media").mkdir()
     (tmp_path / "media" / "big.png").write_bytes(b"0" * 1_000_001)
     (tmp_path / "media" / "doc.svg").write_bytes(b"<svg/>")
     (tmp_path / "secret.jpg").write_bytes(b"s")
     (tmp_path / "media" / "link.jpg").symlink_to(tmp_path / "secret.jpg")
-    for pid, value in (("a", "../x.jpg"), ("b", "gone.jpg"), ("c", "big.png"), ("d", "doc.svg"), ("e", "link.jpg")):
-        write(tmp_path, f"people/{pid}.md", f"---\nname: {pid}\nportrait: {value}\n---\n")
+    cases = (("a", "../x.jpg"), ("b", "gone.jpg"), ("c", "big.png"), ("d", "doc.svg"), ("e", "link.jpg"))
+    write(tmp_path, "family.yml", "".join(f"{pid}:\n  name: {{given: {pid.upper()}}}\n  portrait: {value}\n" for pid, value in cases))
     tree, load_issues = load_tree(tmp_path)
-    codes_by_path = {i.path: i.code for i in check_tree(tree, load_issues) if "PORTRAIT" in i.code}
-    assert codes_by_path == {
-        "people/a.md": "E-PORTRAIT-PATH", "people/b.md": "W-PORTRAIT-MISSING", "people/c.md": "W-PORTRAIT-LARGE",
-        "people/d.md": "W-PORTRAIT-TYPE", "people/e.md": "E-PORTRAIT-PATH",
-    }
+    by_line = {i.line: i.code for i in check_tree(tree, load_issues) if "PORTRAIT" in i.code}
+    # each record is 3 lines; the issue names the record's first line
+    assert by_line == {1: "E-PORTRAIT-PATH", 4: "W-PORTRAIT-MISSING", 7: "W-PORTRAIT-LARGE", 10: "W-PORTRAIT-TYPE", 13: "E-PORTRAIT-PATH"}
 
 
 def test_event_checks(make_tree):

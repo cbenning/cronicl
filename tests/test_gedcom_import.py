@@ -7,7 +7,7 @@ from cronicl.core.gedcom import (
     decode_gedcom,
     import_nodes,
     parse_nodes,
-    write_import,
+    write_import_family,
 )
 from cronicl.core.model import Partnership
 from cronicl.core.relations import build_relations
@@ -196,12 +196,11 @@ def test_name_shapes(name, given, surname):
     assert (person.given, person.surname) == (given, surname)
 
 
-def test_write_import_creates_files_and_archive(tmp_path, sample_ged):
+def test_write_import_creates_the_family_file_and_archive(tmp_path, sample_ged):
     result, data = load_result(sample_ged)
-    summary = write_import(result, tmp_path, data, "sample.ged")
+    summary = write_import_family(result, tmp_path, data, "sample.ged")
     assert summary["people"] == 8 and summary["families"] == 2
-    assert (tmp_path / "people" / "smith-bob.md").exists()
-    assert not (tmp_path / "unions").exists()
+    assert (tmp_path / "family.yml").exists() and not (tmp_path / "people").exists()
     assert summary["archive"].endswith(".ged")
     tree, issues = load_tree(tmp_path)
     rel = build_relations(tree)
@@ -210,11 +209,11 @@ def test_write_import_creates_files_and_archive(tmp_path, sample_ged):
     assert [i for i in issues + rel.issues if i.severity == "error"] == []
 
 
-def test_write_import_refuses_when_already_imported(tmp_path, sample_ged):
+def test_write_import_refuses_when_the_family_already_has_people(tmp_path, sample_ged):
     result, data = load_result(sample_ged)
-    write_import(result, tmp_path, data, "sample.ged")
+    write_import_family(result, tmp_path, data, "sample.ged")
     with pytest.raises(ImportRefused):
-        write_import(result, tmp_path, data, "sample.ged")
+        write_import_family(result, tmp_path, data, "sample.ged")
 
 
 def test_engagement_next_to_a_divorce_without_marriage_is_not_lost():

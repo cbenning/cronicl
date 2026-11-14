@@ -36,3 +36,13 @@ def parse_int(value, minimum: int = 1) -> int | None:
     else:
         return None
     return number if number >= minimum else None
+
+
+def cites_of(value) -> list[str]:
+    """Citations as a list: one string is one citation, a list keeps its non-empty strings, anything else is none."""
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if isinstance(value, list):
+        return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+    return []

@@ -28,7 +28,7 @@ from ..core.relations import Relations, build_relations
 from .settings import place_groups, privacy_settings, site_text
 from ..core.slug import fold_slug, folds_cleanly, slugify
 from .stats import site_stats
-from ..core.store import cites_of
+from ..core.textvalues import cites_of
 from .timeline import build_timeline, event_text
 
 _PACKAGE = Path(__file__).parent

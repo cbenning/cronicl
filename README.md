@@ -1,46 +1,54 @@
 # cronicl
 
-Keep a family tree as plain markdown files in git and generate a static, pan-and-zoom website from them.
-GEDCOM is supported as a separate one-way import tool.
+Keep a family tree in one hand-edited YAML file and generate a static, pan-and-zoom website from it.
+GEDCOM is supported as a one-way import.
 
-Status: v0.1. Design: `docs/superpowers/specs/2026-10-10-cronicl-design.md`.
+Status: v0.1. The file format is specified in `docs/superpowers/specs/2026-11-14-family-file-design.md`; a JSON
+Schema (`cronicl schema`) and a conformance suite (`tests/conformance/`) travel with it, so another tool can read
+and write the same file.
 
 ## Quick start
 
 ```bash
 uv sync
 export CRONICL_DIR=~/my-family            # or pass --dir / -C on every command
-uv run cronicl init                       # creates site.yml, people/, archive/
+uv run cronicl init                       # creates site.yml, family.yml, media/, archive/
 uv run cronicl import-gedcom tree.ged     # preview: counts and warnings
-uv run cronicl import-gedcom tree.ged -a  # write the files
+uv run cronicl import-gedcom tree.ged -a  # write family.yml
 uv run cronicl check
 uv run cronicl search ashby              # find ids
-uv run cronicl edit mark-deceased ashby-greta -a
+uv run cronicl show ashby-greta         # one person, with the line each record lives on
 uv run cronicl serve                      # http://127.0.0.1:8000/
 ```
+
+Coming from the old `people/*.md` layout? `cronicl migrate` previews the conversion and `cronicl migrate -a`
+writes it (see [Migrating](#migrating-from-peoplemd)).
 
 ## Commands
 
 Every command that works on a cronicl folder takes `--dir DIR` (`-C DIR`), before or after the subcommand.
 If it is omitted, `$CRONICL_DIR` is used, and failing that the current directory. Every command that writes
-files previews by default and needs `--apply` (`-a`).
+files previews by default and needs `--apply` (`-a`). Writers change only the lines they must: comments, blank
+lines and the order of records stay as you left them.
 
 | Command | What it does |
 |---|---|
-| `init` | Create `site.yml` (with a random `id_salt`), `people/`, `archive/`. |
-| `check [--format json] [--strict]` | Report problems. Exit 1 on errors (and on warnings with `--strict`). |
+| `init` | Create `site.yml` (with a random `id_salt`), `family.yml` with a short example, `family.schema.json`, `media/`, `archive/`. |
+| `check [--format json] [--strict]` | Report problems, with file and line. Exit 1 on errors (and on warnings with `--strict`). Also named `validate`. |
+| `show ID` | Print one person as the site sees them: record, parents, partners, children, siblings and where each record lives. |
 | `search WORD... [--limit N] [--format json]` | Fuzzy-find people and print their ids (name, id, years, places; typo- and accent-tolerant). `*` marks people the privacy rules treat as living. Exit 1 when nothing matches. |
 | `gaps [--limit N] [--format json]` | List people with missing names, dates, places or parents, best-connected first. |
-| `new --given G --surname S [...] [-a]` | Create one person file, with optional dates, places, parents, spouse and children. |
-| `fix [-a] [--allow-dirty]` | Rename files to match ids, pin missing ids, normalise formatting, resolve filename collisions, rewrite references. Refuses a dirty git tree unless `--allow-dirty`. |
-| `import-gedcom FILE [-a]` | One-time GEDCOM import; archives the original file. |
-| `edit mark-deceased ID... [-a]` | Write `living: false` for the named people. Targeted text edit; all ids are validated first. |
+| `new --given G --surname S [...] [-a]` | Append one person record to `family.yml` (`--file` picks the file in a `family/` folder), with optional dates, places, parents (`--parents`), and `--partner ID` for an empty couple record. |
+| `rename OLD NEW [-a]` | Change a person's id everywhere it is used: the record key, `parents` lists, couple keys and `home` in `site.yml`. |
+| `edit mark-deceased ID... [-a]` | Write `death: unknown` for the named people (no date needed). All ids are validated first. |
 | `edit mark-living ID... [-a]` | Write `living: true` for the named people. |
+| `import-gedcom FILE [-a]` | One-time GEDCOM import into `family.yml`; archives the original file. |
+| `migrate [-a] [--allow-dirty]` | Convert an old `people/*.md` folder to `family.yml`. |
 | `build [--out OUT] [--ignore-errors]` | Run `check`, then generate the static site (default `OUT` is `<dir>/out`). |
 | `serve [--out OUT] [--port N] [--ignore-errors]` | Build and serve locally. |
-| `schema` | Print a JSON Schema for the frontmatter (for agents and editors). Needs no folder. |
+| `schema` | Print the JSON Schema for `family.yml` (for editors and agents). Needs no folder. |
 
-`edit` holds every command that changes a person file by hand-picked id, so it stays separate from the
+`edit` holds the commands that change a person's record by hand-picked id, so it stays separate from the
 read-only utilities. There is deliberately no bulk form.
 
 ## Views
@@ -49,8 +57,7 @@ read-only utilities. There is deliberately no bulk form.
 
 - `index.html` is the **home page**: a heading and optional `intro:` text (Markdown, from `site.yml`), a
   search box, the home person, the numbers (people, generations, years), the commonest surnames, an
-  "On this day" list (filled in by the browser) and recently updated people (from the data folder's git history,
-  when it is a repository).
+  and an "On this day" list (filled in by the browser).
 - `people/index.html` lists everyone grouped by surname; any page's search box filters it (`?q=`).
 - **Kinship:** each person page and side panel says how that person is related to you ("Your
   great-grandmother"). Press **This is me** on your own page and the choice is remembered in your browser only
@@ -104,7 +111,7 @@ The viewer has two modes on the tree page, **Everyone** and **This person's line
   Ancestors (four generations) and Descendants lists. Empty parts are left out. The side panel shows the same
   life sentence and relatives. Warm neutral colours, serif names and headings, and automatic dark mode are used
   throughout; no web fonts are loaded.
-- **Ended partnerships:** a couple whose partnership has an `end` is drawn with dashed spouse lines and a
+- **Ended partnerships:** a couple that has an ending event (divorce, annulment, separation or `end`) is drawn with dashed spouse lines and a
   hollow dot; the side panel shows "Married 1975 – divorced 1990".
 - **Tree, Overview and zoom:** opening the viewer with no address shows the **Everyone** (`tree/`): everyone, fitted
   to the screen. If you pressed "This is me" on a person page, it opens your own focused tree instead. The
@@ -121,11 +128,15 @@ deselects).
 ## Data layout
 
 ```
-site.yml            title, intro, home, schema_version, privacy settings
-people/<id>.md      one file per person -- the only record type
-archive/            original .ged files, unmodified
-media/              portrait images named by `portrait:` in a person file
+site.yml            title, intro, home, schema_version: 3, privacy settings
+family.yml          every person and couple (or a family/ folder of .yml files in the same format)
+media/              portrait images named by `portrait:` in a record
+archive/            original .ged files, unmodified; material set aside by import and migration
 ```
+
+When one file becomes unwieldy, make a folder `family/` of any number of `.yml` files instead (one per branch,
+say). It is one or the other: having both `family.yml` and `family/` is an error. All files are read as one
+stream, and an id must be unique across them.
 
 `home:` in `site.yml` names the person the tree opens on (a person id). Without it the person with the most
 descendants is used; `check` warns when `home:` names nobody.
@@ -136,84 +147,169 @@ so keep portraits at most 600px wide and under 1 MB (`check` warns above 1 MB). 
 page, in the side panel and on the person's tree box. A path that leaves `media/` is an error and is never
 copied, and a person hidden or replaced by privacy redaction never has a portrait.
 
-A person file:
+## The family file
 
-```markdown
----
-id: smith-bob
-name:
-  given: Bob
-  surname: Smith
-birth:
-  date: 1950-03-12
-  place: Vancouver, BC
-parents: [smith-john, brown-mary]
-partnerships:
-  - with: jones-jane
-    type: marriage          # marriage | civil-union | partnership | engagement | unknown
-    start: 1975-06-20
-    end: 1990-02-01         # a date, or `unknown`; leave out while it is ongoing
-    end_reason: divorce     # divorce | annulment | separation
-    place: Surrey, BC       # where it began
-events:                     # anything beyond birth and death
-  - type: occupation
-    value: Teacher
-    cite: Census 1911       # one source, or a list
-  - type: immigration
-    date: 1952-04
-    place: Halifax, NS
-    note: Aboard the Arosa Kulm
----
-Free-form biography in markdown.
+`family.yml` is plain YAML: a mapping in which every top-level key is a record. A key that is an id
+(`lovelace-ada`) is a **person**. A key of two ids joined by a plus sign (`byron-george + milbanke-annabella`,
+either order) is a **couple**.
+
+```yaml
+byron-george:
+  name: {given: George, surname: Byron}
+  birth: {date: 1788-01-22, place: "London, England"}
+  death: {date: 1824-04-19, place: "Missolonghi, Greece"}
+
+milbanke-annabella:
+  name: {given: Annabella, surname: Milbanke}
+  birth: 1792-05-17
+
+byron-george + milbanke-annabella:
+  events:
+    - {type: marriage, date: 1815-01-02, place: "Seaham, England"}
+    - {type: separation, date: 1816}
+
+lovelace-ada:
+  name: {given: Augusta Ada, surname: Lovelace}
+  sex: female
+  birth:
+    date: 1815-12-10
+    place: London, England
+    cite: Parish register, St George Hanover Square
+  death: {date: 1852-11-27, place: "London, England"}
+  parents: [byron-george, milbanke-annabella]
+  events:
+    - {type: occupation, value: Mathematician}
+    - {type: residence, date: FROM 1835 TO 1852, place: "Ockham Park, Surrey"}
+  refs: {gedcom: "@I123@", gallery: ada-lovelace}
+  x-nickname: Enchantress of Number
+  bio: |
+    Mathematician and writer, known for her notes on Babbage's Analytical Engine.
+
+    She is often described as the first computer programmer.
 ```
 
-Only a name is required. `id:` is optional; `cronicl fix` pins it.
+The order of records, blank lines and `#` comments are yours and carry no meaning.
+
+The rules that keep it simple:
+
+1. **One fact, one place.** A fact about one person is in that person's record, a fact about two people as a
+   couple is in the couple's record. Nothing is stored twice, so nothing can disagree.
+2. **Links point up.** `parents:` lives on the child. Children, siblings, partners and descendants are never
+   written; the build derives them.
+3. **Once-only things are fields, repeatable things are a list.** `birth` and `death` are fields; everything else,
+   including marriage, is an entry in `events:`. Married, divorced and married again is three events.
+4. **The id is the key.** No `id:` field, no filename to keep in step. Ids are lower-case letters, digits and
+   single hyphens, surname first by convention (`lovelace-ada`).
+
+### A person record
+
+| Key | Shape | Notes |
+|---|---|---|
+| `name` | mapping | `given`, `surname`; optional `prefix`, `suffix`, `nickname`, `also` (a list of other names, such as a married name; searchable and shown on the page) |
+| `sex` | `male`, `female`, `unknown`, `other` | absent means unknown |
+| `birth`, `death` | dated fact | a person with `death` is deceased; `death: unknown` means dead, date not known |
+| `parents` | list of at most two ids | birth parents |
+| `events` | list of mappings | `type` plus the dated-fact keys and `value` (for attributes such as an occupation) |
+| `portrait` | text | a file under `media/` |
+| `living` | `true` | only to say someone is alive when the dates suggest otherwise; to say someone is dead, use `death` |
+| `refs` | mapping | ids elsewhere: `gedcom` (the id in an imported file), `gallery` (the person's id in the photo gallery) |
+| `bio` | text | the biography, as markdown; use a `|` block for paragraphs |
+| `x-...` | anything | your own keys, kept and never reported |
+
+Only the key is required; a person with no name is reported. `birth: 1820` is short for `birth: {date: 1820}`.
+
+### A couple record
+
+`events` (what happened to the couple: `marriage`, `divorce`, `engagement`, `civil-union`, `partnership`,
+`separation`, `annulment`, `end`, ...), `note` and `x-...` keys. A couple record is needed only when there is
+something to say: two people who share a child are shown as that child's parents without one, and an empty record
+(`a + b: {}`) just says they were a couple. A couple has ended when it has an ending event (`divorce`,
+`annulment`, `separation`, `end`) that no beginning event follows. A partner's death never ends a couple.
+
+### Dates
+
+One `date` value everywhere; there are no start and end keys.
+
+| Written | Meaning |
+|---|---|
+| `1850`, `1850-03`, `1850-03-15` | a year, a month, a day |
+| `ABT 1850` (also `CAL`, `EST`) | about |
+| `BEF 1920`, `AFT 1880` | before, after |
+| `BET 1880 AND 1890` | some time between |
+| `FROM 1900 TO 1950`, `FROM 1900`, `TO 1950` | a span, for things that last (a residence, an occupation) |
+| `unknown` | happened, date not known |
+
+Keywords are GEDCOM's, in any case. For sorting and the timeline a qualified date counts as its first year; pages
+show it in words ("about 1850", "1900 to 1950"). Spans on a birth, death, marriage or divorce are reported.
 
 ### Events, notes and sources
 
-`events:` is a list of things that happened to a person or are true of them. `type` is any slug you like
-(hyphens read as spaces); each entry may have `date` (or `start` and `end` for a span), `place`, `value` (for
-attributes such as an occupation), `note` and `cite`. Entries with a date appear on the person's page,
-in the side panel and as ticks on their bar in the timeline; entries without a date are listed as facts.
-`birth` and `death` may carry `note` and `cite` too. Known types read as words (`burial` is "buried",
-`immigration` "immigrated", `residence` "lived", `occupation` with a value "worked as Teacher", and so on);
-others are shown as written. People treated as living under redaction never have events, notes or sources
-published. `import-gedcom` maps individual events and attributes (BAPM, CHR, CONF, BURI, CREM, IMMI, EMIG, NATU,
-RESI, OCCU, EDUC, RELI, NATI, GRAD, RETI, CENS, WILL, PROB) to `events:`; a line whose date cannot be converted,
-and anything else it does not know, stays in `gedcom_extra`. Imports made before this version keep those lines in
-`gedcom_extra` until you type them in by hand. Search also finds event places and values.
+`events:` is a list of things that happened to a person or are true of them. `type` is any slug you like (hyphens
+read as spaces); each entry may have `date`, `place`, `value` (for attributes such as an occupation), `note` and
+`cite` (one source, or a list). `birth` and `death` may carry `note` and `cite` too. Entries with a date appear on
+the person's page, in the side panel and as ticks on their bar in the timeline; entries without a date are listed
+as facts. Known types read as words (`burial` is "buried", `immigration` "immigrated", `residence` "lived",
+`occupation` with a value "worked as Teacher"); others are shown as written. People treated as living under
+redaction never have events, notes or sources published. `import-gedcom` maps individual events and attributes
+(BAPM, CHR, CONF, BURI, CREM, IMMI, EMIG, NATU, RESI, OCCU, EDUC, RELI, NATI, GRAD, RETI, CENS, WILL, PROB) to
+`events:`; a family's MARR, DIV, ENGA and ANUL become events in the couple's record; whatever it cannot map goes to
+`archive/gedcom-extra.yml`, which nothing reads. Search also finds event places and values.
 
-### Declare relationships on whichever file you are editing
+### Writing YAML safely
 
-| Add | Write |
-|---|---|
-| A child of a known couple | one new file with `parents: [a, b]` |
-| A spouse | one new file with `spouse: [a]` (or a `partnerships` entry) |
-| A parent of an existing person | one new file with `children: [existing-id]`; no existing file changes |
+Every value is read as text exactly as typed: `NO` is `NO`, `1066` is `1066`. Two traps, and `check` catches the first:
 
-`parents` is the canonical up-reference. `children`, `spouse` and `partnerships` may be declared on either
-end and are merged: `start` on one file and `end` on the other make one partnership. Couples are derived;
-there are no couple files. A partner's death never sets `end`, and nothing is inferred; `end` is only for
-divorce, annulment or a split. Old `marriages:` entries (with `date:`) still load, and `cronicl fix --apply`
-rewrites them as `partnerships:` entries (and bumps `schema_version` to 2).
+- Inside `{...}` or `[...]` a comma separates entries, so text containing a comma must be quoted:
+  `place: "London, England"`. On a line of its own (`place: London, England`) no quotes are needed.
+- Text containing `: ` (colon, space) or starting with `#`, `*`, `&`, `!`, `[` or `{` needs quotes. Merge keys
+  (`<<`) are not supported.
+
+An editor with YAML support underlines unknown keys and bad values as you type: `init` writes
+`family.schema.json` and the first line of `family.yml` points at it.
+
+### Migrating from people/*.md
+
+Older versions kept one markdown file per person. `cronicl migrate` shows what it would do (counts, and notes
+about anything that cannot be carried across exactly); `cronicl migrate -a` writes `family.yml`, moves `people/`
+to `archive/people-md/`, and sets `schema_version: 3`. It refuses while the old data has errors or the git tree
+has uncommitted changes (`--allow-dirty` overrides the latter).
 
 ## Validation
 
 `cronicl check` (also `cronicl validate`) reads everything you edit and reports what it cannot use, with the file,
-the key and what to do. It never changes a file. `--format json` gives machine-readable output and `--strict`
-makes warnings fail too.
+the **line**, the key and what to do (`family.yml:214`). It never changes a file. `--format json` gives
+machine-readable output and `--strict` makes warnings fail too.
 
 `cronicl build` and `cronicl serve` print errors in full (an error stops the build) but only one line for
-warnings, such as `3 warnings: 2 W-UNKNOWN-KEY, 1 W-BAD-LIVING (run cronicl check for details)`. Run `check` for
+warnings, such as `3 warnings: 2 W-UNKNOWN-KEY, 1 W-LIVING-FALSE (run cronicl check for details)`. Run `check` for
 the list.
 
-What it reports, besides broken references, dates and ids:
+Errors about the family file:
 
 | Code | Meaning |
 |---|---|
-| `W-UNKNOWN-KEY` | a key that nothing reads, at any level of a person file or `site.yml`, with a "did you mean" when it looks like a misspelling (`birht` for `birth`) |
+| `E-BAD-FAMILY` | `family.yml` cannot be parsed, is not a mapping, uses a merge key, or both `family.yml` and `family/` exist |
+| `E-NO-FAMILY` | there is no `family.yml` or `family/`; the message says to run `cronicl migrate` when `people/*.md` exists |
+| `E-RECORD-KEY` | a top-level key is neither a person id nor a couple key |
+| `E-RECORD-SHAPE` | a record is not a mapping; `name` is not a mapping; `parents` or `events` has the wrong shape |
+| `E-DUPLICATE-ID` | the same person, or the same couple in either order, twice (also across split files) |
+| `E-COUPLE-SELF` | a couple key names one person twice |
+| `E-DANGLING-REF` | a parent, or half of a couple key, is not a person in the family |
+| `E-CYCLE`, `E-GENERATION-CONFLICT` | a person is their own ancestor; a marriage across generations the layout cannot draw |
+
+Warnings, and the rest:
+
+| Code | Meaning |
+|---|---|
+| `W-UNKNOWN-KEY` | a key that nothing reads, at any level of a record or `site.yml`, with a "did you mean" when it looks like a misspelling (`birht` for `birth`) |
+| `W-FLOW-COMMA` | an empty key inside `{...}`: probably an unquoted comma (`place: London, England`) |
+| `W-BLANK` | a known key with no value |
 | `W-DUPLICATE-KEY` | the same key twice in one block; the later value wins |
-| `W-BAD-LIVING` | a person's `living:` is not `true` or `false`; it is ignored |
+| `W-DATE-UNPARSED`, `W-DATE-SPAN`, `W-END-BEFORE-START` | a date that is not one of the forms above; a span where one date is meant; an end before its start |
+| `W-BAD-SEX` | `sex` is not `male`, `female`, `unknown` or `other` |
+| `W-LIVING-FALSE` | `living:` is anything but `true`; say `death: unknown` for someone who has died |
+| `W-EVENT-IS-FIELD`, `W-EVENT-ONCE`, `W-EVENT-PLACEMENT` | a birth or death in `events` (use the field); two burials or cremations; a marriage or divorce in a person's events (put it in the couple's record) |
+| `W-NO-NAME`, `W-TOO-MANY-PARENTS` | a person with no name; more than two parents |
 | `E-PRIVACY-MODE` | `privacy` is not a mapping, or `privacy.living` is not `full`, `placeholder` or `hidden` |
 | `E-PRIVACY-SALT` | `privacy.id_salt` is a list or mapping |
 | `W-PRIVACY-NO-SALT` | redaction is on but there is no `id_salt`, so the anonymised ids can be guessed |
@@ -225,7 +321,7 @@ What it reports, besides broken references, dates and ids:
 kept and never reported. It works at every level. (Inside `gallery:` it only silences the unknown-key warning:
 everything there is published to visitors.)
 
-**Values stay text.** `site.yml` is read the way person files are: `NO` is `NO`, `1066` is `1066`, and nothing is
+**Values stay text.** `site.yml` is read the way `family.yml` is: `NO` is `NO`, `1066` is `1066`, and nothing is
 turned into a boolean or a date behind your back. Where a yes/no is expected, write `true`, `yes`, `on`, `1` or
 `false`, `no`, `off`, `0` in any case. Where a number is expected, write plain digits.
 
@@ -239,14 +335,15 @@ One side effect: anonymised ids come from the exact `id_salt` text. A salt that 
 The loop that works best once the first import is done:
 
 1. `cronicl gaps` lists who is missing a name, a date, a place or parents, best-connected people first.
-2. `cronicl search WORD` finds the ids you need for parents, spouses and children.
-3. `cronicl new --given Bob --surname Smith --birth 1950-03-12 --parents smith-john brown-mary` previews a new
-   file; add `-a` to write it. Or edit a file in `people/` by hand.
+2. `cronicl search WORD` finds the ids you need for parents and partners.
+3. Add a record to `family.yml` by hand, or `cronicl new --given Bob --surname Smith --birth 1950-03-12 --parents smith-john brown-mary`
+   to preview one; add `-a` to write it at the end of the file.
 4. `cronicl check` reports anything that does not hold together.
 5. `cronicl serve` shows the result.
 
-The table above, "Declare relationships on whichever file you are editing", is the reference for which file to
-touch when you add a relative.
+Relatives need no bookkeeping on the other side: a child names its `parents`, and the parents' pages, the tree and
+the descendants lists follow. A marriage is an event in the couple's record (`a + b:`). `cronicl rename OLD NEW`
+changes an id everywhere it is used.
 
 ## Publishing
 
@@ -266,7 +363,7 @@ title: Hollings family
 intro: |                       # Markdown, shown on the home page
   Our family, from Silesia to British Columbia.
 home: hollings-nora-doreen     # the person the tree opens on (an id)
-edit_url: https://github.com/example/family/edit/main/people/{id}.md   # adds "Edit this page"
+edit_url: https://github.com/example/family/blob/main/{file}#L{line}   # adds "Edit this page"
 contact: mailto:family@example.org    # adds "Suggest a correction" (a mailto: or https:// link)
 place_groups:                  # optional: fold a region into its country on the places page
   Ontario: Canada
@@ -276,7 +373,7 @@ privacy:
   cutoff_years: 100
 ```
 
-`edit_url` must be an `https://` address containing `{id}`; `contact` must be `mailto:`, `http://` or `https://`.
+`edit_url` must be an `https://` address containing `{id}`, `{line}` or both (`{file}` is the file holding the person's record, such as `family.yml`, and `{line}` its first line); `contact` must be `mailto:`, `http://` or `https://`.
 `check` warns about anything else. People hidden or replaced by privacy redaction get neither link.
 
 ## Deploying
@@ -288,12 +385,11 @@ you edit it; do not use it to publish. Before publishing, set `privacy.living` t
 
 Every page uses relative addresses, so the site works at the root of a domain or in a subfolder
 (`example.com/family/`). Each build clears only the files it generates, so `rsync --delete` of the output
-folder is safe. The home page's "recently updated" list reads the data folder's git history, so a build in a
-fresh clone needs the full history, not a shallow copy.
+folder is safe. A build reads only the data folder, not its git history, so a shallow clone works.
 
 ### GitHub Pages
 
-Keep your data folder (`people/`, `media/`, `site.yml`) in a GitHub repository. In the repository's *Settings,
+Keep your data folder (`family.yml`, `media/`, `site.yml`) in a GitHub repository. In the repository's *Settings,
 Pages*, set *Source* to *GitHub Actions*, then add `.github/workflows/site.yml`:
 
 ```yaml
@@ -314,8 +410,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0            # the full history, for "recently updated"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -357,8 +451,7 @@ Point any web server at that folder. The files are static; there is nothing to c
 ### Netlify, Cloudflare Pages, Vercel and similar
 
 Connect the repository, set the build command to `pip install cronicl && cronicl build --out public` and the
-publish directory to `public`. These hosts clone with a shallow history by default: turn on a full clone (or
-accept that the home page's "recently updated" list is short).
+publish directory to `public`.
 
 ## Password protection
 
@@ -460,9 +553,9 @@ gallery:
   photos of that person, the page looks exactly as it would without a gallery.
 - People are found by their name, turned into a lowercase-latin slug (`Zoë Müller` is `zoe-muller`), or, if that
   fails, by the one gallery entry with the same name. If a person is tagged differently in the gallery, put its slug
-  in their file: `gallery_id: jane-doe`. Two people with the same name need this too, because Fussel numbers the
+  in their record: `refs: {gallery: jane-doe}`. Two people with the same name need this too, because Fussel numbers the
   second one. So do names with letters that have no plain-ASCII form (Cyrillic, Chinese, `ð`): Fussel transliterates
-  those its own way, so cronicl does not guess and shows no photos for them until `gallery_id` is set.
+  those its own way, so cronicl does not guess and shows no photos for them until `refs.gallery` is set.
 - People hidden or replaced by privacy redaction never get a photos block.
 - It needs a Fussel that writes `people.json` (gallery option `gallery.people.enable: true`, on by default). A
   Fussel that also lists each photo's largest size (`src`) gives sharper featured photos and lightbox; an older one
@@ -473,7 +566,7 @@ gallery:
 
 `cronicl check` reports `E-GALLERY-TYPE` (missing or unknown `type`), `E-GALLERY-URL` (missing or not an
 `http://` or `https://` address), `W-GALLERY-KEY` (a key that does nothing), `W-GALLERY-PORTRAITS` (`portraits` is
-not `true` or `false`), `W-GALLERY-SECRET` (a key named like a secret) and `W-GALLERY-ID-UNUSED` (a `gallery_id` with no usable gallery). An invalid `gallery:` block is ignored
+not `true` or `false`), `W-GALLERY-SECRET` (a key named like a secret) and `W-GALLERY-ID-UNUSED` (a `refs.gallery` with no usable gallery). An invalid `gallery:` block is ignored
 when building.
 
 Another gallery can be added later by registering a type in `galleries.py` and an adapter in `gallery.js`.
@@ -485,10 +578,23 @@ Another gallery can be added later by registering a type in `galleries.py` and a
 before you publish a site that contains living people.
 
 When redaction is on, people are treated as living when `living: true`, or when they have no `death` and were
-born less than `cutoff_years` ago (default 100); no dates at all also counts as living. Nothing is ever
-inferred: `edit mark-deceased` is how you tell cronicl someone is dead. Living people are redacted before any
+born less than `cutoff_years` ago (default 100); no usable birth date also counts as living. A qualified birth
+date counts as the *latest* year it allows (`BET 1920 AND 1950` is 1950), so an uncertain date can never publish a
+living person; an ancestor written `birth: AFT 1700` with no `death` stays hidden until you add `death: unknown`
+(`cronicl gaps` lists such people). Nothing is ever inferred: `death: unknown`, or `edit mark-deceased`, is how you
+tell cronicl someone is dead. Living people are redacted before any
 output file is written, their ids are replaced by salted hashes, and partnership details (type, dates, notes)
 involving a living partner are dropped. Mentions of a living person's name inside someone else's biography are not detected.
+
+## Where the format comes from
+
+The family file stands on kingraph (a family as one small hand-written YAML file), nissaga (a person's facts as
+plain fields under their id), GEDCOM (the record stream, event vocabulary and date keywords), GeneWeb's `.gw` format
+(a couple as two ids joined by a plus sign), GENEALOGIX (one schema-checked YAML file keyed by id) and plain-text
+accounting (a hand-edited file, a strict checker, generated views). The design document credits each and also lists
+what was considered and not used, and why: GENEALOGIX's event-and-relationship model as the working format, GEDCOM
+and GEDCOM X as working files, one file per person, household files and a custom syntax. See
+`docs/superpowers/specs/2026-11-14-family-file-design.md`.
 
 ## Development
 

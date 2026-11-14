@@ -23,7 +23,7 @@ def test_gaps_lists_missing_facts_best_connected_first(make_tree):
 
 
 def test_gaps_cli_on_an_empty_folder(tmp_path, capsys):
-    assert main(["init", "--legacy-layout", "--dir", str(tmp_path / "fam")]) == 0
+    assert main(["init", "--dir", str(tmp_path / "fam")]) == 0
     capsys.readouterr()
     assert main(["gaps", "--dir", str(tmp_path / "fam")]) == 0
     assert capsys.readouterr().out == ""

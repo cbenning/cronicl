@@ -105,6 +105,6 @@ def gallery_issues(site: dict, people: dict) -> list[Issue]:
         for person in people.values():
             if person.gallery_id:
                 issues.append(
-                    Issue("W-GALLERY-ID-UNUSED", f"{person.id}: gallery_id is set but no usable gallery is configured", person.location)
+                    Issue("W-GALLERY-ID-UNUSED", f"{person.id}: refs.gallery is set but no usable gallery is configured", person.location)
                 )
     return issues

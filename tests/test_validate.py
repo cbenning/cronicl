@@ -6,9 +6,10 @@ from cronicl.core.validate import is_extension, suggest
 
 
 def issues_of(tmp_path, write, person_front="", site_yml=None):
-    if site_yml is not None:
-        write(tmp_path, "site.yml", site_yml)
-    write(tmp_path, "people/a.md", f"---\nid: a\nname:\n  given: Ann\n  surname: Lee\n{person_front}---\n")
+    """Check a one-person family; `person_front` is extra lines of that person's record (2-space indented here)."""
+    body = "".join("  " + line + "\n" for line in person_front.splitlines())
+    (tmp_path / "family.yml").write_text(f"a:\n  name: {{given: Ann, surname: Lee}}\n{body}", encoding="utf-8")
+    (tmp_path / "site.yml").write_text(site_yml if site_yml is not None else "title: T\nschema_version: 3\n", encoding="utf-8")
     tree, load_issues = load_tree(tmp_path)
     return check_tree(tree, load_issues)
 
@@ -48,8 +49,7 @@ def test_a_key_with_no_close_match_has_no_suggestion(tmp_path, write):
         ("birth:\n  date: 1950\n  palce: X\n", "birth.palce"),
         ("death:\n  date: 1990\n  nickname: Z\n", "death.nickname"),
         ("events:\n  - type: job\n    value: x\n  - type: job\n    typo: y\n", "events[2].typo"),
-        ("partnerships:\n  - with: b\n    colour: red\n", "partnerships[1].colour"),
-        ("marriages:\n  - with: b\n    colour: red\n", "partnerships[1].colour"),
+        ("refs:\n  gedcom: I1\n  colour: red\n", "refs.colour"),
     ],
 )
 def test_unknown_keys_are_found_at_every_level(tmp_path, write, front, path):
@@ -58,7 +58,7 @@ def test_unknown_keys_are_found_at_every_level(tmp_path, write, front, path):
 
 
 def test_unknown_name_keys(tmp_path, write):
-    write(tmp_path, "people/a.md", "---\nid: a\nname:\n  given: Ann\n  maiden: Lee\n---\n")
+    (tmp_path / "family.yml").write_text("a:\n  name:\n    given: Ann\n    maiden: Lee\n", encoding="utf-8")
     tree, load = load_tree(tmp_path)
     assert any("name.maiden" in m for m in messages(check_tree(tree, load), "W-UNKNOWN-KEY"))
 
@@ -68,10 +68,9 @@ def test_unknown_name_keys(tmp_path, write):
     [
         "x-nickname: Annie\n",
         "X_note: hi\n",
-        "media: ignored\n",
         "birth:\n  date: 1950\n  x-source: grandma\n  note: n\n  cite: c\n",
         "events:\n  - type: job\n    x-boss: Z\n",
-        "partnerships:\n  - with: b\n    x-color: red\n    note: n\n    date: 1950\n",
+        "refs:\n  gedcom: I1\n  x-other: 7\n",
     ],
 )
 def test_extension_and_known_keys_are_silent(tmp_path, write, front):
@@ -80,13 +79,15 @@ def test_extension_and_known_keys_are_silent(tmp_path, write, front):
 
 
 def test_bad_living_values(tmp_path, write):
-    assert "W-BAD-LIVING" in codes(issues_of(tmp_path, write, "living: maybe\n"))
-    assert "W-BAD-LIVING" not in codes(issues_of(tmp_path, write, "living: yes\n"))
-    assert "W-BAD-LIVING" not in codes(issues_of(tmp_path, write, ""))
+    assert "W-LIVING-FALSE" in codes(issues_of(tmp_path, write, "living: maybe\n"))
+    assert "W-LIVING-FALSE" in codes(issues_of(tmp_path, write, "living: false\n"))
+    assert "W-LIVING-FALSE" not in codes(issues_of(tmp_path, write, "living: yes\n"))
+    assert "W-LIVING-FALSE" not in codes(issues_of(tmp_path, write, "living: true\n"))
+    assert "W-LIVING-FALSE" not in codes(issues_of(tmp_path, write, ""))
 
 
 def test_site_yml_unknown_keys_with_suggestion(tmp_path, write):
-    found = issues_of(tmp_path, write, site_yml="titel: X\nschema_version: 2\nprivacy:\n  livng: hidden\nx-note: ok\n")
+    found = issues_of(tmp_path, write, site_yml="titel: X\nschema_version: 3\nprivacy:\n  livng: hidden\nx-note: ok\n")
     msgs = messages(found, "W-UNKNOWN-KEY")
     assert any("'titel'" in m and "did you mean 'title'?" in m for m in msgs)
     assert any("'privacy.livng'" in m and "did you mean 'living'?" in m for m in msgs)
@@ -138,25 +139,26 @@ def test_gallery_extension_keys_exempt_only_from_the_unknown_key_warning(tmp_pat
 
 
 def test_a_rule_that_raises_is_reported_for_that_person_only(tmp_path, write, monkeypatch):
-    write(tmp_path, "people/a.md", "---\nid: a\nname: A One\n---\n")
-    write(tmp_path, "people/b.md", "---\nid: b\nname: B Two\nbirth: 19x0\n---\n")
+    (tmp_path / "family.yml").write_text(
+        "a:\n  name: {given: A, surname: One}\nb:\n  name: {given: B, surname: Two}\n  birth: 19x0\n", encoding="utf-8"
+    )
     tree, load = load_tree(tmp_path)
-    real = __import__("cronicl.core.check", fromlist=["x"]).person_issues
+    real = __import__("cronicl.core.check", fromlist=["x"])._check_person
 
-    def boom(person):
+    def boom(person, out):
         if person.id == "a":
             raise RuntimeError("kaput")
-        return real(person)
+        return real(person, out)
 
-    monkeypatch.setattr("cronicl.core.check.person_issues", boom)
+    monkeypatch.setattr("cronicl.core.check._check_person", boom)
     found = check_tree(tree, load)
     (v,) = [i for i in found if i.code == "E-VALIDATOR"]
-    assert "a: validation failed: kaput" in v.message and v.path == "people/a.md"
+    assert "a: validation failed: kaput" in v.message and v.path == "family.yml"
     assert "W-DATE-UNPARSED" in codes(found)
 
 
 def test_a_whole_tree_step_that_raises_is_reported_without_a_file(tmp_path, write, monkeypatch):
-    write(tmp_path, "people/a.md", "---\nid: a\nname: A One\n---\n")
+    (tmp_path / "family.yml").write_text("a:\n  name: {given: A, surname: One}\n", encoding="utf-8")
     tree, load = load_tree(tmp_path)
 
     def boom(_tree):

@@ -14,7 +14,8 @@ from . import emit
 from .check import check_tree
 from .family import has_family, partnerships_from_events
 from .relations import build_relations
-from .store import load_tree
+from .legacy import load_legacy_tree
+from .store import load_site
 
 
 class MigrateRefused(Exception):
@@ -50,7 +51,9 @@ def plan_migration(data_dir: Path) -> MigrationPlan:
         raise MigrateRefused(f"{data_dir} has no people/*.md to migrate")
     if (data_dir / "archive" / "people-md").exists():
         raise MigrateRefused("archive/people-md already exists; move it away first")
-    tree, load_issues = load_tree(data_dir)
+    tree, load_issues = load_legacy_tree(data_dir)
+    tree.site, site_issues = load_site(data_dir)
+    load_issues = site_issues + load_issues
     errors = [i for i in check_tree(tree, load_issues) if i.severity == "error"]
     if errors:
         shown = "; ".join(f"{i.code} {i.path or ''}: {i.message}" for i in errors[:5])

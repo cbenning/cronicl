@@ -121,20 +121,19 @@ def test_gallery_in_a_real_browser(tmp_path):
     gallery_base = f"http://127.0.0.1:{gallery.server_address[1]}"
 
     data, out = tmp_path / "fam", tmp_path / "out"
-    assert main(["init", "--legacy-layout", "--dir", str(data)]) == 0
+    assert main(["init", "--dir", str(data)]) == 0
     (data / "site.yml").write_text(
-        "title: T\nschema_version: 2\nprivacy:\n  living: placeholder\n  cutoff_years: 100\n"
+        "title: T\nschema_version: 3\nprivacy:\n  living: placeholder\n  cutoff_years: 100\n"
         f"gallery:\n  type: fussel\n  label: Family photos\n  url: {gallery_base}/photos\n",
         encoding="utf-8",
     )
-    people = {
-        "jane-doe": "name:\n  given: Jane\n  surname: Doe\nbirth: 1950\ndeath: 2010\n",
-        "lone-person": "name:\n  given: Lone\n  surname: Person\nbirth: 1940\ndeath: 2000\n",
-        "living-kid": "name:\n  given: Kid\n  surname: Now\nbirth: 2020\n",
-        "john-doe": "name:\n  given: John\n  surname: Doe\nbirth: 1948\ndeath: 2015\nportrait: john.png\n",
-    }
-    for pid, front in people.items():
-        (data / "people" / f"{pid}.md").write_text(f"---\nid: {pid}\n{front}---\n", encoding="utf-8")
+    (data / "family.yml").write_text(
+        "jane-doe:\n  name: {given: Jane, surname: Doe}\n  birth: 1950\n  death: 2010\n"
+        "lone-person:\n  name: {given: Lone, surname: Person}\n  birth: 1940\n  death: 2000\n"
+        "living-kid:\n  name: {given: Kid, surname: Now}\n  birth: 2020\n"
+        "john-doe:\n  name: {given: John, surname: Doe}\n  birth: 1948\n  death: 2015\n  portrait: john.png\n",
+        encoding="utf-8",
+    )
     (data / "media").mkdir(exist_ok=True)
     (data / "media" / "john.png").write_bytes(PNG)
     assert main(["build", "--dir", str(data), "--out", str(out)]) == 0

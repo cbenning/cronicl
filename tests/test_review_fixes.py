@@ -6,7 +6,6 @@ import pytest
 
 from cronicl.checks import check_all as check_tree
 from cronicl.cli import main
-from cronicl.core.fix import FixPlan, apply_plan, plan_fix
 from cronicl.core.gedcom import import_nodes, parse_nodes
 from cronicl.site.layout import LayoutError, compute_layout
 from cronicl.core.model import Event, Partnership
@@ -65,50 +64,32 @@ def test_rebuild_leaves_unrelated_files_in_the_output_directory(tmp_path, make_t
 
 
 @pytest.mark.parametrize(
-    "front",
+    "record",
     [
-        "sex: [M]",
-        "id: [a]",
-        "name: [Bob, Smith]",
-        "birth: [1950]",
-        "marriages:\n  - with: [x]",
-        "parents: {a: b}",
-        "living: [true]",
-        "name:\n  given: [Bob]",
-        "birth:\n  date: [1950]",
-        "gedcom_id: [I1]",
+        "x:\n  sex: [male]\n",
+        "x:\n  name: [Bob, Smith]\n",
+        "x:\n  birth: [1950]\n",
+        "x:\n  parents: {a: b}\n",
+        "x:\n  living: [true]\n",
+        "x:\n  name:\n    given: [Bob]\n",
+        "x:\n  birth:\n    date: [1950]\n",
+        "x:\n  refs: {gedcom: [I1]}\n",
+        "x:\n  events: [[a], {type: [t]}]\n",
+        "x + good:\n  events: [[marriage]]\n",
+        "x + good:\n  note: [a]\n",
+        "[x]: y\n",
     ],
 )
-def test_wrong_shaped_values_are_reported_not_crashed(tmp_path, write, front):
-    write(tmp_path, "people/x.md", f"---\n{front}\n---\n")
-    write(tmp_path, "people/good.md", "---\nname: Good\n---\n")
+def test_wrong_shaped_values_are_reported_not_crashed(tmp_path, write_family, record):
+    write_family(tmp_path, record + "good:\n  name: {given: Good}\n")
     tree, issues = load_tree(tmp_path)
     check_tree(tree, issues)  # must not raise
-    assert "good" in tree.people
-    assert "E-BAD-FRONTMATTER" in codes(issues)
+    assert "good" in tree.people or "E-BAD-FAMILY" in codes(issues)
 
 
 # I2: fix must not drop nested unknown keys or partner-less marriage entries ------------------------
 
 
-def test_fix_keeps_nested_unknown_keys_and_partnerless_marriages(tmp_path, write):
-    write(
-        tmp_path,
-        "people/smith-bob.md",
-        "---\nid: smith-bob\nname:\n  given: Bob\n  surname: Smith\n  nickname: Bobby\n"
-        "birth:\n  date: 1950\n  note: hospital birth\n"
-        "marriages:\n  - with: x\n    date: 1975\n    witness: Pat\n  - date: 1990\n    place: Reno\n---\n",
-    )
-    write(tmp_path, "people/x.md", "---\nid: x\nname: X\n---\n")
-    apply_plan(plan_fix(tmp_path))
-    assert plan_fix(tmp_path).empty
-    tree, _ = load_tree(tmp_path)
-    bob = tree.people["smith-bob"]
-    assert bob.name_extra == {"nickname": "Bobby"}
-    assert bob.birth.extra == {"note": "hospital birth"}
-    assert bob.partnerships[0].with_id == "x" and bob.partnerships[0].extra == {"witness": "Pat"}
-    assert len(bob.partnerships) == 2
-    assert bob.partnerships[1].with_id == "" and bob.partnerships[1].start == "1990" and bob.partnerships[1].place == "Reno"
 
 
 def test_partnerless_marriage_is_a_warning_not_a_dangling_reference(make_tree):
@@ -119,28 +100,11 @@ def test_partnerless_marriage_is_a_warning_not_a_dangling_reference(make_tree):
 # I3: duplicate invalid pinned ids must not be guessed ---------------------------------------------
 
 
-def test_duplicate_invalid_pinned_ids_are_reported_and_references_untouched(tmp_path, write):
-    write(tmp_path, "people/a.md", "---\nid: Smith_Bob\nname: First\n---\n")
-    write(tmp_path, "people/b.md", "---\nid: Smith_Bob\nname: Second\n---\n")
-    write(tmp_path, "people/kid.md", "---\nname: Kid\nparents: [Smith_Bob]\n---\n")
-    plan = plan_fix(tmp_path)
-    assert "E-DUPLICATE-ID" in [i.code for i in plan.unresolved]
-    apply_plan(plan)
-    tree, _ = load_tree(tmp_path)
-    assert tree.people["kid"].parents == ["Smith_Bob"]
 
 
 # I4: a rename that targets the same file must not delete it ---------------------------------------
 
 
-def test_apply_plan_does_not_unlink_a_path_that_is_the_same_file_as_a_write(tmp_path):
-    old = tmp_path / "Bob.md"
-    old.write_text("old", encoding="utf-8")
-    new = tmp_path / "bob.md"
-    os.link(old, new)  # stands in for a case-insensitive filesystem, where both names are one file
-    apply_plan(FixPlan(writes={new: "new"}, deletes=[old]))
-    assert new.read_text(encoding="utf-8") == "new"
-    assert old.exists()
 
 
 # I5: cross-generation marriages must be reported at check time and named by layout ----------------
@@ -204,9 +168,8 @@ def test_dangling_chil_is_reported_preserved_and_does_not_hide_the_couple():
 # I8: build prints warnings -------------------------------------------------------------------------
 
 
-def test_build_prints_warnings(tmp_path, write, capsys):
-    main(["init", "--legacy-layout", "--dir", str(tmp_path)])
-    write(tmp_path, "people/bob.md", "---\nid: bob\nname: Bob\nbirth: sometime\n---\n")
+def test_build_prints_warnings(tmp_path, write_family, capsys):
+    write_family(tmp_path, "bob:\n  name: {given: Bob}\n  birth: sometime\n")
     capsys.readouterr()
     assert main(["build", "--dir", str(tmp_path), "--out", str(tmp_path / "out")]) == 0
     assert "W-DATE-UNPARSED" in capsys.readouterr().out

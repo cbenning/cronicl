@@ -38,36 +38,26 @@ def find_chrome() -> str | None:
 def test_viewer_in_a_real_browser(tmp_path, sample_ged):
     data = tmp_path / "fam"
     out = tmp_path / "out"
-    assert main(["init", "--legacy-layout", "--dir", str(data)]) == 0
+    assert main(["init", "--dir", str(data)]) == 0
     assert main(["import-gedcom", str(sample_ged), "--dir", str(data), "-a"]) == 0
-    (data / "people" / "ellsworth-maude.md").write_text(
-        "---\nid: ellsworth-maude\nname:\n  given: Maude Sylvie Marnie\n  surname: Ellsworth\n"
-        "birth: 1925\ndeath: 1990\nportrait: maude.png\nparents: [smith-john, brown-mary]\n"
-        "events:\n  - type: occupation\n    value: Teacher\n    date: 1950\n---\n",
-        encoding="utf-8",
-    )
     (data / "media").mkdir(exist_ok=True)
     (data / "media" / "maude.png").write_bytes(
         base64.b64decode(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
         )
     )
-    (data / "people" / "kid-now.md").write_text(
-        "---\nid: kid-now\nname:\n  given: Kid\n  surname: Now\nbirth: 2000-05-05\nparents: [smith-bob]\n---\n",
-        encoding="utf-8",
-    )
-    (data / "people" / "old-open.md").write_text(
-        "---\nid: old-open\nname:\n  given: Old\n  surname: Open\nbirth: 1850\n---\n", encoding="utf-8"
-    )
-    (data / "people" / "lone-person.md").write_text(
-        "---\nid: lone-person\nname:\n  given: Lone\n  surname: Person\n---\n", encoding="utf-8"
-    )
-    (data / "people" / "wife-first.md").write_text(
-        "---\nid: wife-first\nname:\n  given: Ex\n  surname: Wife\n"
-        "partnerships:\n  - with: smith-john\n    type: marriage\n    start: 1940\n    end: 1945\n"
-        "    end_reason: divorce\n---\n",
-        encoding="utf-8",
-    )
+    with (data / "family.yml").open("a", encoding="utf-8") as family:
+        family.write(
+            "\nellsworth-maude:\n  name: {given: Maude Sylvie Marnie, surname: Ellsworth}\n"
+            "  birth: 1925\n  death: 1990\n  portrait: maude.png\n  parents: [smith-john, brown-mary]\n"
+            "  events:\n    - {type: occupation, value: Teacher, date: 1950}\n"
+            "\nkid-now:\n  name: {given: Kid, surname: Now}\n  birth: 2000-05-05\n  parents: [smith-bob]\n"
+            "\nold-open:\n  name: {given: Old, surname: Open}\n  birth: 1850\n"
+            "\nlone-person:\n  name: {given: Lone, surname: Person}\n"
+            "\nwife-first:\n  name: {given: Ex, surname: Wife}\n"
+            "\nsmith-john + wife-first:\n  events:\n    - {type: marriage, date: 1940}\n"
+            "    - {type: divorce, date: 1945}\n"
+        )
     assert main(["build", "--dir", str(data), "--out", str(out)]) == 0
 
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(out))
