@@ -281,3 +281,17 @@ img.avatar { object-fit: cover; }
 
 /* Optional edit and correction links */
 .page-foot { margin-top: var(--space-5); padding-top: var(--space-3); border-top: 1px solid var(--border); font-size: .85rem; display: flex; gap: var(--space-4); }
+
+/* Shared header and page columns line up on one 60rem column */
+.site-bar { padding-inline: max(var(--space-4), calc((100% - 60rem) / 2 + var(--space-4))); }
+.site-bar .site-title { margin-right: 0; }
+.site-bar nav { margin-right: auto; }
+.home, .index { max-width: 60rem; margin: 0 auto; width: 100%; }
+.index { padding: var(--space-5) var(--space-4); }
+.index h2 { font-size: 1.25rem; margin: var(--space-4) 0 var(--space-2); }
+.index ul { padding-left: var(--space-4); margin: 0; }
+.index .count { color: var(--muted); font-size: .9rem; font-weight: 400; }
+.index .years { color: var(--muted); font-size: .9rem; }
+.relate-pick { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.relate-pick select { max-width: 100%; padding: .35rem .5rem; }
+#relate-answer { font-size: 1.15rem; margin-top: var(--space-4); }

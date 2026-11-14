@@ -402,6 +402,8 @@ async function main() {
   for (const path of ['/index.html', '/people/index.html', '/places/index.html', '/relate/index.html']) {
     await send('Page.navigate', { url: base + path }); await sleep(700);
     const col = await ev(`(() => { const m = document.querySelector('main'); const kids = [...m.children].filter((c) => !c.hidden && c.getBoundingClientRect().height > 0); const tops = kids.map((c) => c.getBoundingClientRect().top); const input = document.querySelector('main input[type="search"]'); return { stacked: tops.every((t, i) => i === 0 || t >= tops[i - 1]) && new Set(kids.map((c) => Math.round(c.getBoundingClientRect().left))).size === 1, inputH: input ? input.getBoundingClientRect().height : 0 }; })()`);
+    const align = await ev(`(() => { const t = document.querySelector('.site-title').getBoundingClientRect().left; const c = document.querySelector('main').firstElementChild.getBoundingClientRect().left; const nav = document.querySelector('.site-bar nav').getBoundingClientRect().left; return { t, c, nav }; })()`);
+    check('the header lines up with the page content on ' + path, Math.abs(align.t - align.c) < 2 && align.nav < 700, JSON.stringify(align));
     check('the ' + path + ' page is one stacked column with a normal search box', col.stacked && col.inputH < 60, JSON.stringify(col));
   }
 

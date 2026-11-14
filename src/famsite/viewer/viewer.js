@@ -332,6 +332,13 @@
     return { first: first, last: last };
   }
 
+  // A wheel event's distance in pixels: some browsers report lines (a notch is 3) or pages, not pixels.
+  function wheelPixels(delta, mode, pageHeight) {
+    if (mode === 1) return delta * 40;
+    if (mode === 2) return delta * pageHeight;
+    return delta;
+  }
+
   // Where a tree node's text goes: centred across the box, or to the right of a 40px portrait when there is one.
   function nodeTextBox(n, hasImage) {
     if (hasImage) return { x: n.x + 54, anchor: 'start', width: n.w - 54 - 8 };
@@ -1150,7 +1157,7 @@
       treeSvg.addEventListener('wheel', function (e) {
         e.preventDefault();
         var r = treeSvg.getBoundingClientRect();
-        applyView(zoomAt({ scale: scale, tx: tx, ty: ty }, Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top));
+        applyView(zoomAt({ scale: scale, tx: tx, ty: ty }, Math.exp(-wheelPixels(e.deltaY, e.deltaMode, r.height) * 0.0015), e.clientX - r.left, e.clientY - r.top));
       }, { passive: false });
       controls.addEventListener('click', function (e) {
         var act = e.target && e.target.getAttribute && e.target.getAttribute('data-act');
@@ -1263,7 +1270,7 @@
         var cls = 'span-row';
         if (id === state.selected) cls += ' selected';
         else if (state.selected) cls += related.has(id) ? ' related' : ' dim';
-        var g = svgEl('g', { 'class': cls, 'data-id': id, transform: 'translate(0 ' + (AXIS_H + index * ROW_H + ty) + ')' });
+        var g = svgEl('g', { 'class': cls, 'data-id': id, transform: 'translate(0 ' + (AXIS_H + index * ROW_H) + ')' });
         var bar = spanBar(span, nowYear);
         var startX = null;
         if (bar) {
@@ -1306,10 +1313,22 @@
         rowLayer.appendChild(g);
       }
 
+      // What the drawn rows depend on besides vertical scroll; when it is unchanged, scrolling moves the layer.
+      var drawnKey = '';
+      var drawnFirst = -1, drawnLast = -1;
+
       function render() {
         if (!ready) return;
         var r = tlSvg.getBoundingClientRect();
         clampView();
+        var list0 = rows();
+        var win0 = rowWindow(-ty, r.height - AXIS_H, ROW_H, list0.length);
+        var key = [tx, pxPerYear, r.width, r.height, state.selected, nowYear, list0.length].join('|');
+        rowLayer.setAttribute('transform', 'translate(0 ' + ty + ')');
+        if (key === drawnKey && win0.first === drawnFirst && win0.last === drawnLast) return;
+        drawnKey = key;
+        drawnFirst = win0.first;
+        drawnLast = win0.last;
         gridLayer.textContent = '';
         rowLayer.textContent = '';
         axisLayer.textContent = '';
@@ -1440,6 +1459,7 @@
         var d = new Date();
         nowYear = yearPosition({ year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() });
         bounds = axisBounds(state.timeline.range.min, nowYear);
+        drawnKey = '';
         rowIndex = new Map();
         rows().forEach(function (id, i) { rowIndex.set(id, i); });
         marks = new Map();
@@ -1533,12 +1553,14 @@
       tlSvg.addEventListener('wheel', function (e) {
         e.preventDefault();
         var px = e.clientX - tlSvg.getBoundingClientRect().left;
+        var dy = wheelPixels(e.deltaY, e.deltaMode, viewHeight());
+        var dx = wheelPixels(e.deltaX, e.deltaMode, viewWidth());
         if (e.ctrlKey || e.metaKey) {
-          zoomBy(Math.exp(-e.deltaY * 0.01), px); // pinch / Ctrl+wheel
-        } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-          panBy(-(e.deltaX || e.deltaY)); // sideways swipe / Shift+wheel
+          zoomBy(Math.exp(-dy * 0.01), px); // pinch / Ctrl+wheel
+        } else if (e.shiftKey || Math.abs(dx) > Math.abs(dy)) {
+          panBy(-(dx || dy)); // sideways swipe / Shift+wheel
         } else {
-          ty -= e.deltaY; // a plain wheel scrolls the rows
+          ty -= dy; // a plain wheel scrolls the rows
           renderSoon();
         }
       }, { passive: false });
@@ -1626,6 +1648,7 @@
     axisBounds: axisBounds,
     rowWindow: rowWindow,
     nodeTextBox: nodeTextBox,
+    wheelPixels: wheelPixels,
     initialView: initialView,
     lodFor: lodFor,
     zoomAt: zoomAt,

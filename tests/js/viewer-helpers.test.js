@@ -248,3 +248,9 @@ test('nodeTextBox makes room for a portrait', () => {
   assert.deepStrictEqual(v.nodeTextBox(n, false), { x: 180, anchor: 'middle', width: 140 });
   assert.deepStrictEqual(v.nodeTextBox(n, true), { x: 154, anchor: 'start', width: 98 });
 });
+
+test('wheelPixels turns lines and pages into pixels', () => {
+  assert.strictEqual(v.wheelPixels(120, 0, 800), 120);
+  assert.strictEqual(v.wheelPixels(3, 1, 800), 120);
+  assert.strictEqual(v.wheelPixels(-1, 2, 800), -800);
+});
