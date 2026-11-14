@@ -18,12 +18,13 @@ from .gaps import find_gaps
 from .gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
 from .history import recent_changes
 from .layout import LayoutError
+from .new import plan_new
 from .privacy import is_living
 from .relations import build_relations
 from .render import build_site, dumps
 from .schema import PERSON_SCHEMA
 from .search import search_people
-from .store import load_tree
+from .store import dump_person, load_tree, write_person
 
 SITE_YML = """\
 title: Family Tree
@@ -206,6 +207,23 @@ def cmd_gaps(args) -> int:
     return 0
 
 
+def cmd_new(args) -> int:
+    person = plan_new(
+        Path(args.dir), given=args.given, surname=args.surname, sex=args.sex,
+        birth=args.birth, birth_place=args.birth_place, death=args.death, death_place=args.death_place,
+        parents=args.parents or [], spouse=args.spouse or [], children=args.children or [],
+    )
+    rel = f"people/{person.id}.md"
+    if not args.apply:
+        print(rel)
+        print(dump_person(person), end="")
+        print("dry run; re-run with --apply (-a) to write this file")
+        return 0
+    write_person(Path(args.dir), person)
+    print(f"created {rel}")
+    return 0
+
+
 def cmd_search(args) -> int:
     tree, _ = load_tree(Path(args.dir))
     try:
@@ -279,6 +297,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.set_defaults(func=cmd_gaps)
+
+    p = sub.add_parser("new", parents=[common], help="create one person file (preview unless --apply)")
+    p.add_argument("--given")
+    p.add_argument("--surname")
+    p.add_argument("--sex", choices=["M", "F", "U"], default="U")
+    p.add_argument("--birth", metavar="DATE")
+    p.add_argument("--birth-place", metavar="PLACE")
+    p.add_argument("--death", metavar="DATE")
+    p.add_argument("--death-place", metavar="PLACE")
+    p.add_argument("--parents", nargs="+", metavar="ID", help="one or two parent ids")
+    p.add_argument("--spouse", nargs="+", metavar="ID")
+    p.add_argument("--children", nargs="+", metavar="ID")
+    _add_apply(p)
+    p.set_defaults(func=cmd_new)
 
     p = sub.add_parser("fix", parents=[common], help="repair filenames and ids (preview unless --apply)")
     _add_apply(p)

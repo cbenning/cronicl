@@ -31,6 +31,7 @@ files previews by default and needs `--apply` (`-a`).
 | `check [--format json] [--strict]` | Report problems. Exit 1 on errors (and on warnings with `--strict`). |
 | `search WORD... [--limit N] [--format json]` | Fuzzy-find people and print their ids (name, id, years, places; typo- and accent-tolerant). `*` marks people the privacy rules treat as living. Exit 1 when nothing matches. |
 | `gaps [--limit N] [--format json]` | List people with missing names, dates, places or parents, best-connected first. |
+| `new --given G --surname S [...] [-a]` | Create one person file, with optional dates, places, parents, spouse and children. |
 | `fix [-a] [--allow-dirty]` | Rename files to match ids, pin missing ids, normalise formatting, resolve filename collisions, rewrite references. Refuses a dirty git tree unless `--allow-dirty`. |
 | `import-gedcom FILE [-a]` | One-time GEDCOM import; archives the original file. |
 | `edit mark-deceased ID... [-a]` | Write `living: false` for the named people. Targeted text edit; all ids are validated first. |
