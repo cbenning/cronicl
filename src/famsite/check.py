@@ -93,6 +93,18 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
             _check_date(person.birth.date, "birth", person, issues)
         if person.death:
             _check_date(person.death.date, "death", person, issues)
+        for entry in person.events:
+            label = entry.type or "event"
+            if not entry.type:
+                issues.append(Issue("W-EVENT-NO-TYPE", f"{person.id}: an event has no type", where))
+            _check_date(entry.date, label, person, issues)
+            _check_date(entry.start, f"{label} start", person, issues)
+            _check_date(entry.end, f"{label} end", person, issues)
+            begun, ended = parse_date(entry.start), parse_date(entry.end)
+            if begun and ended and (ended.year, ended.month or 0, ended.day or 0) < (begun.year, begun.month or 0, begun.day or 0):
+                issues.append(
+                    Issue("W-END-BEFORE-START", f"{person.id}: {label} ends ({entry.end}) before it starts ({entry.start})", where)
+                )
         for entry in person.partnerships:
             _check_date(entry.start, "partnership start", person, issues)
             if entry.end != "unknown":

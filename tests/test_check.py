@@ -148,3 +148,15 @@ def test_portrait_checks(tmp_path, write):
         "people/a.md": "E-PORTRAIT-PATH", "people/b.md": "W-PORTRAIT-MISSING", "people/c.md": "W-PORTRAIT-LARGE",
         "people/d.md": "W-PORTRAIT-TYPE", "people/e.md": "E-PORTRAIT-PATH",
     }
+
+
+def test_event_checks(make_tree):
+    from famsite.model import LifeEvent
+
+    tree = make_tree([{"id": "a", "given": "A", "events": [
+        LifeEvent(type="", value="x"),
+        LifeEvent(type="residence", start="1960", end="1950"),
+        LifeEvent(type="burial", date="soon"),
+        LifeEvent(type="moved-house", date="1940"),
+    ]}])
+    assert sorted(i.code for i in check_tree(tree)) == ["W-DATE-UNPARSED", "W-END-BEFORE-START", "W-EVENT-NO-TYPE"]
