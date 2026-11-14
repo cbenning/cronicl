@@ -926,8 +926,10 @@
         var n = nodes.get(id);
         if (!n) return;
         var r = treeSvg.getBoundingClientRect();
+        // on a phone the person's sheet covers the bottom 60% of the screen: centre in what is left above it
+        var visible = window.matchMedia && window.matchMedia('(max-width: 40rem)').matches ? r.height * 0.4 : r.height;
         tx = r.width / 2 - (n.x + n.w / 2) * scale;
-        ty = r.height / 2 - (n.y + n.h / 2) * scale;
+        ty = visible / 2 - (n.y + n.h / 2) * scale;
       }
 
       function select(id, center, fromRoute) {
@@ -979,13 +981,22 @@
           else boxes.push({ id: 'l:' + i, x: l.x, y: l.y - 16, w: 320, h: 24 });
         });
         grid = buildGrid(boxes, CELL);
+        applyOpeningView();
+        rebuild();
+      }
+
+      // The opening view needs the tree's real size; while the tree is hidden (the page opened on the timeline)
+      // that is zero, so it is worked out again the first time the tree is shown.
+      var viewPending = false;
+      function applyOpeningView() {
         var box = treeSvg.getBoundingClientRect();
-        var view = initialView(layout.bounds, { w: box.width, h: box.height },
+        viewPending = box.width === 0 || box.height === 0;
+        if (viewPending) return;
+        var view = initialView(state.layout.bounds, { w: box.width, h: box.height },
           nodes.get(focusId || state.selected || home) || null);
         scale = view.scale;
         tx = view.tx;
         ty = view.ty;
-        rebuild();
       }
 
       function showFull() {
@@ -1051,6 +1062,7 @@
 
       function ensure() {
         if (state.layout) {
+          if (viewPending) applyOpeningView();
           rebuild();
           return;
         }

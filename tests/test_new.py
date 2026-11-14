@@ -64,3 +64,10 @@ def test_new_with_a_name_that_slugs_to_nothing(root):
 def test_new_outside_a_famsite_folder(tmp_path, capsys):
     assert main(["new", "--dir", str(tmp_path), "--given", "X", "-a"]) == 2
     assert "famsite init" in capsys.readouterr().err and not (tmp_path / "people").exists()
+
+
+def test_new_never_overwrites_an_existing_file(root, write):
+    write(root, "people/doe-jane.md", "---\nid: someone-else\nname: Somebody\n---\nPrecious notes.\n")
+    assert main(["new", "--dir", str(root), "--given", "Jane", "--surname", "Doe", "-a"]) == 0
+    assert "Precious notes." in (root / "people/doe-jane.md").read_text(encoding="utf-8")
+    assert (root / "people/doe-jane-2.md").exists()

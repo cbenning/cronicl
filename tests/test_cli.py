@@ -189,3 +189,15 @@ def test_build_is_quiet_when_redaction_is_on(tmp_path, write, capsys):
 def test_init_creates_media_folder(tmp_path):
     assert main(["init", "--dir", str(tmp_path / "fam")]) == 0
     assert (tmp_path / "fam" / "media" / ".gitkeep").exists()
+
+
+def test_build_refuses_to_write_over_the_data_folder(tmp_path, write):
+    root = tmp_path / "fam"
+    assert main(["init", "--dir", str(root)]) == 0
+    write(root, "people/a.md", "---\nname: A\n---\n")
+    (root / "media").mkdir(exist_ok=True)
+    (root / "media" / "keep.jpg").write_bytes(b"x")
+    assert main(["build", "--dir", str(root), "--out", str(root)]) == 2
+    assert (root / "people" / "a.md").exists() and (root / "media" / "keep.jpg").exists()
+    assert main(["build", "--dir", str(root), "--out", str(root / "people")]) == 2
+    assert (root / "people" / "a.md").exists()

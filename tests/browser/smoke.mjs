@@ -388,6 +388,16 @@ async function main() {
   check('a dated fact is a tick on its own lifespan bar', (await ev(`(() => { const m = document.querySelector('.span-row[data-id="ellsworth-maude"] .mark.fact title'); return !!m && /worked as Teacher/.test(m.textContent) && document.querySelectorAll('.mark.fact').length === 1; })()`)) === true);
   check('the panel lists the person\'s own events', /worked as Teacher/.test(await ev(`document.getElementById('panel').textContent`)));
 
+  // ---- opening on the timeline, then the whole tree
+  await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
+  await send('Page.navigate', { url: base + '/tree.html#/timeline' }); await sleep(1500);
+  await goto('#/tree');
+  const afterTimeline = await ev(`document.querySelector('#tree > g').getAttribute('transform')`);
+  await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
+  await send('Page.navigate', { url: base + '/tree.html#/tree' }); await sleep(1500);
+  const direct = await ev(`document.querySelector('#tree > g').getAttribute('transform')`);
+  check('the tree opens the same after the timeline as when opened directly', afterTimeline === direct, afterTimeline + ' vs ' + direct);
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });
@@ -396,6 +406,7 @@ async function main() {
   check('phone: the panel is a full-width bottom sheet', phone.panelW === 390 && Math.round(phone.panelBottom) === 844 && phone.panelH <= 844 * 0.6 + 1, JSON.stringify(phone));
   check('phone: the panel title has room to read', phone.titleW >= 200, JSON.stringify(phone));
   check('phone: nothing is wider than the screen', phone.searchRight <= 390 && phone.pageW <= 390, JSON.stringify(phone));
+  check('phone: the selected person is above the bottom sheet', (await ev(`(() => { const n = document.querySelector('.node.selected rect').getBoundingClientRect(); const p = document.getElementById('panel').getBoundingClientRect(); return n.bottom <= p.top && n.top >= 0; })()`)) === true);
   await ev(`document.querySelector('#panel h2').textContent = 'W'.repeat(40)`);
   check('phone: a long unbroken name wraps inside the sheet', (await ev(`document.documentElement.scrollWidth <= 390 && document.getElementById('panel').scrollWidth <= 390`)) === true);
   await shot('phone-panel');

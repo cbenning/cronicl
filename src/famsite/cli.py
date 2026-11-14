@@ -147,6 +147,12 @@ def cmd_build(args) -> int:
                 "set it to placeholder or hidden before publishing"
             )
     out = Path(args.out) if args.out else root / "out"
+    for folder in ("people", "media"):
+        # a build clears what it generates in the output folder; never let that be the data itself
+        data = (root / folder).resolve()
+        if (out / folder).resolve() == data or out.resolve() == data or data in out.resolve().parents:
+            print(f"error: --out {out} would overwrite the data folder {root / folder}; choose another folder", file=sys.stderr)
+            return 2
     summary = build_site(tree, out, today=today, recent=recent_changes(root), media_dir=root / "media")
     print(f"built {summary.people} people, {summary.files} files into {out}")
     return 0

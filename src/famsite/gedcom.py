@@ -263,10 +263,12 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
                 extra.append(child)  # a date famsite cannot convert stays exactly as written, in gedcom_extra
                 continue
             happened = _event(child, kind, xref, extra, issues)
+            text = child.value.strip()
             life_events.append(
                 LifeEvent(
                     type=kind, date=happened.date, place=happened.place,
-                    value=(child.value.strip() or None) if takes_value else None,
+                    value=(text or None) if takes_value else None,
+                    note=text if text and not takes_value and text.upper() not in ("Y", "N") else None,
                 )
             )
         elif tag == "FAMC":

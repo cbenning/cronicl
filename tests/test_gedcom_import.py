@@ -269,3 +269,9 @@ def test_individual_events_are_imported():
         ("occupation", None, None, "Carpenter"), ("immigration", "1952-04", "Halifax", None),
         ("burial", "1991", None, None), ("residence", "1960", None, None), ("residence", "1970", None, None)]
     assert "FACT Left-handed" in (ann.gedcom_extra or "") and "OCCU" not in (ann.gedcom_extra or "")
+
+
+def test_text_on_an_event_line_is_kept_as_a_note():
+    result = from_text("0 HEAD\n0 @I1@ INDI\n1 NAME Ann /Dunn/\n1 RESI Marital status: married\n2 DATE 1960\n1 IMMI Y\n1 CENS\n0 TRLR\n")
+    ann = next(p for p in result.people if p.given == "Ann")
+    assert [(e.type, e.note) for e in ann.events] == [("residence", "Marital status: married"), ("immigration", None), ("census", None)]

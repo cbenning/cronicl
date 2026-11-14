@@ -46,7 +46,10 @@ def plan_new(
                 f"{value!r} is not a date (use YYYY, YYYY-MM or YYYY-MM-DD, with a leading ~ for approximate)"
             )
     return Person(
-        id=unique_id(person_slug(given, surname), set(tree.people)),
+        id=unique_id(
+            person_slug(given, surname),
+            set(tree.people) | {path.stem for path in (data_dir / "people").glob("*.md")},  # never reuse a file name
+        ),
         given=given,
         surname=surname,
         sex=sex,
