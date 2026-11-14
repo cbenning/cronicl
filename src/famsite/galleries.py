@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from .issues import Issue
+from .settings import parse_bool
 
 CORE_KEYS = ("type", "label")
 DEFAULT_LABEL = "Photos"
@@ -72,7 +73,7 @@ def gallery_config(site: dict) -> dict | None:
     url = _normal_url(gallery.get("url"))
     if url is None:
         return None
-    return {"type": kind.name, "label": _label(gallery.get("label")), "url": url, "portraits": gallery.get("portraits") is not False}
+    return {"type": kind.name, "label": _label(gallery.get("label")), "url": url, "portraits": parse_bool(gallery.get("portraits")) is not False}
 
 
 def gallery_issues(site: dict, people: dict) -> list[Issue]:
@@ -88,7 +89,7 @@ def gallery_issues(site: dict, people: dict) -> list[Issue]:
                 issues.append(
                     Issue("E-GALLERY-URL", "gallery url must be an http:// or https:// address without ? or #", "site.yml")
                 )
-            if "portraits" in kind.keys and "portraits" in gallery and not isinstance(gallery["portraits"], bool):
+            if "portraits" in kind.keys and "portraits" in gallery and parse_bool(gallery["portraits"]) is None:
                 issues.append(Issue("W-GALLERY-PORTRAITS", "gallery portraits must be true or false; it is treated as true", "site.yml"))
             valid = set(CORE_KEYS) | set(kind.keys)
             for key in gallery:
