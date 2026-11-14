@@ -105,3 +105,17 @@ def test_urls_the_browser_would_reject_are_errors_and_never_crash(url):
     value = {"type": "fussel", "url": url}
     assert codes(issues_for(value)) == ["E-GALLERY-URL"]
     assert gallery_config({"gallery": value}) is None
+
+
+def test_portraits_is_a_valid_key_and_defaults_to_true():
+    assert issues_for({**GOOD, "portraits": True}) == []
+    assert gallery_config({"gallery": GOOD})["portraits"] is True
+    assert gallery_config({"gallery": {**GOOD, "portraits": False}})["portraits"] is False
+    assert gallery_config({"gallery": {**GOOD, "portraits": True}})["portraits"] is True
+
+
+@pytest.mark.parametrize("value", ["off", 0, [], None, "false"])
+def test_a_portraits_value_that_is_not_a_bool_warns_and_counts_as_true(value):
+    gallery = {**GOOD, "portraits": value}
+    assert codes(issues_for(gallery)) == ["W-GALLERY-PORTRAITS"]
+    assert gallery_config({"gallery": gallery})["portraits"] is True

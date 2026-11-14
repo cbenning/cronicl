@@ -52,7 +52,7 @@
   </section>
   {% if person.bodyHtml %}<article class="bio">{{ person.bodyHtml | safe }}</article>{% endif %}
   {% if gallery_person %}
-  <section class="gallery" id="gallery" hidden data-gallery-type="{{ gallery.type }}" data-gallery-url="{{ gallery.url }}" data-gallery-key="{{ gallery_person.key }}" data-gallery-explicit="{{ 1 if gallery_person.explicit else 0 }}" data-gallery-name="{{ gallery_person.name }}">
+  <section class="gallery" id="gallery" hidden data-gallery-type="{{ gallery.type }}" data-gallery-url="{{ gallery.url }}" data-gallery-key="{{ gallery_person.key }}" data-gallery-explicit="{{ 1 if gallery_person.explicit else 0 }}" data-gallery-name="{{ gallery_person.name }}" data-gallery-portrait="{{ 1 if gallery_person.portrait else 0 }}">
     <h2>{{ gallery.label }}</h2>
     <ul class="gallery-thumbs"></ul>
     <p class="gallery-more"><a target="_blank" rel="noopener"></a></p>

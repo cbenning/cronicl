@@ -657,3 +657,26 @@ def test_names_that_do_not_fold_cleanly_get_no_derived_key(tmp_path, make_tree):
     assert 'id="gallery"' not in _page(tmp_path, "a")
     assert 'data-gallery-key="zoe-muller"' in _page(tmp_path, "b")
     assert 'data-gallery-key="ivan-smith"' in _page(tmp_path, "c") and 'data-gallery-explicit="1"' in _page(tmp_path, "c")
+
+
+def test_portrait_fallback_attribute(tmp_path, make_tree):
+    tree = _gallery_site(make_tree, [p("a", "Ann", "X")])
+    build_site(tree, tmp_path, today=TODAY)
+    assert 'data-gallery-portrait="1"' in _page(tmp_path)
+
+
+def test_portraits_false_turns_the_fallback_off(tmp_path, make_tree):
+    tree = _gallery_site(make_tree, [p("a", "Ann", "X")], gallery={**GALLERY, "portraits": False})
+    build_site(tree, tmp_path, today=TODAY)
+    assert 'data-gallery-portrait="0"' in _page(tmp_path)
+
+
+def test_a_person_with_their_own_portrait_never_gets_the_fallback(tmp_path, make_tree):
+    media = tmp_path / "media"
+    media.mkdir()
+    (media / "ann.jpg").write_bytes(b"ANN")
+    tree = _gallery_site(make_tree, [p("a", "Ann", "X", portrait="ann.jpg"), p("b", "Bob", "X")])
+    out = tmp_path / "out"
+    build_site(tree, out, today=TODAY, media_dir=media)
+    assert 'data-gallery-portrait="0"' in _page(out, "a")
+    assert 'data-gallery-portrait="1"' in _page(out, "b")

@@ -231,7 +231,7 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
     return payload
 
 
-def _gallery_person(tree: Tree, pid: str, name: str, gallery: dict | None) -> dict | None:
+def _gallery_person(tree: Tree, pid: str, name: str, gallery: dict | None, has_image: bool) -> dict | None:
     """What the browser needs to find this person in the gallery; None when the page must carry no gallery block.
 
     Only people who exist in the original tree and have a name qualify, so a redacted living person never does.
@@ -243,7 +243,7 @@ def _gallery_person(tree: Tree, pid: str, name: str, gallery: dict | None) -> di
     key = original.gallery_id or (fold_slug(name) if folds_cleanly(name) else "")
     if not key:
         return None
-    return {"key": key, "explicit": bool(original.gallery_id), "name": name}
+    return {"key": key, "explicit": bool(original.gallery_id), "name": name, "portrait": bool(gallery["portraits"]) and not has_image}
 
 
 def _asset_version(name: str) -> str:
@@ -448,7 +448,7 @@ def build_site(
                 title=title, person=payload, ancestors=ancestor_tree(visible, relations, pid),
                 descendants=outline, descendant_count=count_descendants(outline),
                 links=page_links(tree.site, pid, payload["name"]) if pid in tree.people else [],
-                gallery_person=_gallery_person(tree, pid, payload["name"], gallery),
+                gallery_person=_gallery_person(tree, pid, payload["name"], gallery, bool(payload["image"])),
                 v=versions, home=home, root="../../"
             ),
         )
