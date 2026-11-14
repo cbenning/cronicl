@@ -384,6 +384,10 @@ async function main() {
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' }); await sleep(1500);
   check('the panel and the tree node show the portrait', (await ev(`!!document.querySelector('#panel img.avatar') && !!document.querySelector('.node[data-id="ellsworth-maude"] image') && !document.querySelector('.node[data-id="smith-bob"] image')`)) === true);
 
+  await goto('#/timeline/ellsworth-maude');
+  check('a dated fact is a tick on its own lifespan bar', (await ev(`(() => { const m = document.querySelector('.span-row[data-id="ellsworth-maude"] .mark.fact title'); return !!m && /worked as Teacher/.test(m.textContent) && document.querySelectorAll('.mark.fact').length === 1; })()`)) === true);
+  check('the panel lists the person\'s own events', /worked as Teacher/.test(await ev(`document.getElementById('panel').textContent`)));
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });

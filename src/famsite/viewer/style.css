@@ -276,3 +276,4 @@ img.avatar { object-fit: cover; }
 .attrs dt { color: var(--muted); }
 .attrs dd { margin: 0; }
 .panel-facts ul, .panel-events ul { margin: 0; padding-left: var(--space-4); }
+.mark.fact { fill: var(--muted); }

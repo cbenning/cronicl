@@ -42,7 +42,8 @@ def test_viewer_in_a_real_browser(tmp_path, sample_ged):
     assert main(["import-gedcom", str(sample_ged), "--dir", str(data), "-a"]) == 0
     (data / "people" / "ellsworth-maude.md").write_text(
         "---\nid: ellsworth-maude\nname:\n  given: Maude Sylvie Marnie\n  surname: Ellsworth\n"
-        "birth: 1925\ndeath: 1990\nportrait: maude.png\nparents: [smith-john, brown-mary]\n---\n",
+        "birth: 1925\ndeath: 1990\nportrait: maude.png\nparents: [smith-john, brown-mary]\n"
+        "events:\n  - type: occupation\n    value: Teacher\n    date: 1950\n---\n",
         encoding="utf-8",
     )
     (data / "media").mkdir(exist_ok=True)

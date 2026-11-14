@@ -1269,8 +1269,10 @@
         }
         (marks.get(id) || []).forEach(function (ev) {
           var x = xOfYear(yearPosition(ev)), y = 15 + BAR_H / 2;
-          var d = 'M' + x + ' ' + (y - 4) + 'l4 4l-4 4l-4 -4z';
-          var mark = svgEl('path', { d: d, 'class': 'mark ' + (ev.type === 'divorce' ? 'end' : 'partner') });
+          var isFact = ev.type === 'fact';
+          // a fact is a thin tick; a partnership start or end is a diamond
+          var d = isFact ? 'M' + (x - 1) + ' ' + (y - 6) + 'h2v12h-2z' : 'M' + x + ' ' + (y - 4) + 'l4 4l-4 4l-4 -4z';
+          var mark = svgEl('path', { d: d, 'class': 'mark ' + (isFact ? 'fact' : ev.type === 'divorce' ? 'end' : 'partner') });
           var tip = svgEl('title');
           tip.textContent = ev.text + ' · ' + ev.year;
           mark.appendChild(tip);
@@ -1420,7 +1422,7 @@
         rows().forEach(function (id, i) { rowIndex.set(id, i); });
         marks = new Map();
         state.timeline.events.forEach(function (ev) {
-          if (ev.type !== 'marriage' && ev.type !== 'partnership' && ev.type !== 'divorce') return;
+          if (ev.type !== 'marriage' && ev.type !== 'partnership' && ev.type !== 'divorce' && ev.type !== 'fact') return;
           ev.people.forEach(function (pid) {
             if (!marks.has(pid)) marks.set(pid, []);
             marks.get(pid).push(ev);

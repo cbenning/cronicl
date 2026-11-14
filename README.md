@@ -137,11 +137,33 @@ partnerships:
     end: 1990-02-01         # a date, or `unknown`; leave out while it is ongoing
     end_reason: divorce     # divorce | annulment | separation
     place: Surrey, BC       # where it began
+events:                     # anything beyond birth and death
+  - type: occupation
+    value: Teacher
+    cite: Census 1911       # one source, or a list
+  - type: immigration
+    date: 1952-04
+    place: Halifax, NS
+    note: Aboard the Arosa Kulm
 ---
 Free-form biography in markdown.
 ```
 
 Only a name is required. `id:` is optional; `famsite fix` pins it.
+
+### Events, notes and sources
+
+`events:` is a list of things that happened to a person or are true of them. `type` is any slug you like
+(hyphens read as spaces); each entry may have `date` (or `start` and `end` for a span), `place`, `value` (for
+attributes such as an occupation), `note` and `cite`. Entries with a date appear on the person's page,
+in the side panel and as ticks on their bar in the timeline; entries without a date are listed as facts.
+`birth` and `death` may carry `note` and `cite` too. Known types read as words (`burial` is "buried",
+`immigration` "immigrated", `residence` "lived", `occupation` with a value "worked as Teacher", and so on);
+others are shown as written. People treated as living under redaction never have events, notes or sources
+published. `import-gedcom` maps individual events and attributes (BAPM, CHR, CONF, BURI, CREM, IMMI, EMIG, NATU,
+RESI, OCCU, EDUC, RELI, NATI, GRAD, RETI, CENS, WILL, PROB) to `events:`; a line whose date cannot be converted,
+and anything else it does not know, stays in `gedcom_extra`. Imports made before this version keep those lines in
+`gedcom_extra` until you type them in by hand. Search also finds event places and values.
 
 ### Declare relationships on whichever file you are editing
 
