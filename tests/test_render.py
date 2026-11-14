@@ -638,3 +638,11 @@ def test_long_name_key_is_not_truncated(tmp_path, make_tree):
     tree = _gallery_site(make_tree, [p("a", "Ann", "z" * 70)])
     build_site(tree, tmp_path, today=TODAY)
     assert 'data-gallery-key="ann-' + "z" * 70 + '"' in _page(tmp_path)
+
+
+def test_gallery_styles_exist(tmp_path, make_tree):
+    build_site(make_tree([p("a", "Ann", "X")]), tmp_path, today=TODAY)
+    css = (tmp_path / "style.css").read_text(encoding="utf-8")
+    assert ".gallery-thumbs" in css and ".site-gallery" in css
+    printed = css.split("@media print", 1)[1].split("}", 1)[0]
+    assert ".gallery" in printed

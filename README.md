@@ -217,8 +217,9 @@ Before you publish a site that contains living people, set `privacy.living` to `
 `site.yml`. While it is `full`, `build` prints `W-PRIVACY-OFF` with the number of people the privacy rules treat
 as living: that is a reminder that they are all published.
 
-`famsite build --out public` writes a folder of plain files that any static host can serve. The site makes no
-external requests: no web fonts, scripts or analytics are loaded from anywhere.
+`famsite build --out public` writes a folder of plain files that any static host can serve. Unless you configure a
+[photo gallery](#photo-gallery), the site makes no external requests: no web fonts, scripts or analytics are loaded
+from anywhere.
 
 `site.yml` keys that shape the published site:
 
@@ -239,6 +240,38 @@ privacy:
 
 `edit_url` must be an `https://` address containing `{id}`; `contact` must be `mailto:`, `http://` or `https://`.
 `check` warns about anything else. People hidden or replaced by privacy redaction get neither link.
+
+## Photo gallery
+
+If you keep your photos in a [Fussel](https://github.com/cbenning/fussel) gallery, famsite can show a few of a
+person's photos on their page, with a link to the rest. Add this to `site.yml`:
+
+```yaml
+gallery:
+  type: fussel                         # required; fussel is the only type for now
+  url: https://example.com/photos/     # the address of the gallery's front page
+  label: Family photos                 # optional; the block heading and the top-bar link text (default "Photos")
+```
+
+- A person page gets a block of up to six thumbnails and "See all N photos in the gallery". A "Photos" link to the
+  gallery is added to the top bar of every page. Thumbnails and links open the gallery in a new tab.
+- Your browser fetches `people.json` from the gallery when the page opens. If the gallery is down, slow, or has no
+  photos of that person, the page looks exactly as it would without a gallery.
+- People are found by their name, turned into the same lowercase-latin slug Fussel uses (`Zoë Müller` is
+  `zoe-muller`). If a person is tagged differently in the gallery, put its slug in their file:
+  `gallery_id: jane-doe`. Two people with the same name need this too, because Fussel numbers the second one.
+- People hidden or replaced by privacy redaction never get a photos block.
+- It needs a Fussel that writes `people.json` (gallery option `gallery.people.enable: true`, on by default).
+- A gallery on a different domain can only be read if its host sends an `Access-Control-Allow-Origin` header
+  (GitHub Pages does). Without it only the top-bar link works.
+- Everything under `gallery:` is published to every visitor, so never put a secret there.
+
+`famsite check` reports `E-GALLERY-TYPE` (missing or unknown `type`), `E-GALLERY-URL` (missing or not an
+`http://` or `https://` address), `W-GALLERY-KEY` (a key that does nothing), `W-GALLERY-SECRET` (a key named like
+a secret) and `W-GALLERY-ID-UNUSED` (a `gallery_id` with no usable gallery). An invalid `gallery:` block is ignored
+when building.
+
+Another gallery can be added later by registering a type in `galleries.py` and an adapter in `gallery.js`.
 
 ## Privacy
 
