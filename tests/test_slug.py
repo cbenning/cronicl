@@ -58,3 +58,19 @@ def test_unique_id_respects_max_length():
 
 def test_natural_key_orders_numbers_numerically():
     assert sorted(["I10", "I2", "I1"], key=natural_key) == ["I1", "I2", "I10"]
+
+
+def test_fold_slug_folds_accents_and_special_letters():
+    from famsite.slug import fold_slug
+
+    assert fold_slug("Zoë Müller") == "zoe-muller"
+    assert fold_slug("Straße Ørsted") == "strasse-orsted"
+    assert fold_slug("  --  ") == ""
+
+
+def test_fold_slug_does_not_truncate_but_slugify_does():
+    from famsite.slug import MAX_ID_LEN, fold_slug
+
+    long_word = "a" * 70
+    assert fold_slug(long_word) == long_word
+    assert slugify(long_word) == "a" * MAX_ID_LEN

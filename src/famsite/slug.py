@@ -10,15 +10,19 @@ _VALID_ID = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 _SPECIAL = {"ß": "ss", "æ": "ae", "œ": "oe", "ø": "o", "đ": "d", "ł": "l", "þ": "th"}
 
 
-def slugify(text: str) -> str:
-    """Fold to lowercase ASCII words joined by single hyphens, at most MAX_ID_LEN long."""
+def fold_slug(text: str) -> str:
+    """Fold to lowercase ASCII words joined by single hyphens, with no length limit."""
     lowered = text.lower()
     for char, replacement in _SPECIAL.items():
         lowered = lowered.replace(char, replacement)
     folded = unicodedata.normalize("NFKD", lowered)
     ascii_text = folded.encode("ascii", "ignore").decode("ascii")
-    dashed = re.sub(r"[^a-z0-9]+", "-", ascii_text).strip("-")
-    return dashed[:MAX_ID_LEN].strip("-")
+    return re.sub(r"[^a-z0-9]+", "-", ascii_text).strip("-")
+
+
+def slugify(text: str) -> str:
+    """Fold to lowercase ASCII words joined by single hyphens, at most MAX_ID_LEN long."""
+    return fold_slug(text)[:MAX_ID_LEN].strip("-")
 
 
 def person_slug(given: str | None, surname: str | None) -> str:
