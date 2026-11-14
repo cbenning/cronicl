@@ -51,7 +51,7 @@ def test_bad_fussel_url_is_an_error(url):
 def test_url_is_normalised_to_one_trailing_slash(url, expected):
     value = {"type": "fussel", "url": url}
     assert issues_for(value) == []
-    assert gallery_config({"gallery": value}) == {"type": "fussel", "label": DEFAULT_LABEL, "url": expected}
+    assert gallery_config({"gallery": value}) == {"type": "fussel", "label": DEFAULT_LABEL, "url": expected, "portraits": True}
 
 
 @pytest.mark.parametrize(
