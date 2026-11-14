@@ -1,0 +1,156 @@
+{
+  "age_at_death": 79,
+  "age_at_death_approx": false,
+  "birth": {
+    "date": "1896",
+    "place": null,
+    "when": "1896"
+  },
+  "bodyHtml": "",
+  "children": [],
+  "death": {
+    "date": "1975",
+    "place": null,
+    "when": "1975"
+  },
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1896",
+      "day": null,
+      "id": "birth:wu-meiling",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "born",
+      "type": "birth",
+      "when": "1896",
+      "year": 1896
+    },
+    {
+      "age": 24,
+      "age_approx": false,
+      "cite": [],
+      "date": "1920",
+      "day": null,
+      "id": "marriage:alder-dan+wu-meiling:1",
+      "kind": "marriage",
+      "month": null,
+      "note": null,
+      "place": "Vancouver, BC",
+      "role": "self",
+      "text": "married Dan Alder",
+      "type": "marriage",
+      "when": "1920",
+      "year": 1920
+    },
+    {
+      "age": 24,
+      "age_approx": false,
+      "cite": [],
+      "date": "1920",
+      "day": null,
+      "id": "partnership:alder-dan+wu-meiling",
+      "kind": "civil-union",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "entered a civil union with Dan Alder",
+      "type": "partnership",
+      "when": "1920",
+      "year": 1920
+    },
+    {
+      "age": 25,
+      "age_approx": false,
+      "cite": [],
+      "date": "1921",
+      "day": null,
+      "id": "divorce:alder-dan+wu-meiling",
+      "kind": "civil-union",
+      "month": null,
+      "note": null,
+      "place": "",
+      "reason": "annulment",
+      "role": "self",
+      "text": "marriage to Dan Alder annulled",
+      "type": "divorce",
+      "when": "1921",
+      "year": 1921
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1971-02-02",
+      "day": 2,
+      "id": "death:alder-dan",
+      "month": 2,
+      "note": null,
+      "place": "",
+      "role": "spouse",
+      "text": "Dan Alder died",
+      "type": "death",
+      "when": "2 February 1971",
+      "year": 1971
+    },
+    {
+      "age": 79,
+      "age_approx": false,
+      "cite": [],
+      "date": "1975",
+      "day": null,
+      "id": "death:wu-meiling",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "died",
+      "type": "death",
+      "when": "1975",
+      "year": 1975
+    }
+  ],
+  "facts": [],
+  "id": "wu-meiling",
+  "image": null,
+  "initials": "MW",
+  "name": "Meiling Wu",
+  "parents": [],
+  "sex": "F",
+  "siblings": [],
+  "spouses": [
+    {
+      "id": "alder-dan",
+      "initials": "DA",
+      "name": "Dan Alder",
+      "partnerships": [
+        {
+          "end": "1921",
+          "end_reason": "annulment",
+          "note": null,
+          "place": null,
+          "start": "1920",
+          "text": "Civil union 1920 – annulled 1921",
+          "type": "civil-union"
+        },
+        {
+          "end": null,
+          "end_reason": null,
+          "note": null,
+          "place": "Vancouver, BC",
+          "start": "1920",
+          "text": "Married 1920 (Vancouver, BC)",
+          "type": "marriage"
+        }
+      ],
+      "years": "1892–1971"
+    }
+  ],
+  "summary": "Born 1896. Died 1975, aged 79.",
+  "years": "1896–1975"
+}

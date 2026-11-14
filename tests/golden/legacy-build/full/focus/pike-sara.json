@@ -1,0 +1,78 @@
+{
+  "bounds": {
+    "h": 128,
+    "w": 408
+  },
+  "edges": [
+    {
+      "from": "alder-ben",
+      "kind": "spouse",
+      "points": [
+        [
+          192,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "alder-ben+pike-sara"
+    },
+    {
+      "from": "pike-sara",
+      "kind": "spouse",
+      "points": [
+        [
+          216,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "alder-ben+pike-sara"
+    }
+  ],
+  "focus": "pike-sara",
+  "hidden": {
+    "alder-ben": 6
+  },
+  "nodes": [
+    {
+      "h": 64,
+      "id": "alder-ben",
+      "w": 160,
+      "x": 32,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "pike-sara",
+      "w": 160,
+      "x": 216,
+      "y": 32
+    }
+  ],
+  "unions": [
+    {
+      "ended": true,
+      "id": "alder-ben+pike-sara",
+      "members": [
+        "alder-ben",
+        "pike-sara"
+      ],
+      "partnerships": [
+        {
+          "end": "unknown",
+          "start": "1900",
+          "type": "partnership"
+        }
+      ],
+      "x": 204,
+      "y": 64
+    }
+  ],
+  "version": 1
+}

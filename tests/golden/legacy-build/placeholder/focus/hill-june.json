@@ -1,0 +1,181 @@
+{
+  "bounds": {
+    "h": 424,
+    "w": 408
+  },
+  "edges": [
+    {
+      "from": "alder-eli",
+      "kind": "spouse",
+      "points": [
+        [
+          192,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "alder-eli+hill-june"
+    },
+    {
+      "from": "alder-eli+hill-june",
+      "kind": "child",
+      "points": [
+        [
+          204,
+          64
+        ],
+        [
+          204,
+          114
+        ],
+        [
+          296,
+          114
+        ],
+        [
+          296,
+          180
+        ]
+      ],
+      "to": "living-a9be131674"
+    },
+    {
+      "from": "hill-june",
+      "kind": "spouse",
+      "points": [
+        [
+          216,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "alder-eli+hill-june"
+    },
+    {
+      "from": "living-77e92948bb",
+      "kind": "spouse",
+      "points": [
+        [
+          192,
+          212
+        ],
+        [
+          204,
+          212
+        ]
+      ],
+      "to": "living-77e92948bb+living-a9be131674"
+    },
+    {
+      "from": "living-77e92948bb+living-a9be131674",
+      "kind": "child",
+      "points": [
+        [
+          204,
+          212
+        ],
+        [
+          204,
+          262
+        ],
+        [
+          204,
+          262
+        ],
+        [
+          204,
+          328
+        ]
+      ],
+      "to": "living-e9c71c91f4"
+    },
+    {
+      "from": "living-a9be131674",
+      "kind": "spouse",
+      "points": [
+        [
+          216,
+          212
+        ],
+        [
+          204,
+          212
+        ]
+      ],
+      "to": "living-77e92948bb+living-a9be131674"
+    }
+  ],
+  "focus": "hill-june",
+  "hidden": {
+    "alder-eli": 2
+  },
+  "nodes": [
+    {
+      "h": 64,
+      "id": "alder-eli",
+      "w": 160,
+      "x": 32,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "hill-june",
+      "w": 160,
+      "x": 216,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "living-77e92948bb",
+      "w": 160,
+      "x": 32,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "living-a9be131674",
+      "w": 160,
+      "x": 216,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "living-e9c71c91f4",
+      "w": 160,
+      "x": 124,
+      "y": 328
+    }
+  ],
+  "unions": [
+    {
+      "id": "alder-eli+hill-june",
+      "members": [
+        "alder-eli",
+        "hill-june"
+      ],
+      "x": 204,
+      "y": 64
+    },
+    {
+      "id": "living-77e92948bb+living-a9be131674",
+      "members": [
+        "living-77e92948bb",
+        "living-a9be131674"
+      ],
+      "partnerships": [
+        {
+          "type": "unknown"
+        }
+      ],
+      "x": 204,
+      "y": 212
+    }
+  ],
+  "version": 1
+}

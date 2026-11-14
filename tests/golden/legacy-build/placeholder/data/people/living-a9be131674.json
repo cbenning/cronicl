@@ -1,0 +1,91 @@
+{
+  "age_at_death": null,
+  "age_at_death_approx": false,
+  "birth": null,
+  "bodyHtml": "",
+  "children": [
+    {
+      "id": "living-e9c71c91f4",
+      "initials": "L",
+      "name": "Living",
+      "years": ""
+    }
+  ],
+  "death": null,
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "2010-01-01",
+      "day": 1,
+      "id": "death:alder-eli",
+      "month": 1,
+      "note": null,
+      "place": "",
+      "role": "parent",
+      "text": "Eli Alder died",
+      "type": "death",
+      "when": "1 January 2010",
+      "year": 2010
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "2015",
+      "day": null,
+      "id": "death:hill-june",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "parent",
+      "text": "June Hill died",
+      "type": "death",
+      "when": "2015",
+      "year": 2015
+    }
+  ],
+  "facts": [],
+  "id": "living-a9be131674",
+  "image": null,
+  "initials": "L",
+  "name": "Living",
+  "parents": [
+    {
+      "id": "alder-eli",
+      "initials": "EA",
+      "name": "Eli Alder",
+      "years": "1925–2010"
+    },
+    {
+      "id": "hill-june",
+      "initials": "JH",
+      "name": "June Hill",
+      "years": "1930–2015"
+    }
+  ],
+  "sex": "U",
+  "siblings": [],
+  "spouses": [
+    {
+      "id": "living-77e92948bb",
+      "initials": "L",
+      "name": "Living",
+      "partnerships": [
+        {
+          "end": null,
+          "end_reason": null,
+          "note": null,
+          "place": null,
+          "start": null,
+          "text": "",
+          "type": "unknown"
+        }
+      ],
+      "years": ""
+    }
+  ],
+  "summary": "",
+  "years": ""
+}

@@ -1,0 +1,152 @@
+{
+  "age_at_death": 90,
+  "age_at_death_approx": false,
+  "birth": {
+    "date": "1900",
+    "place": null,
+    "when": "1900"
+  },
+  "bodyHtml": "",
+  "children": [
+    {
+      "id": "alder-eli",
+      "initials": "EA",
+      "name": "Eli Alder",
+      "years": "1925–2010"
+    }
+  ],
+  "death": {
+    "date": "1990",
+    "place": null,
+    "when": "1990"
+  },
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1900",
+      "day": null,
+      "id": "birth:ross-hana",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "born",
+      "type": "birth",
+      "when": "1900",
+      "year": 1900
+    },
+    {
+      "age": 22,
+      "age_approx": false,
+      "cite": [],
+      "date": "1922-05-05",
+      "day": 5,
+      "id": "marriage:alder-dan+ross-hana",
+      "kind": "marriage",
+      "month": 5,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "married Dan Alder",
+      "type": "marriage",
+      "when": "5 May 1922",
+      "year": 1922
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1925-10-10",
+      "day": 10,
+      "id": "birth:alder-eli",
+      "month": 10,
+      "note": null,
+      "place": "",
+      "role": "child",
+      "text": "Eli Alder born",
+      "type": "birth",
+      "when": "10 October 1925",
+      "year": 1925
+    },
+    {
+      "age": 40,
+      "age_approx": false,
+      "cite": [],
+      "date": "1940",
+      "day": null,
+      "id": "divorce:alder-dan+ross-hana",
+      "kind": "marriage",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "marriage to Dan Alder ended",
+      "type": "divorce",
+      "when": "1940",
+      "year": 1940
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1971-02-02",
+      "day": 2,
+      "id": "death:alder-dan",
+      "month": 2,
+      "note": null,
+      "place": "",
+      "role": "spouse",
+      "text": "Dan Alder died",
+      "type": "death",
+      "when": "2 February 1971",
+      "year": 1971
+    },
+    {
+      "age": 90,
+      "age_approx": false,
+      "cite": [],
+      "date": "1990",
+      "day": null,
+      "id": "death:ross-hana",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "died",
+      "type": "death",
+      "when": "1990",
+      "year": 1990
+    }
+  ],
+  "facts": [],
+  "id": "ross-hana",
+  "image": null,
+  "initials": "HR",
+  "name": "Hana Ross",
+  "parents": [],
+  "sex": "F",
+  "siblings": [],
+  "spouses": [
+    {
+      "id": "alder-dan",
+      "initials": "DA",
+      "name": "Dan Alder",
+      "partnerships": [
+        {
+          "end": "1940",
+          "end_reason": null,
+          "note": null,
+          "place": null,
+          "start": "1922-05-05",
+          "text": "Married 5 May 1922 – ended 1940",
+          "type": "marriage"
+        }
+      ],
+      "years": "1892–1971"
+    }
+  ],
+  "summary": "Born 1900. Died 1990, aged 90.",
+  "years": "1900–1990"
+}

@@ -1,0 +1,242 @@
+{
+  "people": {
+    "alder-ada": {
+      "name": "Ada Marie Alder",
+      "parents": [],
+      "partners": [
+        "alder-walter"
+      ],
+      "sex": "F"
+    },
+    "alder-ben": {
+      "name": "Benjamin Alder",
+      "parents": [
+        "alder-walter",
+        "alder-ada"
+      ],
+      "partners": [
+        "moss-ellen",
+        "pike-sara"
+      ],
+      "sex": "M"
+    },
+    "alder-cora": {
+      "name": "Cora Alder",
+      "parents": [
+        "alder-walter",
+        "alder-ada"
+      ],
+      "partners": [],
+      "sex": "F"
+    },
+    "alder-dan": {
+      "name": "Dan Alder",
+      "parents": [
+        "alder-ben",
+        "moss-ellen"
+      ],
+      "partners": [
+        "reed-lena",
+        "ross-hana",
+        "wu-meiling"
+      ],
+      "sex": "M"
+    },
+    "alder-eli": {
+      "name": "Eli Alder",
+      "parents": [
+        "alder-dan",
+        "ross-hana"
+      ],
+      "partners": [
+        "hill-june"
+      ],
+      "sex": "M"
+    },
+    "alder-fay": {
+      "name": "Fay Alder",
+      "parents": [
+        "alder-eli",
+        "hill-june"
+      ],
+      "partners": [
+        "gray-sam"
+      ],
+      "sex": "F"
+    },
+    "alder-gus": {
+      "name": "Gus Alder",
+      "parents": [
+        "alder-fay",
+        "gray-sam"
+      ],
+      "partners": [],
+      "sex": "U"
+    },
+    "alder-walter": {
+      "name": "Walter Alder",
+      "parents": [],
+      "partners": [
+        "alder-ada"
+      ],
+      "sex": "M"
+    },
+    "brown-mary": {
+      "name": "Mary Brown",
+      "parents": [],
+      "partners": [
+        "smith-john"
+      ],
+      "sex": "F"
+    },
+    "gray-sam": {
+      "name": "Sam Gray",
+      "parents": [],
+      "partners": [
+        "alder-fay"
+      ],
+      "sex": "M"
+    },
+    "hill-june": {
+      "name": "June Hill",
+      "parents": [],
+      "partners": [
+        "alder-eli"
+      ],
+      "sex": "F"
+    },
+    "jones-jane": {
+      "name": "Jane Jones",
+      "parents": [],
+      "partners": [
+        "smith-bob"
+      ],
+      "sex": "F"
+    },
+    "kerr-ivor": {
+      "name": "Ivor Kerr",
+      "parents": [],
+      "partners": [
+        "kerr-thea"
+      ],
+      "sex": "M"
+    },
+    "kerr-thea": {
+      "name": "Thea Kerr",
+      "parents": [],
+      "partners": [
+        "kerr-ivor"
+      ],
+      "sex": "F"
+    },
+    "moss-ellen": {
+      "name": "Ellen Moss",
+      "parents": [],
+      "partners": [
+        "alder-ben"
+      ],
+      "sex": "F"
+    },
+    "nameless-one": {
+      "name": "nameless-one",
+      "parents": [
+        "alder-walter"
+      ],
+      "partners": [],
+      "sex": "U"
+    },
+    "old-open": {
+      "name": "Old Open",
+      "parents": [],
+      "partners": [],
+      "sex": "U"
+    },
+    "pike-sara": {
+      "name": "Sara Pike",
+      "parents": [],
+      "partners": [
+        "alder-ben"
+      ],
+      "sex": "F"
+    },
+    "reed-lena": {
+      "name": "Lena Reed",
+      "parents": [],
+      "partners": [
+        "alder-dan"
+      ],
+      "sex": "F"
+    },
+    "ross-hana": {
+      "name": "Hana Ross",
+      "parents": [],
+      "partners": [
+        "alder-dan"
+      ],
+      "sex": "F"
+    },
+    "smith-amy": {
+      "name": "Amy Smith",
+      "parents": [
+        "smith-bob",
+        "jones-jane"
+      ],
+      "partners": [],
+      "sex": "F"
+    },
+    "smith-bob": {
+      "name": "Bob Smith",
+      "parents": [
+        "smith-john",
+        "brown-mary"
+      ],
+      "partners": [
+        "jones-jane"
+      ],
+      "sex": "M"
+    },
+    "smith-bob-2": {
+      "name": "Bob Smith",
+      "parents": [],
+      "partners": [],
+      "sex": "M"
+    },
+    "smith-john": {
+      "name": "John Smith",
+      "parents": [],
+      "partners": [
+        "brown-mary"
+      ],
+      "sex": "M"
+    },
+    "smith-tom": {
+      "name": "Tom Smith",
+      "parents": [
+        "smith-bob",
+        "jones-jane"
+      ],
+      "partners": [],
+      "sex": "M"
+    },
+    "stone-oak": {
+      "name": "Oak Stone",
+      "parents": [],
+      "partners": [],
+      "sex": "M"
+    },
+    "unknown-i8": {
+      "name": "unknown-i8",
+      "parents": [],
+      "partners": [],
+      "sex": "U"
+    },
+    "wu-meiling": {
+      "name": "Meiling Wu",
+      "parents": [],
+      "partners": [
+        "alder-dan"
+      ],
+      "sex": "F"
+    }
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "age_at_death": 85,
+  "age_at_death_approx": false,
+  "birth": {
+    "date": "1895",
+    "place": null,
+    "when": "1895"
+  },
+  "bodyHtml": "",
+  "children": [],
+  "death": {
+    "date": "1980",
+    "place": null,
+    "when": "1980"
+  },
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1895",
+      "day": null,
+      "id": "birth:reed-lena",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "born",
+      "type": "birth",
+      "when": "1895",
+      "year": 1895
+    },
+    {
+      "age": 23,
+      "age_approx": false,
+      "cite": [],
+      "date": "1918",
+      "day": null,
+      "id": "partnership:alder-dan+reed-lena",
+      "kind": "engagement",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "engaged to Dan Alder",
+      "type": "partnership",
+      "when": "1918",
+      "year": 1918
+    },
+    {
+      "age": 24,
+      "age_approx": false,
+      "cite": [],
+      "date": "1919",
+      "day": null,
+      "id": "divorce:alder-dan+reed-lena",
+      "kind": "engagement",
+      "month": null,
+      "note": null,
+      "place": "",
+      "reason": "separation",
+      "role": "self",
+      "text": "separated from Dan Alder",
+      "type": "divorce",
+      "when": "1919",
+      "year": 1919
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1971-02-02",
+      "day": 2,
+      "id": "death:alder-dan",
+      "month": 2,
+      "note": null,
+      "place": "",
+      "role": "spouse",
+      "text": "Dan Alder died",
+      "type": "death",
+      "when": "2 February 1971",
+      "year": 1971
+    },
+    {
+      "age": 85,
+      "age_approx": false,
+      "cite": [],
+      "date": "1980",
+      "day": null,
+      "id": "death:reed-lena",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "died",
+      "type": "death",
+      "when": "1980",
+      "year": 1980
+    }
+  ],
+  "facts": [],
+  "id": "reed-lena",
+  "image": null,
+  "initials": "LR",
+  "name": "Lena Reed",
+  "parents": [],
+  "sex": "F",
+  "siblings": [],
+  "spouses": [
+    {
+      "id": "alder-dan",
+      "initials": "DA",
+      "name": "Dan Alder",
+      "partnerships": [
+        {
+          "end": "1919",
+          "end_reason": "separation",
+          "note": null,
+          "place": null,
+          "start": "1918",
+          "text": "Engaged 1918 – separated 1919",
+          "type": "engagement"
+        }
+      ],
+      "years": "1892–1971"
+    }
+  ],
+  "summary": "Born 1895. Died 1980, aged 85.",
+  "years": "1895–1980"
+}

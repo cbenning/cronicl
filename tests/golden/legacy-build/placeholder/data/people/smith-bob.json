@@ -1,0 +1,153 @@
+{
+  "age_at_death": 70,
+  "age_at_death_approx": false,
+  "birth": {
+    "date": "1950-03-12",
+    "place": "Vancouver, BC",
+    "when": "12 March 1950"
+  },
+  "bodyHtml": "<p>Bob was a teacher\nwho loved the sea.</p>\n",
+  "children": [
+    {
+      "id": "smith-amy",
+      "initials": "AS",
+      "name": "Amy Smith",
+      "years": "b. 1980"
+    },
+    {
+      "id": "living-993898cebe",
+      "initials": "L",
+      "name": "Living",
+      "years": ""
+    }
+  ],
+  "death": {
+    "date": "2020-07-01",
+    "place": "Burnaby, BC",
+    "when": "1 July 2020"
+  },
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1950-03-12",
+      "day": 12,
+      "id": "birth:smith-bob",
+      "month": 3,
+      "note": null,
+      "place": "Vancouver, BC",
+      "role": "self",
+      "text": "born",
+      "type": "birth",
+      "when": "12 March 1950",
+      "year": 1950
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1980",
+      "day": null,
+      "id": "birth:smith-amy",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "child",
+      "text": "Amy Smith born",
+      "type": "birth",
+      "when": "1980",
+      "year": 1980
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1990",
+      "day": null,
+      "id": "death:smith-john",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "parent",
+      "text": "John Smith died",
+      "type": "death",
+      "when": "1990",
+      "year": 1990
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "2001",
+      "day": null,
+      "id": "death:brown-mary",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "parent",
+      "text": "Mary Brown died",
+      "type": "death",
+      "when": "2001",
+      "year": 2001
+    },
+    {
+      "age": 70,
+      "age_approx": false,
+      "cite": [],
+      "date": "2020-07-01",
+      "day": 1,
+      "id": "death:smith-bob",
+      "month": 7,
+      "note": null,
+      "place": "Burnaby, BC",
+      "role": "self",
+      "text": "died",
+      "type": "death",
+      "when": "1 July 2020",
+      "year": 2020
+    }
+  ],
+  "facts": [],
+  "id": "smith-bob",
+  "image": null,
+  "initials": "BS",
+  "name": "Bob Smith",
+  "parents": [
+    {
+      "id": "smith-john",
+      "initials": "JS",
+      "name": "John Smith",
+      "years": "1920–1990"
+    },
+    {
+      "id": "brown-mary",
+      "initials": "MB",
+      "name": "Mary Brown",
+      "years": "1925–2001"
+    }
+  ],
+  "sex": "M",
+  "siblings": [],
+  "spouses": [
+    {
+      "id": "living-99e6a4f467",
+      "initials": "L",
+      "name": "Living",
+      "partnerships": [
+        {
+          "end": null,
+          "end_reason": null,
+          "note": null,
+          "place": null,
+          "start": null,
+          "text": "",
+          "type": "unknown"
+        }
+      ],
+      "years": ""
+    }
+  ],
+  "summary": "Born 12 March 1950 in Vancouver, BC. Died 1 July 2020 in Burnaby, BC, aged 70.",
+  "years": "1950–2020"
+}

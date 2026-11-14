@@ -1,0 +1,63 @@
+{
+  "bounds": {
+    "h": 276,
+    "w": 224
+  },
+  "edges": [
+    {
+      "from": "alder-walter+",
+      "kind": "child",
+      "points": [
+        [
+          112,
+          96
+        ],
+        [
+          112,
+          114
+        ],
+        [
+          112,
+          114
+        ],
+        [
+          112,
+          180
+        ]
+      ],
+      "to": "nameless-one"
+    }
+  ],
+  "focus": "nameless-one",
+  "hidden": {
+    "alder-walter": 3,
+    "nameless-one": 2
+  },
+  "nodes": [
+    {
+      "h": 64,
+      "id": "alder-walter",
+      "w": 160,
+      "x": 32,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "nameless-one",
+      "w": 160,
+      "x": 32,
+      "y": 180
+    }
+  ],
+  "unions": [
+    {
+      "id": "alder-walter+",
+      "members": [
+        "alder-walter"
+      ],
+      "x": 112,
+      "y": 96
+    }
+  ],
+  "version": 1
+}

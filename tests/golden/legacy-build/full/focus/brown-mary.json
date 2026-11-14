@@ -1,0 +1,211 @@
+{
+  "bounds": {
+    "h": 424,
+    "w": 532
+  },
+  "edges": [
+    {
+      "from": "brown-mary",
+      "kind": "spouse",
+      "points": [
+        [
+          192,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "brown-mary+smith-john"
+    },
+    {
+      "from": "brown-mary+smith-john",
+      "kind": "child",
+      "points": [
+        [
+          204,
+          64
+        ],
+        [
+          204,
+          114
+        ],
+        [
+          296,
+          114
+        ],
+        [
+          296,
+          180
+        ]
+      ],
+      "to": "smith-bob"
+    },
+    {
+      "from": "jones-jane",
+      "kind": "spouse",
+      "points": [
+        [
+          192,
+          212
+        ],
+        [
+          204,
+          212
+        ]
+      ],
+      "to": "jones-jane+smith-bob"
+    },
+    {
+      "from": "jones-jane+smith-bob",
+      "kind": "child",
+      "points": [
+        [
+          204,
+          212
+        ],
+        [
+          204,
+          262
+        ],
+        [
+          204,
+          262
+        ],
+        [
+          204,
+          328
+        ]
+      ],
+      "to": "smith-amy"
+    },
+    {
+      "from": "jones-jane+smith-bob",
+      "kind": "child",
+      "points": [
+        [
+          204,
+          212
+        ],
+        [
+          204,
+          262
+        ],
+        [
+          420,
+          262
+        ],
+        [
+          420,
+          328
+        ]
+      ],
+      "to": "smith-tom"
+    },
+    {
+      "from": "smith-bob",
+      "kind": "spouse",
+      "points": [
+        [
+          216,
+          212
+        ],
+        [
+          204,
+          212
+        ]
+      ],
+      "to": "jones-jane+smith-bob"
+    },
+    {
+      "from": "smith-john",
+      "kind": "spouse",
+      "points": [
+        [
+          216,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "brown-mary+smith-john"
+    }
+  ],
+  "focus": "brown-mary",
+  "hidden": {},
+  "nodes": [
+    {
+      "h": 64,
+      "id": "brown-mary",
+      "w": 160,
+      "x": 32,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "jones-jane",
+      "w": 160,
+      "x": 32,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "smith-amy",
+      "w": 160,
+      "x": 124,
+      "y": 328
+    },
+    {
+      "h": 64,
+      "id": "smith-bob",
+      "w": 160,
+      "x": 216,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "smith-john",
+      "w": 160,
+      "x": 216,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "smith-tom",
+      "w": 160,
+      "x": 340,
+      "y": 328
+    }
+  ],
+  "unions": [
+    {
+      "id": "brown-mary+smith-john",
+      "members": [
+        "brown-mary",
+        "smith-john"
+      ],
+      "x": 204,
+      "y": 64
+    },
+    {
+      "id": "jones-jane+smith-bob",
+      "members": [
+        "jones-jane",
+        "smith-bob"
+      ],
+      "partnerships": [
+        {
+          "place": "Surrey, BC",
+          "start": "1975-06-20",
+          "type": "marriage"
+        }
+      ],
+      "x": 204,
+      "y": 212
+    }
+  ],
+  "version": 1
+}

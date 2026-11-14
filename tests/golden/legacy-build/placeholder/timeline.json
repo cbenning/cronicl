@@ -1,0 +1,1294 @@
+{
+  "events": [
+    {
+      "approx": false,
+      "date": "1700",
+      "day": null,
+      "id": "birth:kerr-ivor",
+      "month": null,
+      "people": [
+        "kerr-ivor"
+      ],
+      "place": "",
+      "text": "Ivor Kerr born",
+      "type": "birth",
+      "year": 1700
+    },
+    {
+      "approx": false,
+      "date": "1700",
+      "day": null,
+      "id": "birth:nameless-one",
+      "month": null,
+      "people": [
+        "nameless-one"
+      ],
+      "place": "",
+      "text": "nameless-one born",
+      "type": "birth",
+      "year": 1700
+    },
+    {
+      "approx": false,
+      "date": "1705",
+      "day": null,
+      "id": "birth:kerr-thea",
+      "month": null,
+      "people": [
+        "kerr-thea"
+      ],
+      "place": "",
+      "text": "Thea Kerr born",
+      "type": "birth",
+      "year": 1705
+    },
+    {
+      "approx": false,
+      "date": "1760",
+      "day": null,
+      "id": "death:nameless-one",
+      "month": null,
+      "people": [
+        "nameless-one"
+      ],
+      "place": "",
+      "text": "nameless-one died",
+      "type": "death",
+      "year": 1760
+    },
+    {
+      "approx": false,
+      "date": "1770",
+      "day": null,
+      "id": "death:kerr-ivor",
+      "month": null,
+      "people": [
+        "kerr-ivor"
+      ],
+      "place": "",
+      "text": "Ivor Kerr died",
+      "type": "death",
+      "year": 1770
+    },
+    {
+      "approx": false,
+      "date": "1790",
+      "day": null,
+      "id": "death:kerr-thea",
+      "month": null,
+      "people": [
+        "kerr-thea"
+      ],
+      "place": "",
+      "text": "Thea Kerr died",
+      "type": "death",
+      "year": 1790
+    },
+    {
+      "approx": true,
+      "date": "~1835",
+      "day": null,
+      "id": "birth:alder-walter",
+      "month": null,
+      "people": [
+        "alder-walter"
+      ],
+      "place": "",
+      "text": "Walter Alder born",
+      "type": "birth",
+      "year": 1835
+    },
+    {
+      "approx": false,
+      "date": "1840-03-02",
+      "day": 2,
+      "id": "birth:alder-ada",
+      "month": 3,
+      "people": [
+        "alder-ada"
+      ],
+      "place": "Leeds, England",
+      "text": "Ada Marie Alder born",
+      "type": "birth",
+      "year": 1840
+    },
+    {
+      "approx": false,
+      "date": "1850",
+      "day": null,
+      "id": "birth:old-open",
+      "month": null,
+      "people": [
+        "old-open"
+      ],
+      "place": "",
+      "text": "Old Open born",
+      "type": "birth",
+      "year": 1850
+    },
+    {
+      "approx": false,
+      "date": "1862",
+      "day": null,
+      "end": "1912",
+      "id": "fact:alder-ada:1",
+      "kind": "residence",
+      "month": null,
+      "people": [
+        "alder-ada"
+      ],
+      "place": "Leeds, England",
+      "text": "Ada Marie Alder lived",
+      "type": "fact",
+      "value": "",
+      "year": 1862
+    },
+    {
+      "approx": false,
+      "date": "1862-06-14",
+      "day": 14,
+      "id": "marriage:alder-ada+alder-walter",
+      "kind": "marriage",
+      "month": 6,
+      "people": [
+        "alder-ada",
+        "alder-walter"
+      ],
+      "place": "Leeds, England",
+      "text": "Ada Marie Alder & Walter Alder married",
+      "type": "marriage",
+      "year": 1862
+    },
+    {
+      "approx": false,
+      "date": "1864-01-09",
+      "day": 9,
+      "id": "birth:alder-ben",
+      "month": 1,
+      "people": [
+        "alder-ben"
+      ],
+      "place": "",
+      "text": "Benjamin Alder born",
+      "type": "birth",
+      "year": 1864
+    },
+    {
+      "approx": false,
+      "date": "1866",
+      "day": null,
+      "id": "birth:alder-cora",
+      "month": null,
+      "people": [
+        "alder-cora"
+      ],
+      "place": "",
+      "text": "Cora Alder born",
+      "type": "birth",
+      "year": 1866
+    },
+    {
+      "approx": false,
+      "date": "1866-12",
+      "day": null,
+      "id": "death:alder-cora",
+      "month": 12,
+      "people": [
+        "alder-cora"
+      ],
+      "place": "",
+      "text": "Cora Alder died",
+      "type": "death",
+      "year": 1866
+    },
+    {
+      "approx": false,
+      "date": "1868",
+      "day": null,
+      "id": "birth:moss-ellen",
+      "month": null,
+      "people": [
+        "moss-ellen"
+      ],
+      "place": "",
+      "text": "Ellen Moss born",
+      "type": "birth",
+      "year": 1868
+    },
+    {
+      "approx": false,
+      "date": "1870-07",
+      "day": null,
+      "id": "birth:pike-sara",
+      "month": 7,
+      "people": [
+        "pike-sara"
+      ],
+      "place": "",
+      "text": "Sara Pike born",
+      "type": "birth",
+      "year": 1870
+    },
+    {
+      "approx": false,
+      "date": "1890-05-01",
+      "day": 1,
+      "id": "marriage:alder-ben+moss-ellen",
+      "kind": "marriage",
+      "month": 5,
+      "people": [
+        "alder-ben",
+        "moss-ellen"
+      ],
+      "place": "",
+      "text": "Benjamin Alder & Ellen Moss married",
+      "type": "marriage",
+      "year": 1890
+    },
+    {
+      "approx": false,
+      "date": "1892-08-20",
+      "day": 20,
+      "id": "birth:alder-dan",
+      "month": 8,
+      "people": [
+        "alder-dan"
+      ],
+      "place": "",
+      "text": "Dan Alder born",
+      "type": "birth",
+      "year": 1892
+    },
+    {
+      "approx": false,
+      "date": "1895",
+      "day": null,
+      "id": "birth:reed-lena",
+      "month": null,
+      "people": [
+        "reed-lena"
+      ],
+      "place": "",
+      "text": "Lena Reed born",
+      "type": "birth",
+      "year": 1895
+    },
+    {
+      "approx": false,
+      "date": "1895-02-11",
+      "day": 11,
+      "id": "divorce:alder-ben+moss-ellen",
+      "kind": "marriage",
+      "month": 2,
+      "people": [
+        "alder-ben",
+        "moss-ellen"
+      ],
+      "place": "",
+      "reason": "divorce",
+      "text": "Benjamin Alder & Ellen Moss divorced",
+      "type": "divorce",
+      "year": 1895
+    },
+    {
+      "approx": false,
+      "date": "1896",
+      "day": null,
+      "id": "birth:wu-meiling",
+      "month": null,
+      "people": [
+        "wu-meiling"
+      ],
+      "place": "",
+      "text": "Meiling Wu born",
+      "type": "birth",
+      "year": 1896
+    },
+    {
+      "approx": false,
+      "date": "1899-09-09",
+      "day": 9,
+      "id": "marriage:alder-ben+moss-ellen:1",
+      "kind": "marriage",
+      "month": 9,
+      "people": [
+        "alder-ben",
+        "moss-ellen"
+      ],
+      "place": "",
+      "text": "Benjamin Alder & Ellen Moss married",
+      "type": "marriage",
+      "year": 1899
+    },
+    {
+      "approx": false,
+      "date": "1900",
+      "day": null,
+      "id": "birth:ross-hana",
+      "month": null,
+      "people": [
+        "ross-hana"
+      ],
+      "place": "",
+      "text": "Hana Ross born",
+      "type": "birth",
+      "year": 1900
+    },
+    {
+      "approx": false,
+      "date": "1900",
+      "day": null,
+      "id": "partnership:alder-ben+pike-sara",
+      "kind": "partnership",
+      "month": null,
+      "people": [
+        "alder-ben",
+        "pike-sara"
+      ],
+      "place": "",
+      "text": "Benjamin Alder & Sara Pike became partners",
+      "type": "partnership",
+      "year": 1900
+    },
+    {
+      "approx": false,
+      "date": "1901",
+      "day": null,
+      "id": "death:alder-walter",
+      "month": null,
+      "people": [
+        "alder-walter"
+      ],
+      "place": "",
+      "text": "Walter Alder died",
+      "type": "death",
+      "year": 1901
+    },
+    {
+      "approx": false,
+      "date": "1905-04",
+      "day": null,
+      "end": null,
+      "id": "fact:alder-ben:0",
+      "kind": "immigration",
+      "month": 4,
+      "people": [
+        "alder-ben"
+      ],
+      "place": "Halifax, Nova Scotia, Canada",
+      "text": "Benjamin Alder immigrated",
+      "type": "fact",
+      "value": "",
+      "year": 1905
+    },
+    {
+      "approx": false,
+      "date": "1912-11-30",
+      "day": 30,
+      "id": "death:alder-ada",
+      "month": 11,
+      "people": [
+        "alder-ada"
+      ],
+      "place": "Leeds, England",
+      "text": "Ada Marie Alder died",
+      "type": "death",
+      "year": 1912
+    },
+    {
+      "approx": false,
+      "date": "1912-12-04",
+      "day": 4,
+      "end": null,
+      "id": "fact:alder-ada:2",
+      "kind": "burial",
+      "month": 12,
+      "people": [
+        "alder-ada"
+      ],
+      "place": "Leeds, England",
+      "text": "Ada Marie Alder buried",
+      "type": "fact",
+      "value": "",
+      "year": 1912
+    },
+    {
+      "approx": false,
+      "date": "1918",
+      "day": null,
+      "id": "partnership:alder-dan+reed-lena",
+      "kind": "engagement",
+      "month": null,
+      "people": [
+        "alder-dan",
+        "reed-lena"
+      ],
+      "place": "",
+      "text": "Dan Alder & Lena Reed engaged",
+      "type": "partnership",
+      "year": 1918
+    },
+    {
+      "approx": false,
+      "date": "1919",
+      "day": null,
+      "id": "divorce:alder-dan+reed-lena",
+      "kind": "engagement",
+      "month": null,
+      "people": [
+        "alder-dan",
+        "reed-lena"
+      ],
+      "place": "",
+      "reason": "separation",
+      "text": "Dan Alder & Lena Reed separated",
+      "type": "divorce",
+      "year": 1919
+    },
+    {
+      "approx": false,
+      "date": "1920",
+      "day": null,
+      "id": "birth:smith-john",
+      "month": null,
+      "people": [
+        "smith-john"
+      ],
+      "place": "",
+      "text": "John Smith born",
+      "type": "birth",
+      "year": 1920
+    },
+    {
+      "approx": false,
+      "date": "1920",
+      "day": null,
+      "id": "marriage:alder-dan+wu-meiling:1",
+      "kind": "marriage",
+      "month": null,
+      "people": [
+        "alder-dan",
+        "wu-meiling"
+      ],
+      "place": "Vancouver, BC",
+      "text": "Dan Alder & Meiling Wu married",
+      "type": "marriage",
+      "year": 1920
+    },
+    {
+      "approx": false,
+      "date": "1920",
+      "day": null,
+      "id": "partnership:alder-dan+wu-meiling",
+      "kind": "civil-union",
+      "month": null,
+      "people": [
+        "alder-dan",
+        "wu-meiling"
+      ],
+      "place": "",
+      "text": "Dan Alder & Meiling Wu entered a civil union",
+      "type": "partnership",
+      "year": 1920
+    },
+    {
+      "approx": false,
+      "date": "1921",
+      "day": null,
+      "id": "divorce:alder-dan+wu-meiling",
+      "kind": "civil-union",
+      "month": null,
+      "people": [
+        "alder-dan",
+        "wu-meiling"
+      ],
+      "place": "",
+      "reason": "annulment",
+      "text": "Marriage of Dan Alder & Meiling Wu annulled",
+      "type": "divorce",
+      "year": 1921
+    },
+    {
+      "approx": false,
+      "date": "1922-05-05",
+      "day": 5,
+      "id": "marriage:alder-dan+ross-hana",
+      "kind": "marriage",
+      "month": 5,
+      "people": [
+        "alder-dan",
+        "ross-hana"
+      ],
+      "place": "",
+      "text": "Dan Alder & Hana Ross married",
+      "type": "marriage",
+      "year": 1922
+    },
+    {
+      "approx": false,
+      "date": "1925",
+      "day": null,
+      "id": "birth:brown-mary",
+      "month": null,
+      "people": [
+        "brown-mary"
+      ],
+      "place": "",
+      "text": "Mary Brown born",
+      "type": "birth",
+      "year": 1925
+    },
+    {
+      "approx": false,
+      "date": "1925-10-10",
+      "day": 10,
+      "id": "birth:alder-eli",
+      "month": 10,
+      "people": [
+        "alder-eli"
+      ],
+      "place": "",
+      "text": "Eli Alder born",
+      "type": "birth",
+      "year": 1925
+    },
+    {
+      "approx": false,
+      "date": "1930",
+      "day": null,
+      "id": "birth:hill-june",
+      "month": null,
+      "people": [
+        "hill-june"
+      ],
+      "place": "",
+      "text": "June Hill born",
+      "type": "birth",
+      "year": 1930
+    },
+    {
+      "approx": false,
+      "date": "1930",
+      "day": null,
+      "id": "death:alder-ben",
+      "month": null,
+      "people": [
+        "alder-ben"
+      ],
+      "place": "Bradford, England",
+      "text": "Benjamin Alder died",
+      "type": "death",
+      "year": 1930
+    },
+    {
+      "approx": false,
+      "date": "1940",
+      "day": null,
+      "id": "divorce:alder-dan+ross-hana",
+      "kind": "marriage",
+      "month": null,
+      "people": [
+        "alder-dan",
+        "ross-hana"
+      ],
+      "place": "",
+      "reason": "",
+      "text": "Marriage of Dan Alder & Hana Ross ended",
+      "type": "divorce",
+      "year": 1940
+    },
+    {
+      "approx": false,
+      "date": "1940",
+      "day": null,
+      "id": "death:pike-sara",
+      "month": null,
+      "people": [
+        "pike-sara"
+      ],
+      "place": "",
+      "text": "Sara Pike died",
+      "type": "death",
+      "year": 1940
+    },
+    {
+      "approx": true,
+      "date": "~1950",
+      "day": null,
+      "end": null,
+      "id": "fact:alder-eli:2",
+      "kind": "residence",
+      "month": null,
+      "people": [
+        "alder-eli"
+      ],
+      "place": "Surrey, BC",
+      "text": "Eli Alder lived",
+      "type": "fact",
+      "value": "",
+      "year": 1950
+    },
+    {
+      "approx": false,
+      "date": "1950-03-12",
+      "day": 12,
+      "id": "birth:smith-bob",
+      "month": 3,
+      "people": [
+        "smith-bob"
+      ],
+      "place": "Vancouver, BC",
+      "text": "Bob Smith born",
+      "type": "birth",
+      "year": 1950
+    },
+    {
+      "approx": false,
+      "date": "1960",
+      "day": null,
+      "end": "1985",
+      "id": "fact:alder-eli:1",
+      "kind": "occupation",
+      "month": null,
+      "people": [
+        "alder-eli"
+      ],
+      "place": "",
+      "text": "Eli Alder worked as Principal",
+      "type": "fact",
+      "value": "Principal",
+      "year": 1960
+    },
+    {
+      "approx": false,
+      "date": "1971-02-02",
+      "day": 2,
+      "id": "death:alder-dan",
+      "month": 2,
+      "people": [
+        "alder-dan"
+      ],
+      "place": "",
+      "text": "Dan Alder died",
+      "type": "death",
+      "year": 1971
+    },
+    {
+      "approx": false,
+      "date": "1975",
+      "day": null,
+      "id": "death:wu-meiling",
+      "month": null,
+      "people": [
+        "wu-meiling"
+      ],
+      "place": "",
+      "text": "Meiling Wu died",
+      "type": "death",
+      "year": 1975
+    },
+    {
+      "approx": false,
+      "date": "1980",
+      "day": null,
+      "id": "birth:smith-amy",
+      "month": null,
+      "people": [
+        "smith-amy"
+      ],
+      "place": "",
+      "text": "Amy Smith born",
+      "type": "birth",
+      "year": 1980
+    },
+    {
+      "approx": false,
+      "date": "1980",
+      "day": null,
+      "id": "death:reed-lena",
+      "month": null,
+      "people": [
+        "reed-lena"
+      ],
+      "place": "",
+      "text": "Lena Reed died",
+      "type": "death",
+      "year": 1980
+    },
+    {
+      "approx": false,
+      "date": "1990",
+      "day": null,
+      "id": "death:ross-hana",
+      "month": null,
+      "people": [
+        "ross-hana"
+      ],
+      "place": "",
+      "text": "Hana Ross died",
+      "type": "death",
+      "year": 1990
+    },
+    {
+      "approx": false,
+      "date": "1990",
+      "day": null,
+      "id": "death:smith-john",
+      "month": null,
+      "people": [
+        "smith-john"
+      ],
+      "place": "",
+      "text": "John Smith died",
+      "type": "death",
+      "year": 1990
+    },
+    {
+      "approx": false,
+      "date": "2001",
+      "day": null,
+      "id": "death:brown-mary",
+      "month": null,
+      "people": [
+        "brown-mary"
+      ],
+      "place": "",
+      "text": "Mary Brown died",
+      "type": "death",
+      "year": 2001
+    },
+    {
+      "approx": false,
+      "date": "2010-01-01",
+      "day": 1,
+      "id": "death:alder-eli",
+      "month": 1,
+      "people": [
+        "alder-eli"
+      ],
+      "place": "",
+      "text": "Eli Alder died",
+      "type": "death",
+      "year": 2010
+    },
+    {
+      "approx": false,
+      "date": "2015",
+      "day": null,
+      "id": "death:hill-june",
+      "month": null,
+      "people": [
+        "hill-june"
+      ],
+      "place": "",
+      "text": "June Hill died",
+      "type": "death",
+      "year": 2015
+    },
+    {
+      "approx": false,
+      "date": "2020-07-01",
+      "day": 1,
+      "id": "death:smith-bob",
+      "month": 7,
+      "people": [
+        "smith-bob"
+      ],
+      "place": "Burnaby, BC",
+      "text": "Bob Smith died",
+      "type": "death",
+      "year": 2020
+    }
+  ],
+  "people": {
+    "alder-ada": {
+      "children": [
+        "alder-ben",
+        "alder-cora"
+      ],
+      "name": "Ada Marie Alder",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 1912.911,
+        "open": null,
+        "start": 1840.169
+      },
+      "spouses": [
+        "alder-walter"
+      ]
+    },
+    "alder-ben": {
+      "children": [
+        "alder-dan"
+      ],
+      "name": "Benjamin Alder",
+      "parents": [
+        "alder-walter",
+        "alder-ada"
+      ],
+      "siblings": [
+        "alder-cora",
+        "nameless-one"
+      ],
+      "span": {
+        "end": 1930.5,
+        "open": null,
+        "start": 1864.022
+      },
+      "spouses": [
+        "moss-ellen",
+        "pike-sara"
+      ]
+    },
+    "alder-cora": {
+      "children": [],
+      "name": "Cora Alder",
+      "parents": [
+        "alder-walter",
+        "alder-ada"
+      ],
+      "siblings": [
+        "alder-ben",
+        "nameless-one"
+      ],
+      "span": {
+        "end": 1866.917,
+        "open": null,
+        "start": 1866.5
+      },
+      "spouses": []
+    },
+    "alder-dan": {
+      "children": [
+        "alder-eli"
+      ],
+      "name": "Dan Alder",
+      "parents": [
+        "alder-ben",
+        "moss-ellen"
+      ],
+      "siblings": [],
+      "span": {
+        "end": 1971.086,
+        "open": null,
+        "start": 1892.634
+      },
+      "spouses": [
+        "reed-lena",
+        "ross-hana",
+        "wu-meiling"
+      ]
+    },
+    "alder-eli": {
+      "children": [
+        "living-a9be131674"
+      ],
+      "name": "Eli Alder",
+      "parents": [
+        "alder-dan",
+        "ross-hana"
+      ],
+      "siblings": [],
+      "span": {
+        "end": 2010.0,
+        "open": null,
+        "start": 1925.774
+      },
+      "spouses": [
+        "hill-june"
+      ]
+    },
+    "alder-walter": {
+      "children": [
+        "alder-ben",
+        "alder-cora",
+        "nameless-one"
+      ],
+      "name": "Walter Alder",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 1901.5,
+        "open": null,
+        "start": 1835.5
+      },
+      "spouses": [
+        "alder-ada"
+      ]
+    },
+    "brown-mary": {
+      "children": [
+        "smith-bob"
+      ],
+      "name": "Mary Brown",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 2001.5,
+        "open": null,
+        "start": 1925.5
+      },
+      "spouses": [
+        "smith-john"
+      ]
+    },
+    "hill-june": {
+      "children": [
+        "living-a9be131674"
+      ],
+      "name": "June Hill",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 2015.5,
+        "open": null,
+        "start": 1930.5
+      },
+      "spouses": [
+        "alder-eli"
+      ]
+    },
+    "kerr-ivor": {
+      "children": [],
+      "name": "Ivor Kerr",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 1770.5,
+        "open": null,
+        "start": 1700.5
+      },
+      "spouses": [
+        "kerr-thea"
+      ]
+    },
+    "kerr-thea": {
+      "children": [],
+      "name": "Thea Kerr",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 1790.5,
+        "open": null,
+        "start": 1705.5
+      },
+      "spouses": [
+        "kerr-ivor"
+      ]
+    },
+    "living-234ad8d9bc": {
+      "children": [],
+      "name": "Living",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": null,
+        "open": null,
+        "start": null
+      },
+      "spouses": []
+    },
+    "living-77e92948bb": {
+      "children": [
+        "living-e9c71c91f4"
+      ],
+      "name": "Living",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": null,
+        "open": null,
+        "start": null
+      },
+      "spouses": [
+        "living-a9be131674"
+      ]
+    },
+    "living-993898cebe": {
+      "children": [],
+      "name": "Living",
+      "parents": [
+        "smith-bob",
+        "living-99e6a4f467"
+      ],
+      "siblings": [
+        "smith-amy"
+      ],
+      "span": {
+        "end": null,
+        "open": null,
+        "start": null
+      },
+      "spouses": []
+    },
+    "living-99e6a4f467": {
+      "children": [
+        "living-993898cebe",
+        "smith-amy"
+      ],
+      "name": "Living",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": null,
+        "open": null,
+        "start": null
+      },
+      "spouses": [
+        "smith-bob"
+      ]
+    },
+    "living-a9be131674": {
+      "children": [
+        "living-e9c71c91f4"
+      ],
+      "name": "Living",
+      "parents": [
+        "alder-eli",
+        "hill-june"
+      ],
+      "siblings": [],
+      "span": {
+        "end": null,
+        "open": null,
+        "start": null
+      },
+      "spouses": [
+        "living-77e92948bb"
+      ]
+    },
+    "living-aec1d13b69": {
+      "children": [],
+      "name": "Living",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": null,
+        "open": null,
+        "start": null
+      },
+      "spouses": []
+    },
+    "living-e75de51c72": {
+      "children": [],
+      "name": "Living",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": null,
+        "open": null,
+        "start": null
+      },
+      "spouses": []
+    },
+    "living-e9c71c91f4": {
+      "children": [],
+      "name": "Living",
+      "parents": [
+        "living-a9be131674",
+        "living-77e92948bb"
+      ],
+      "siblings": [],
+      "span": {
+        "end": null,
+        "open": null,
+        "start": null
+      },
+      "spouses": []
+    },
+    "moss-ellen": {
+      "children": [
+        "alder-dan"
+      ],
+      "name": "Ellen Moss",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": null,
+        "open": "unknown",
+        "start": 1868.5
+      },
+      "spouses": [
+        "alder-ben"
+      ]
+    },
+    "nameless-one": {
+      "children": [],
+      "name": "nameless-one",
+      "parents": [
+        "alder-walter"
+      ],
+      "siblings": [
+        "alder-ben",
+        "alder-cora"
+      ],
+      "span": {
+        "end": 1760.5,
+        "open": null,
+        "start": 1700.5
+      },
+      "spouses": []
+    },
+    "old-open": {
+      "children": [],
+      "name": "Old Open",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": null,
+        "open": "unknown",
+        "start": 1850.5
+      },
+      "spouses": []
+    },
+    "pike-sara": {
+      "children": [],
+      "name": "Sara Pike",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 1940.5,
+        "open": null,
+        "start": 1870.5
+      },
+      "spouses": [
+        "alder-ben"
+      ]
+    },
+    "reed-lena": {
+      "children": [],
+      "name": "Lena Reed",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 1980.5,
+        "open": null,
+        "start": 1895.5
+      },
+      "spouses": [
+        "alder-dan"
+      ]
+    },
+    "ross-hana": {
+      "children": [
+        "alder-eli"
+      ],
+      "name": "Hana Ross",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 1990.5,
+        "open": null,
+        "start": 1900.5
+      },
+      "spouses": [
+        "alder-dan"
+      ]
+    },
+    "smith-amy": {
+      "children": [],
+      "name": "Amy Smith",
+      "parents": [
+        "smith-bob",
+        "living-99e6a4f467"
+      ],
+      "siblings": [
+        "living-993898cebe"
+      ],
+      "span": {
+        "end": null,
+        "open": "unknown",
+        "start": 1980.5
+      },
+      "spouses": []
+    },
+    "smith-bob": {
+      "children": [
+        "living-993898cebe",
+        "smith-amy"
+      ],
+      "name": "Bob Smith",
+      "parents": [
+        "smith-john",
+        "brown-mary"
+      ],
+      "siblings": [],
+      "span": {
+        "end": 2020.5,
+        "open": null,
+        "start": 1950.196
+      },
+      "spouses": [
+        "living-99e6a4f467"
+      ]
+    },
+    "smith-john": {
+      "children": [
+        "smith-bob"
+      ],
+      "name": "John Smith",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 1990.5,
+        "open": null,
+        "start": 1920.5
+      },
+      "spouses": [
+        "brown-mary"
+      ]
+    },
+    "wu-meiling": {
+      "children": [],
+      "name": "Meiling Wu",
+      "parents": [],
+      "siblings": [],
+      "span": {
+        "end": 1975.5,
+        "open": null,
+        "start": 1896.5
+      },
+      "spouses": [
+        "alder-dan"
+      ]
+    }
+  },
+  "range": {
+    "max": 2020,
+    "min": 1700
+  },
+  "rows": [
+    "kerr-ivor",
+    "nameless-one",
+    "kerr-thea",
+    "alder-walter",
+    "alder-ada",
+    "old-open",
+    "alder-ben",
+    "alder-cora",
+    "moss-ellen",
+    "pike-sara",
+    "alder-dan",
+    "reed-lena",
+    "wu-meiling",
+    "ross-hana",
+    "smith-john",
+    "brown-mary",
+    "alder-eli",
+    "hill-june",
+    "smith-bob",
+    "smith-amy"
+  ],
+  "undated": [
+    "living-234ad8d9bc",
+    "living-77e92948bb",
+    "living-993898cebe",
+    "living-99e6a4f467",
+    "living-a9be131674",
+    "living-aec1d13b69",
+    "living-e75de51c72",
+    "living-e9c71c91f4"
+  ],
+  "version": 1
+}

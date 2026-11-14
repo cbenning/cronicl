@@ -1,0 +1,106 @@
+{
+  "bounds": {
+    "h": 276,
+    "w": 408
+  },
+  "edges": [
+    {
+      "from": "alder-fay",
+      "kind": "spouse",
+      "points": [
+        [
+          192,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "alder-fay+gray-sam"
+    },
+    {
+      "from": "alder-fay+gray-sam",
+      "kind": "child",
+      "points": [
+        [
+          204,
+          64
+        ],
+        [
+          204,
+          114
+        ],
+        [
+          204,
+          114
+        ],
+        [
+          204,
+          180
+        ]
+      ],
+      "to": "alder-gus"
+    },
+    {
+      "from": "gray-sam",
+      "kind": "spouse",
+      "points": [
+        [
+          216,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "alder-fay+gray-sam"
+    }
+  ],
+  "focus": "gray-sam",
+  "hidden": {
+    "alder-fay": 2
+  },
+  "nodes": [
+    {
+      "h": 64,
+      "id": "alder-fay",
+      "w": 160,
+      "x": 32,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "alder-gus",
+      "w": 160,
+      "x": 124,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "gray-sam",
+      "w": 160,
+      "x": 216,
+      "y": 32
+    }
+  ],
+  "unions": [
+    {
+      "id": "alder-fay+gray-sam",
+      "members": [
+        "alder-fay",
+        "gray-sam"
+      ],
+      "partnerships": [
+        {
+          "start": "2008-08-08",
+          "type": "marriage"
+        }
+      ],
+      "x": 204,
+      "y": 64
+    }
+  ],
+  "version": 1
+}

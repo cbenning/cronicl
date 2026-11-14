@@ -1,0 +1,183 @@
+{
+  "bounds": {
+    "h": 424,
+    "w": 408
+  },
+  "edges": [
+    {
+      "from": "brown-mary",
+      "kind": "spouse",
+      "points": [
+        [
+          192,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "brown-mary+smith-john"
+    },
+    {
+      "from": "brown-mary+smith-john",
+      "kind": "child",
+      "points": [
+        [
+          204,
+          64
+        ],
+        [
+          204,
+          114
+        ],
+        [
+          296,
+          114
+        ],
+        [
+          296,
+          180
+        ]
+      ],
+      "to": "smith-bob"
+    },
+    {
+      "from": "living-99e6a4f467",
+      "kind": "spouse",
+      "points": [
+        [
+          192,
+          212
+        ],
+        [
+          204,
+          212
+        ]
+      ],
+      "to": "living-99e6a4f467+smith-bob"
+    },
+    {
+      "from": "living-99e6a4f467+smith-bob",
+      "kind": "child",
+      "points": [
+        [
+          204,
+          212
+        ],
+        [
+          204,
+          262
+        ],
+        [
+          204,
+          262
+        ],
+        [
+          204,
+          328
+        ]
+      ],
+      "to": "living-993898cebe"
+    },
+    {
+      "from": "smith-bob",
+      "kind": "spouse",
+      "points": [
+        [
+          216,
+          212
+        ],
+        [
+          204,
+          212
+        ]
+      ],
+      "to": "living-99e6a4f467+smith-bob"
+    },
+    {
+      "from": "smith-john",
+      "kind": "spouse",
+      "points": [
+        [
+          216,
+          64
+        ],
+        [
+          204,
+          64
+        ]
+      ],
+      "to": "brown-mary+smith-john"
+    }
+  ],
+  "focus": "living-993898cebe",
+  "hidden": {
+    "living-993898cebe": 1,
+    "living-99e6a4f467": 1,
+    "smith-bob": 1
+  },
+  "nodes": [
+    {
+      "h": 64,
+      "id": "brown-mary",
+      "w": 160,
+      "x": 32,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "living-993898cebe",
+      "w": 160,
+      "x": 124,
+      "y": 328
+    },
+    {
+      "h": 64,
+      "id": "living-99e6a4f467",
+      "w": 160,
+      "x": 32,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "smith-bob",
+      "w": 160,
+      "x": 216,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "smith-john",
+      "w": 160,
+      "x": 216,
+      "y": 32
+    }
+  ],
+  "unions": [
+    {
+      "id": "brown-mary+smith-john",
+      "members": [
+        "brown-mary",
+        "smith-john"
+      ],
+      "x": 204,
+      "y": 64
+    },
+    {
+      "id": "living-99e6a4f467+smith-bob",
+      "members": [
+        "living-99e6a4f467",
+        "smith-bob"
+      ],
+      "partnerships": [
+        {
+          "type": "unknown"
+        }
+      ],
+      "x": 204,
+      "y": 212
+    }
+  ],
+  "version": 1
+}

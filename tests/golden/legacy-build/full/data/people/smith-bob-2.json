@@ -1,0 +1,41 @@
+{
+  "age_at_death": null,
+  "age_at_death_approx": false,
+  "birth": {
+    "date": "1975",
+    "place": null,
+    "when": "1975"
+  },
+  "bodyHtml": "",
+  "children": [],
+  "death": null,
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1975",
+      "day": null,
+      "id": "birth:smith-bob-2",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "born",
+      "type": "birth",
+      "when": "1975",
+      "year": 1975
+    }
+  ],
+  "facts": [],
+  "id": "smith-bob-2",
+  "image": null,
+  "initials": "BS",
+  "name": "Bob Smith",
+  "parents": [],
+  "sex": "M",
+  "siblings": [],
+  "spouses": [],
+  "summary": "Born 1975.",
+  "years": "b. 1975"
+}

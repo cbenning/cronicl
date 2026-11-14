@@ -1,0 +1,41 @@
+{
+  "age_at_death": null,
+  "age_at_death_approx": false,
+  "birth": {
+    "date": "1850",
+    "place": null,
+    "when": "1850"
+  },
+  "bodyHtml": "",
+  "children": [],
+  "death": null,
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1850",
+      "day": null,
+      "id": "birth:old-open",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "born",
+      "type": "birth",
+      "when": "1850",
+      "year": 1850
+    }
+  ],
+  "facts": [],
+  "id": "old-open",
+  "image": null,
+  "initials": "OO",
+  "name": "Old Open",
+  "parents": [],
+  "sex": "U",
+  "siblings": [],
+  "spouses": [],
+  "summary": "Born 1850.",
+  "years": "b. 1850"
+}

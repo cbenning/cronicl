@@ -1,0 +1,41 @@
+{
+  "age_at_death": null,
+  "age_at_death_approx": false,
+  "birth": {
+    "date": "1955-06-06",
+    "place": null,
+    "when": "6 June 1955"
+  },
+  "bodyHtml": "",
+  "children": [],
+  "death": null,
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1955-06-06",
+      "day": 6,
+      "id": "birth:stone-oak",
+      "month": 6,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "born",
+      "type": "birth",
+      "when": "6 June 1955",
+      "year": 1955
+    }
+  ],
+  "facts": [],
+  "id": "stone-oak",
+  "image": null,
+  "initials": "OS",
+  "name": "Oak Stone",
+  "parents": [],
+  "sex": "M",
+  "siblings": [],
+  "spouses": [],
+  "summary": "Born 6 June 1955.",
+  "years": "b. 1955"
+}

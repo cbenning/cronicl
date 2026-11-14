@@ -1,0 +1,84 @@
+{
+  "age_at_death": null,
+  "age_at_death_approx": false,
+  "birth": null,
+  "bodyHtml": "",
+  "children": [],
+  "death": null,
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1980",
+      "day": null,
+      "id": "birth:smith-amy",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "sibling",
+      "text": "Amy Smith born",
+      "type": "birth",
+      "when": "1980",
+      "year": 1980
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "2020-07-01",
+      "day": 1,
+      "id": "death:smith-bob",
+      "month": 7,
+      "note": null,
+      "place": "Burnaby, BC",
+      "role": "parent",
+      "text": "Bob Smith died",
+      "type": "death",
+      "when": "1 July 2020",
+      "year": 2020
+    }
+  ],
+  "facts": [],
+  "id": "living-993898cebe",
+  "image": null,
+  "initials": "L",
+  "name": "Living",
+  "parents": [
+    {
+      "id": "smith-bob",
+      "initials": "BS",
+      "name": "Bob Smith",
+      "years": "1950–2020"
+    },
+    {
+      "id": "living-99e6a4f467",
+      "initials": "L",
+      "name": "Living",
+      "years": ""
+    }
+  ],
+  "sex": "U",
+  "siblings": [
+    {
+      "id": "smith-amy",
+      "initials": "AS",
+      "name": "Amy Smith",
+      "type": "full",
+      "via": [
+        {
+          "id": "smith-bob",
+          "name": "Bob Smith"
+        },
+        {
+          "id": "living-99e6a4f467",
+          "name": "Living"
+        }
+      ],
+      "years": "b. 1980"
+    }
+  ],
+  "spouses": [],
+  "summary": "",
+  "years": ""
+}

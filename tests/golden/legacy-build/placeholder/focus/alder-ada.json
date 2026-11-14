@@ -1,0 +1,637 @@
+{
+  "bounds": {
+    "h": 868,
+    "w": 992
+  },
+  "edges": [
+    {
+      "from": "alder-ada",
+      "kind": "spouse",
+      "points": [
+        [
+          468,
+          64
+        ],
+        [
+          480,
+          64
+        ]
+      ],
+      "to": "alder-ada+alder-walter"
+    },
+    {
+      "from": "alder-ada+alder-walter",
+      "kind": "child",
+      "points": [
+        [
+          480,
+          64
+        ],
+        [
+          480,
+          114
+        ],
+        [
+          480,
+          114
+        ],
+        [
+          480,
+          180
+        ]
+      ],
+      "to": "alder-ben"
+    },
+    {
+      "from": "alder-ada+alder-walter",
+      "kind": "child",
+      "points": [
+        [
+          480,
+          64
+        ],
+        [
+          480,
+          114
+        ],
+        [
+          880,
+          114
+        ],
+        [
+          880,
+          180
+        ]
+      ],
+      "to": "alder-cora"
+    },
+    {
+      "from": "alder-ben",
+      "kind": "spouse",
+      "points": [
+        [
+          400,
+          212
+        ],
+        [
+          388,
+          212
+        ]
+      ],
+      "to": "alder-ben+moss-ellen"
+    },
+    {
+      "from": "alder-ben",
+      "kind": "spouse",
+      "points": [
+        [
+          560,
+          212
+        ],
+        [
+          572,
+          212
+        ]
+      ],
+      "to": "alder-ben+pike-sara"
+    },
+    {
+      "from": "alder-ben+moss-ellen",
+      "kind": "child",
+      "points": [
+        [
+          388,
+          212
+        ],
+        [
+          388,
+          262
+        ],
+        [
+          296,
+          262
+        ],
+        [
+          296,
+          328
+        ]
+      ],
+      "to": "alder-dan"
+    },
+    {
+      "from": "alder-dan",
+      "kind": "spouse",
+      "points": [
+        [
+          216,
+          360
+        ],
+        [
+          204,
+          360
+        ]
+      ],
+      "to": "alder-dan+reed-lena"
+    },
+    {
+      "from": "alder-dan",
+      "kind": "spouse",
+      "points": [
+        [
+          376,
+          360
+        ],
+        [
+          388,
+          360
+        ]
+      ],
+      "to": "alder-dan+ross-hana"
+    },
+    {
+      "from": "alder-dan",
+      "kind": "spouse",
+      "points": [
+        [
+          376,
+          360
+        ],
+        [
+          480,
+          360
+        ]
+      ],
+      "to": "alder-dan+wu-meiling"
+    },
+    {
+      "from": "alder-dan+ross-hana",
+      "kind": "child",
+      "points": [
+        [
+          388,
+          360
+        ],
+        [
+          388,
+          410
+        ],
+        [
+          296,
+          410
+        ],
+        [
+          296,
+          476
+        ]
+      ],
+      "to": "alder-eli"
+    },
+    {
+      "from": "alder-eli",
+      "kind": "spouse",
+      "points": [
+        [
+          376,
+          508
+        ],
+        [
+          388,
+          508
+        ]
+      ],
+      "to": "alder-eli+hill-june"
+    },
+    {
+      "from": "alder-eli+hill-june",
+      "kind": "child",
+      "points": [
+        [
+          388,
+          508
+        ],
+        [
+          388,
+          558
+        ],
+        [
+          480,
+          558
+        ],
+        [
+          480,
+          624
+        ]
+      ],
+      "to": "living-a9be131674"
+    },
+    {
+      "from": "alder-walter",
+      "kind": "spouse",
+      "points": [
+        [
+          492,
+          64
+        ],
+        [
+          480,
+          64
+        ]
+      ],
+      "to": "alder-ada+alder-walter"
+    },
+    {
+      "from": "hill-june",
+      "kind": "spouse",
+      "points": [
+        [
+          400,
+          508
+        ],
+        [
+          388,
+          508
+        ]
+      ],
+      "to": "alder-eli+hill-june"
+    },
+    {
+      "from": "living-77e92948bb",
+      "kind": "spouse",
+      "points": [
+        [
+          376,
+          656
+        ],
+        [
+          388,
+          656
+        ]
+      ],
+      "to": "living-77e92948bb+living-a9be131674"
+    },
+    {
+      "from": "living-77e92948bb+living-a9be131674",
+      "kind": "child",
+      "points": [
+        [
+          388,
+          656
+        ],
+        [
+          388,
+          706
+        ],
+        [
+          388,
+          706
+        ],
+        [
+          388,
+          772
+        ]
+      ],
+      "to": "living-e9c71c91f4"
+    },
+    {
+      "from": "living-a9be131674",
+      "kind": "spouse",
+      "points": [
+        [
+          400,
+          656
+        ],
+        [
+          388,
+          656
+        ]
+      ],
+      "to": "living-77e92948bb+living-a9be131674"
+    },
+    {
+      "from": "moss-ellen",
+      "kind": "spouse",
+      "points": [
+        [
+          376,
+          212
+        ],
+        [
+          388,
+          212
+        ]
+      ],
+      "to": "alder-ben+moss-ellen"
+    },
+    {
+      "from": "pike-sara",
+      "kind": "spouse",
+      "points": [
+        [
+          584,
+          212
+        ],
+        [
+          572,
+          212
+        ]
+      ],
+      "to": "alder-ben+pike-sara"
+    },
+    {
+      "from": "reed-lena",
+      "kind": "spouse",
+      "points": [
+        [
+          192,
+          360
+        ],
+        [
+          204,
+          360
+        ]
+      ],
+      "to": "alder-dan+reed-lena"
+    },
+    {
+      "from": "ross-hana",
+      "kind": "spouse",
+      "points": [
+        [
+          400,
+          360
+        ],
+        [
+          388,
+          360
+        ]
+      ],
+      "to": "alder-dan+ross-hana"
+    },
+    {
+      "from": "wu-meiling",
+      "kind": "spouse",
+      "points": [
+        [
+          584,
+          360
+        ],
+        [
+          480,
+          360
+        ]
+      ],
+      "to": "alder-dan+wu-meiling"
+    }
+  ],
+  "focus": "alder-ada",
+  "hidden": {
+    "alder-ben": 1,
+    "alder-cora": 1,
+    "alder-walter": 1
+  },
+  "nodes": [
+    {
+      "h": 64,
+      "id": "alder-ada",
+      "w": 160,
+      "x": 308,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "alder-ben",
+      "w": 160,
+      "x": 400,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "alder-cora",
+      "w": 160,
+      "x": 800,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "alder-dan",
+      "w": 160,
+      "x": 216,
+      "y": 328
+    },
+    {
+      "h": 64,
+      "id": "alder-eli",
+      "w": 160,
+      "x": 216,
+      "y": 476
+    },
+    {
+      "h": 64,
+      "id": "alder-walter",
+      "w": 160,
+      "x": 492,
+      "y": 32
+    },
+    {
+      "h": 64,
+      "id": "hill-june",
+      "w": 160,
+      "x": 400,
+      "y": 476
+    },
+    {
+      "h": 64,
+      "id": "living-77e92948bb",
+      "w": 160,
+      "x": 216,
+      "y": 624
+    },
+    {
+      "h": 64,
+      "id": "living-a9be131674",
+      "w": 160,
+      "x": 400,
+      "y": 624
+    },
+    {
+      "h": 64,
+      "id": "living-e9c71c91f4",
+      "w": 160,
+      "x": 308,
+      "y": 772
+    },
+    {
+      "h": 64,
+      "id": "moss-ellen",
+      "w": 160,
+      "x": 216,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "pike-sara",
+      "w": 160,
+      "x": 584,
+      "y": 180
+    },
+    {
+      "h": 64,
+      "id": "reed-lena",
+      "w": 160,
+      "x": 32,
+      "y": 328
+    },
+    {
+      "h": 64,
+      "id": "ross-hana",
+      "w": 160,
+      "x": 400,
+      "y": 328
+    },
+    {
+      "h": 64,
+      "id": "wu-meiling",
+      "w": 160,
+      "x": 584,
+      "y": 328
+    }
+  ],
+  "unions": [
+    {
+      "id": "alder-ada+alder-walter",
+      "members": [
+        "alder-ada",
+        "alder-walter"
+      ],
+      "partnerships": [
+        {
+          "note": "Married at St Peter's.",
+          "place": "Leeds, England",
+          "start": "1862-06-14",
+          "type": "marriage"
+        }
+      ],
+      "x": 480,
+      "y": 64
+    },
+    {
+      "id": "alder-ben+moss-ellen",
+      "members": [
+        "alder-ben",
+        "moss-ellen"
+      ],
+      "partnerships": [
+        {
+          "end": "1895-02-11",
+          "end_reason": "divorce",
+          "start": "1890-05-01",
+          "type": "marriage"
+        },
+        {
+          "start": "1899-09-09",
+          "type": "marriage"
+        }
+      ],
+      "x": 388,
+      "y": 212
+    },
+    {
+      "ended": true,
+      "id": "alder-ben+pike-sara",
+      "members": [
+        "alder-ben",
+        "pike-sara"
+      ],
+      "partnerships": [
+        {
+          "end": "unknown",
+          "start": "1900",
+          "type": "partnership"
+        }
+      ],
+      "x": 572,
+      "y": 212
+    },
+    {
+      "ended": true,
+      "id": "alder-dan+reed-lena",
+      "members": [
+        "alder-dan",
+        "reed-lena"
+      ],
+      "partnerships": [
+        {
+          "end": "1919",
+          "end_reason": "separation",
+          "start": "1918",
+          "type": "engagement"
+        }
+      ],
+      "x": 204,
+      "y": 360
+    },
+    {
+      "ended": true,
+      "id": "alder-dan+ross-hana",
+      "members": [
+        "alder-dan",
+        "ross-hana"
+      ],
+      "partnerships": [
+        {
+          "end": "1940",
+          "start": "1922-05-05",
+          "type": "marriage"
+        }
+      ],
+      "x": 388,
+      "y": 360
+    },
+    {
+      "id": "alder-dan+wu-meiling",
+      "members": [
+        "alder-dan",
+        "wu-meiling"
+      ],
+      "partnerships": [
+        {
+          "end": "1921",
+          "end_reason": "annulment",
+          "start": "1920",
+          "type": "civil-union"
+        },
+        {
+          "place": "Vancouver, BC",
+          "start": "1920",
+          "type": "marriage"
+        }
+      ],
+      "x": 480,
+      "y": 360
+    },
+    {
+      "id": "alder-eli+hill-june",
+      "members": [
+        "alder-eli",
+        "hill-june"
+      ],
+      "x": 388,
+      "y": 508
+    },
+    {
+      "id": "living-77e92948bb+living-a9be131674",
+      "members": [
+        "living-77e92948bb",
+        "living-a9be131674"
+      ],
+      "partnerships": [
+        {
+          "type": "unknown"
+        }
+      ],
+      "x": 388,
+      "y": 656
+    }
+  ],
+  "version": 1
+}

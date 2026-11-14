@@ -1,0 +1,108 @@
+{
+  "age_at_death": null,
+  "age_at_death_approx": false,
+  "birth": {
+    "date": "1980",
+    "place": null,
+    "when": "1980"
+  },
+  "bodyHtml": "",
+  "children": [],
+  "death": {
+    "date": null,
+    "place": null,
+    "when": ""
+  },
+  "events": [
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "1980",
+      "day": null,
+      "id": "birth:smith-amy",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "self",
+      "text": "born",
+      "type": "birth",
+      "when": "1980",
+      "year": 1980
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "2012",
+      "day": null,
+      "id": "birth:smith-tom",
+      "month": null,
+      "note": null,
+      "place": "",
+      "role": "sibling",
+      "text": "Tom Smith born",
+      "type": "birth",
+      "when": "2012",
+      "year": 2012
+    },
+    {
+      "age": null,
+      "age_approx": false,
+      "cite": [],
+      "date": "2020-07-01",
+      "day": 1,
+      "id": "death:smith-bob",
+      "month": 7,
+      "note": null,
+      "place": "Burnaby, BC",
+      "role": "parent",
+      "text": "Bob Smith died",
+      "type": "death",
+      "when": "1 July 2020",
+      "year": 2020
+    }
+  ],
+  "facts": [],
+  "id": "smith-amy",
+  "image": null,
+  "initials": "AS",
+  "name": "Amy Smith",
+  "parents": [
+    {
+      "id": "smith-bob",
+      "initials": "BS",
+      "name": "Bob Smith",
+      "years": "1950–2020"
+    },
+    {
+      "id": "jones-jane",
+      "initials": "JJ",
+      "name": "Jane Jones",
+      "years": "b. ~1952"
+    }
+  ],
+  "sex": "F",
+  "siblings": [
+    {
+      "id": "smith-tom",
+      "initials": "TS",
+      "name": "Tom Smith",
+      "type": "full",
+      "via": [
+        {
+          "id": "smith-bob",
+          "name": "Bob Smith"
+        },
+        {
+          "id": "jones-jane",
+          "name": "Jane Jones"
+        }
+      ],
+      "years": "b. 2012"
+    }
+  ],
+  "spouses": [],
+  "summary": "Born 1980.",
+  "years": "b. 1980"
+}
