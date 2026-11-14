@@ -68,10 +68,10 @@
       var p = entry.photos[i];
       if (!isObject(p) || typeof p.name !== 'string') continue;
       var thumbSrc = confine(base, p.thumb), href = confine(base, p.url);
-      if (thumbSrc && href) photos.push({ name: p.name, thumbSrc: thumbSrc, href: href });
+      if (thumbSrc && href) photos.push({ name: p.name, thumbSrc: thumbSrc, viewSrc: confine(base, p.src) || thumbSrc, href: href });
     }
     if (!photos.length) return null;
-    return { count: Math.max(count, photos.length), photos: photos, seeAllHref: seeAllHref };
+    return { count: Math.max(count, photos.length), photos: photos, seeAllHref: seeAllHref, face: confine(base, entry.thumb) };
   }
 
   function withTimeout(start, deps) {
@@ -125,16 +125,131 @@
     }
   }
 
+  // Wraps around the ends, so the arrows never dead-end.
+  function stepIndex(index, delta, length) {
+    if (!length) return 0;
+    return (((index + delta) % length) + length) % length;
+  }
+
+  function supportsDialog(doc) {
+    var view = doc.defaultView;
+    return !!(view && view.HTMLDialogElement && view.HTMLDialogElement.prototype && typeof view.HTMLDialogElement.prototype.showModal === 'function');
+  }
+
+  function button(doc, cls, label, text) {
+    var b = doc.createElement('button');
+    b.setAttribute('type', 'button');
+    b.setAttribute('class', cls);
+    b.setAttribute('aria-label', label);
+    b.textContent = text;
+    return b;
+  }
+
+  function buildLightbox(section, shaped, doc) {
+    var photos = shaped.photos, current = 0, startX = null, fellBack = false;
+    var dialog = doc.createElement('dialog');
+    dialog.setAttribute('class', 'gallery-lightbox');
+    dialog.setAttribute('aria-label', 'Photos');
+    var close = button(doc, 'gallery-close', 'Close', '×');
+    var prev = button(doc, 'gallery-prev', 'Previous photo', '‹');
+    var next = button(doc, 'gallery-next', 'Next photo', '›');
+    var figure = doc.createElement('figure');
+    var img = doc.createElement('img');
+    img.setAttribute('class', 'gallery-big');
+    var counter = doc.createElement('p');
+    counter.setAttribute('class', 'gallery-count');
+    var open = doc.createElement('a');
+    open.setAttribute('class', 'gallery-open');
+    open.setAttribute('target', '_blank');
+    open.setAttribute('rel', 'noopener');
+    open.textContent = 'Open in the gallery';
+    var bar = doc.createElement('p');
+    bar.setAttribute('class', 'gallery-bar');
+    bar.appendChild(counter);
+    bar.appendChild(open);
+    figure.appendChild(img);
+    figure.appendChild(bar);
+    [close, prev, next, figure].forEach(function (el) { dialog.appendChild(el); });
+    section.appendChild(dialog);
+
+    var box = { dialog: dialog, opener: null };
+    box.show = function (index) {
+      current = stepIndex(index, 0, photos.length);
+      var photo = photos[current];
+      fellBack = false;
+      img.setAttribute('src', photo.viewSrc);
+      img.setAttribute('alt', photo.name);
+      counter.textContent = (current + 1) + ' / ' + photos.length;
+      open.setAttribute('href', photo.href);
+      prev.hidden = next.hidden = photos.length < 2;
+      if (photos.length > 1) {  // warm the neighbour so the arrow feels instant
+        var ahead = doc.createElement('img');
+        ahead.setAttribute('src', photos[stepIndex(current, 1, photos.length)].viewSrc);
+      }
+    };
+    var step = function (delta) { box.show(stepIndex(current, delta, photos.length)); };
+    close.addEventListener('click', function () { dialog.close(); });
+    prev.addEventListener('click', function () { step(-1); });
+    next.addEventListener('click', function () { step(1); });
+    dialog.addEventListener('click', function (event) { if (event.target === dialog) dialog.close(); });
+    dialog.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1); }
+      else if (event.key === 'ArrowRight') { event.preventDefault(); step(1); }
+    });
+    dialog.addEventListener('close', function () { if (box.opener && box.opener.focus) box.opener.focus(); });
+    img.addEventListener('error', function () {
+      if (fellBack) return;
+      fellBack = true;
+      img.setAttribute('src', photos[current].thumbSrc);
+    });
+    dialog.addEventListener('pointerdown', function (event) { startX = event.clientX; });
+    dialog.addEventListener('pointerup', function (event) {
+      if (startX === null) return;
+      var dx = event.clientX - startX;
+      startX = null;
+      if (Math.abs(dx) >= 40) step(dx < 0 ? 1 : -1);
+    });
+    return box;
+  }
+
+  function openLightbox(section, shaped, index, doc, opener) {
+    var box = section._lightbox || (section._lightbox = buildLightbox(section, shaped, doc));
+    box.opener = opener;
+    box.show(index);
+    box.dialog.showModal();
+  }
+
+  // Replaces the initials circle with the gallery's face crop, but only once the image has loaded.
+  function swapPortrait(doc, face, name) {
+    var avatar = doc.querySelector('.hero .avatar');
+    if (!face || !avatar || avatar.tagName === 'IMG' || !avatar.parentNode) return;
+    var img = doc.createElement('img');
+    img.setAttribute('class', 'avatar avatar-lg');
+    img.setAttribute('width', '112');
+    img.setAttribute('height', '112');
+    img.setAttribute('alt', name || '');
+    img.addEventListener('load', function () { if (avatar.parentNode) avatar.parentNode.replaceChild(img, avatar); });
+    img.setAttribute('src', face);
+  }
+
   function render(section, shaped, doc) {
     var list = section.querySelector('.gallery-thumbs');
-    shaped.photos.forEach(function (photo) {
+    var featured = shaped.photos.length >= 3;
+    list.setAttribute('data-count', String(shaped.photos.length));
+    shaped.photos.forEach(function (photo, index) {
       var item = doc.createElement('li');
+      if (featured && index === 0) item.setAttribute('class', 'featured');
       var link = doc.createElement('a');
       link.setAttribute('href', photo.href);
       link.setAttribute('target', '_blank');
       link.setAttribute('rel', 'noopener');
+      link.addEventListener('click', function (event) {
+        if (!supportsDialog(doc) || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        openLightbox(section, shaped, index, doc, link);
+      });
       var img = doc.createElement('img');
-      img.setAttribute('src', photo.thumbSrc);
+      img.setAttribute('src', featured && index === 0 ? photo.viewSrc : photo.thumbSrc);
       img.setAttribute('alt', photo.name);
       img.setAttribute('loading', 'lazy');
       link.appendChild(img);
@@ -156,7 +271,11 @@
       var data = section.dataset;
       return load({ type: data.galleryType, url: data.galleryUrl },
         { key: data.galleryKey, explicit: data.galleryExplicit === '1', name: data.galleryName }, deps)
-        .then(function (shaped) { if (shaped) render(section, shaped, doc); })
+        .then(function (shaped) {
+          if (!shaped) return;
+          render(section, shaped, doc);
+          if (data.galleryPortrait === '1') swapPortrait(doc, shaped.face, data.galleryName);
+        })
         .then(null, function () { /* a broken block must never break the page */ });
     } catch (e) {
       return Promise.resolve();
@@ -165,7 +284,7 @@
 
   var api = {
     normalizeBase: normalizeBase, confine: confine, fold: fold, pickEntry: pickEntry, shape: shape,
-    load: load, render: render, init: init, ADAPTERS: ADAPTERS
+    load: load, render: render, init: init, stepIndex: stepIndex, openLightbox: openLightbox, swapPortrait: swapPortrait, ADAPTERS: ADAPTERS
   };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;

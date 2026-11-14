@@ -4,10 +4,22 @@ const g = require('../../src/famsite/viewer/gallery.js');
 
 const BASE = 'https://x.example/photos/';
 
-function El(tag) { this.tag = tag; this.children = []; this.attrs = {}; this.textContent = ''; this.hidden = true; }
-El.prototype.appendChild = function (c) { this.children.push(c); return c; };
+function El(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); this.children = []; this.attrs = {}; this.handlers = {}; this.textContent = ''; this.hidden = true; }
+El.prototype.appendChild = function (c) { c.parentNode = this; this.children.push(c); return c; };
 El.prototype.setAttribute = function (k, v) { this.attrs[k] = String(v); };
-const fakeDoc = () => ({ created: [], createElement(tag) { const e = new El(tag); this.created.push(e); return e; } });
+El.prototype.addEventListener = function (type, fn) { this.handlers[type] = fn; };
+El.prototype.replaceChild = function (n, o) { n.parentNode = this; this.children[this.children.indexOf(o)] = n; this.replaced = [n, o]; };
+El.prototype.find = function (pred) { if (pred(this)) return this; for (const c of this.children) { const f = c.find(pred); if (f) return f; } return null; };
+const fakeDoc = (dialogs) => ({
+  created: [],
+  defaultView: dialogs ? { HTMLDialogElement: { prototype: { showModal() {} } } } : {},
+  createElement(tag) {
+    const e = new El(tag);
+    this.created.push(e);
+    if (tag === 'dialog') { e.shown = 0; e.showModal = function () { this.shown++; }; e.close = function () { this.closed = true; }; }
+    return e;
+  },
+});
 function fakeSection(data) {
   const s = new El('section');
   s.dataset = data || {};
@@ -167,4 +179,129 @@ test('names with letters that cannot be folded never match by name', () => {
   const people = [{ name: '\u041c\u0430\u0440\u0438\u044f Smith', slug: 'maria-smith' }];
   assert.strictEqual(g.pickEntry(people, 'smith', false, '\u0418\u0432\u0430\u043d Smith'), null);
   assert.strictEqual(g.pickEntry(people, 'maria-smith', true, ''), people[0]);
+});
+
+
+const six = () => ({ count: 6, seeAllHref: BASE + '#/c', photos: [1, 2, 3, 4, 5, 6].map((n) => ({ name: 'p' + n, thumbSrc: BASE + 't' + n + '.jpg', viewSrc: BASE + 'v' + n + '.jpg', href: BASE + '#/p' + n })) });
+
+test('stepIndex wraps in both directions', () => {
+  assert.strictEqual(g.stepIndex(0, -1, 6), 5);
+  assert.strictEqual(g.stepIndex(5, 1, 6), 0);
+  assert.strictEqual(g.stepIndex(2, 1, 6), 3);
+  assert.strictEqual(g.stepIndex(0, 1, 0), 0);
+});
+
+test('shape keeps a larger size and a face only when they stay under the gallery', () => {
+  const base = { url: '#/c', count: 2 };
+  const ph = (extra) => Object.assign({ name: 'a', thumb: 't.jpg', url: '#/a' }, extra);
+  assert.strictEqual(g.shape(BASE, Object.assign({ photos: [ph({ src: 'big.jpg' })] }, base)).photos[0].viewSrc, BASE + 'big.jpg');
+  for (const src of [undefined, null, 5, 'https://evil/x', '../x', '//evil/x']) {
+    assert.strictEqual(g.shape(BASE, Object.assign({ photos: [ph({ src })] }, base)).photos[0].viewSrc, BASE + 't.jpg', String(src));
+  }
+  assert.strictEqual(g.shape(BASE, Object.assign({ thumb: 'face.jpg', photos: [ph()] }, base)).face, BASE + 'face.jpg');
+  for (const thumb of [undefined, null, 5, 'https://evil/x', '../x']) assert.strictEqual(g.shape(BASE, Object.assign({ thumb, photos: [ph()] }, base)).face, null, String(thumb));
+});
+
+test('render lays out a featured first photo from three photos up', () => {
+  const section = fakeSection();
+  g.render(section, six(), fakeDoc());
+  const items = section._thumbs.children;
+  assert.strictEqual(section._thumbs.attrs['data-count'], '6');
+  assert.deepStrictEqual(items.map((li) => li.attrs.class || ''), ['featured', '', '', '', '', '']);
+  assert.strictEqual(items[0].children[0].children[0].attrs.src, BASE + 'v1.jpg');
+  assert.strictEqual(items[1].children[0].children[0].attrs.src, BASE + 't2.jpg');
+  const two = fakeSection();
+  const s2 = six(); s2.photos = s2.photos.slice(0, 2);
+  g.render(two, s2, fakeDoc());
+  assert.strictEqual(two._thumbs.attrs['data-count'], '2');
+  assert.deepStrictEqual(two._thumbs.children.map((li) => li.attrs.class || ''), ['', '']);
+  assert.strictEqual(two._thumbs.children[0].children[0].children[0].attrs.src, BASE + 't1.jpg');
+});
+
+test('clicking a tile opens one reusable lightbox; modified clicks and old browsers keep the plain link', () => {
+  const doc = fakeDoc(true);
+  const section = fakeSection();
+  g.render(section, six(), doc);
+  const link = (i) => section._thumbs.children[i].children[0];
+  const click = (i, extra) => { const ev = Object.assign({ prevented: false, preventDefault() { this.prevented = true; } }, extra); link(i).handlers.click(ev); return ev; };
+
+  assert.strictEqual(click(2, { ctrlKey: true }).prevented, false);
+  assert.strictEqual(click(2, { button: 1 }).prevented, false);
+  assert.strictEqual(doc.created.filter((e) => e.tag === 'dialog').length, 0);
+
+  assert.strictEqual(click(2).prevented, true);
+  const dialogs = () => doc.created.filter((e) => e.tag === 'dialog');
+  assert.strictEqual(dialogs().length, 1);
+  const dlg = dialogs()[0];
+  assert.strictEqual(dlg.shown, 1);
+  const counter = dlg.find((e) => e.attrs.class === 'gallery-count');
+  const photoLink = dlg.find((e) => e.attrs.class === 'gallery-open');
+  const img = dlg.find((e) => e.tag === 'img' && e.attrs.class === 'gallery-big');
+  assert.strictEqual(counter.textContent, '3 / 6');
+  assert.strictEqual(photoLink.attrs.href, BASE + '#/p3');
+  assert.match(photoLink.attrs.rel, /noopener/);
+  assert.strictEqual(img.attrs.src, BASE + 'v3.jpg');
+
+  dlg.handlers.keydown({ key: 'ArrowRight', preventDefault() {} });
+  assert.strictEqual(counter.textContent, '4 / 6');
+  click(0);
+  assert.strictEqual(dialogs().length, 1);
+  assert.strictEqual(dlg.shown, 2);
+  assert.strictEqual(counter.textContent, '1 / 6');
+  dlg.handlers.keydown({ key: 'ArrowLeft', preventDefault() {} });
+  assert.strictEqual(counter.textContent, '6 / 6');
+  assert.strictEqual(img.attrs.src, BASE + 'v6.jpg');
+  img.handlers.error();
+  assert.strictEqual(img.attrs.src, BASE + 't6.jpg');
+  img.handlers.error();
+  assert.strictEqual(img.attrs.src, BASE + 't6.jpg');
+  dlg.handlers.click({ target: dlg });
+  assert.strictEqual(dlg.closed, true);
+
+  const old = fakeDoc(false);
+  const s2 = fakeSection();
+  g.render(s2, six(), old);
+  assert.strictEqual(s2._thumbs.children[0].children[0].handlers.click({ preventDefault() { throw new Error('must not intercept'); } }), undefined);
+});
+
+test('swapPortrait replaces the initials only once the face has loaded', () => {
+  const parent = new El('div');
+  const initials = new El('div');
+  parent.appendChild(initials);
+  const doc = Object.assign(fakeDoc(), { querySelector: (sel) => (sel === '.hero .avatar' ? initials : null) });
+  g.swapPortrait(doc, BASE + 'face.jpg', 'Jane Doe');
+  const img = doc.created.find((e) => e.tag === 'img');
+  assert.strictEqual(img.attrs.src, BASE + 'face.jpg');
+  assert.strictEqual(img.attrs.alt, 'Jane Doe');
+  assert.match(img.attrs.class, /avatar avatar-lg/);
+  assert.strictEqual(parent.children[0], initials);
+  img.handlers.load();
+  assert.strictEqual(parent.children[0], img);
+});
+
+test('swapPortrait leaves an existing portrait, a missing face and a missing avatar alone', () => {
+  const photoAvatar = new El('img'); photoAvatar.parentNode = new El('div');
+  let doc = Object.assign(fakeDoc(), { querySelector: () => photoAvatar });
+  g.swapPortrait(doc, BASE + 'face.jpg', 'x');
+  assert.strictEqual(doc.created.length, 0);
+  const div = new El('div'); div.parentNode = new El('div');
+  doc = Object.assign(fakeDoc(), { querySelector: () => div });
+  g.swapPortrait(doc, null, 'x');
+  assert.strictEqual(doc.created.length, 0);
+  doc = Object.assign(fakeDoc(), { querySelector: () => null });
+  g.swapPortrait(doc, BASE + 'face.jpg', 'x');
+  assert.strictEqual(doc.created.length, 0);
+});
+
+test('init swaps the portrait only when the page asked for it', async () => {
+  const run = async (flag) => {
+    const section = fakeSection({ galleryType: 'fussel', galleryUrl: BASE, galleryKey: 'jane-doe', galleryExplicit: '0', galleryName: 'Jane Doe', galleryPortrait: flag });
+    const parent = new El('div'); const initials = new El('div'); parent.appendChild(initials);
+    const doc = Object.assign(fakeDoc(), { getElementById: () => section, querySelector: () => initials });
+    const withFace = manifest(); withFace.people[0].thumb = 'static/_gallery/face.jpg';
+    await g.init(doc, Object.assign({ fetch: () => Promise.resolve(okResponse(withFace)) }, noTimers));
+    return doc.created.filter((e) => e.tag === 'img' && /avatar/.test(e.attrs.class || '')).length;
+  };
+  assert.strictEqual(await run('1'), 1);
+  assert.strictEqual(await run('0'), 0);
 });
