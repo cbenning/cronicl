@@ -680,3 +680,14 @@ def test_a_person_with_their_own_portrait_never_gets_the_fallback(tmp_path, make
     build_site(tree, out, today=TODAY, media_dir=media)
     assert 'data-gallery-portrait="0"' in _page(out, "a")
     assert 'data-gallery-portrait="1"' in _page(out, "b")
+
+
+def test_gallery_display_styles_exist(tmp_path, make_tree):
+    build_site(make_tree([p("a", "Ann", "X")]), tmp_path, today=TODAY)
+    css = (tmp_path / "style.css").read_text(encoding="utf-8")
+    for selector in (".gallery-lightbox", ".gallery-thumbs li.featured", ".gallery-count"):
+        assert selector in css, selector
+    reduced = css.split("prefers-reduced-motion", 1)[1].split("}", 2)[0:2]
+    assert ".gallery-lightbox" in "".join(reduced)
+    printed = css.split("@media print", 1)[1].split("}", 1)[0]
+    assert ".gallery-lightbox" in printed
