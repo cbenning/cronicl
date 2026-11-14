@@ -6,6 +6,7 @@
     <a href="{{ root }}timeline/"{% if active == 'timeline' %} aria-current="page"{% endif %}>Timeline</a>
     <a href="{{ root }}people/index.html"{% if active == 'people' %} aria-current="page"{% endif %}>People</a>
     <a href="{{ root }}places/index.html"{% if active == 'places' %} aria-current="page"{% endif %}>Places</a>
+    {% if gallery %}<a class="site-gallery" href="{{ gallery.url }}" target="_blank" rel="noopener">{{ gallery.label }}</a>{% endif %}
   </nav>
   <form class="site-search" action="{{ root }}people/index.html" method="get" role="search">
     <input type="search" name="q" aria-label="Search people" placeholder="Search people">

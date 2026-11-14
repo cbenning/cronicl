@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="{{ root }}style.css?v={{ v.css }}">
 <script src="{{ root }}kin.js?v={{ v.kin }}" defer></script>
 <script src="{{ root }}site.js?v={{ v.site }}" defer></script>
+{% if gallery %}<script src="{{ root }}gallery.js?v={{ v.gallery }}" defer></script>{% endif %}
 </head>
 <body class="person-page">
 {% include "_header.html" %}
@@ -50,6 +51,13 @@
     </div>
   </section>
   {% if person.bodyHtml %}<article class="bio">{{ person.bodyHtml | safe }}</article>{% endif %}
+  {% if gallery_person %}
+  <section class="gallery" id="gallery" hidden data-gallery-type="{{ gallery.type }}" data-gallery-url="{{ gallery.url }}" data-gallery-key="{{ gallery_person.key }}" data-gallery-explicit="{{ 1 if gallery_person.explicit else 0 }}" data-gallery-name="{{ gallery_person.name }}">
+    <h2>{{ gallery.label }}</h2>
+    <ul class="gallery-thumbs"></ul>
+    <p class="gallery-more"><a target="_blank" rel="noopener"></a></p>
+  </section>
+  {% endif %}
   {% if person.parents or person.spouses or person.children or person.siblings %}
   <section class="family">
     <h2>Family</h2>

@@ -14,6 +14,7 @@ from markdown_it import MarkdownIt
 from .dates import age_between, date_year, format_date, format_years, parse_date
 from .facts import fact_label
 from .focus import focus_people, focus_tree, hidden_counts
+from .galleries import gallery_config
 from .home import home_person
 from .kin import build_kin
 from .layout import compute_layout
@@ -24,7 +25,7 @@ from .model import Event, Tree
 from .places import group_places, place_index
 from .privacy import is_living, redact
 from .relations import Relations, build_relations
-from .slug import slugify
+from .slug import fold_slug, slugify
 from .stats import site_stats
 from .store import cites_of
 from .timeline import build_timeline, event_text
@@ -230,6 +231,20 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
     return payload
 
 
+def _gallery_person(tree: Tree, pid: str, name: str, gallery: dict | None) -> dict | None:
+    """What the browser needs to find this person in the gallery; None when the page must carry no gallery block.
+
+    Only people who exist in the original tree and have a name qualify, so a redacted living person never does.
+    """
+    original = tree.people.get(pid)
+    if gallery is None or original is None or not (original.given or original.surname):
+        return None
+    key = original.gallery_id or fold_slug(name)
+    if not key:
+        return None
+    return {"key": key, "explicit": bool(original.gallery_id), "name": name}
+
+
 def _asset_version(name: str) -> str:
     """A short content hash for a viewer asset, so a rebuilt viewer is never served from a browser's cache."""
     return hashlib.sha256((_PACKAGE / "viewer" / name).read_bytes()).hexdigest()[:12]
@@ -241,7 +256,7 @@ def _write(path: Path, text: str) -> None:
 
 
 _GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate", "media", "tree", "timeline")
-_GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json")
+_GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json", "gallery.js")
 
 
 def _clear_generated(out_dir: Path) -> None:
@@ -364,7 +379,9 @@ def build_site(
         _write(out_dir / rel, text)
         written += 1
 
+    gallery = gallery_config(tree.site)
     env = _env()
+    env.globals["gallery"] = gallery
     put("layout.json", dumps(layout))
     put("index.json", dumps(index))
     put("kin.json", dumps(build_kin(visible, relations)))
@@ -376,6 +393,8 @@ def build_site(
     }
     put("timeline.json", dumps(public_timeline))
     versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css"), "site": _asset_version("site.js"), "kin": _asset_version("kin.js")}
+    if gallery:
+        versions["gallery"] = _asset_version("gallery.js")
     home_context = _home_context(visible, tree.site, payloads, timeline, relations, home, recent)
     put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root="", active="home", **home_context))
     put(
@@ -428,11 +447,12 @@ def build_site(
                 title=title, person=payload, ancestors=ancestor_tree(visible, relations, pid),
                 descendants=outline, descendant_count=count_descendants(outline),
                 links=page_links(tree.site, pid, payload["name"]) if pid in tree.people else [],
+                gallery_person=_gallery_person(tree, pid, payload["name"], gallery),
                 v=versions, home=home, root="../../"
             ),
         )
 
-    for asset in ("viewer.js", "style.css", "site.js", "kin.js"):
+    for asset in ("viewer.js", "style.css", "site.js", "kin.js") + (("gallery.js",) if gallery else ()):
         source = _PACKAGE / "viewer" / asset
         if source.exists():
             target = out_dir / asset

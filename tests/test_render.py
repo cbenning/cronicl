@@ -547,3 +547,94 @@ def test_places_page_is_grouped_by_country(tmp_path, make_tree):
     page = (tmp_path / "places/index.html").read_text(encoding="utf-8")
     assert page.index('id="c-canada"') < page.index('id="pl-duncan-british-columbia-canada"') < page.index('id="c-germany"')
     assert 'href="#c-germany"' in page
+
+
+GALLERY = {"type": "fussel", "url": "https://x.example/photos"}
+
+
+def _gallery_site(make_tree, people, gallery=GALLERY, **site):
+    tree = make_tree(people)
+    tree.site = {"gallery": gallery, **site}
+    return tree
+
+
+def _page(tmp_path, pid="a"):
+    return (tmp_path / f"p/{pid}/index.html").read_text(encoding="utf-8")
+
+
+def test_no_gallery_changes_nothing(tmp_path, make_tree):
+    build_site(make_tree([p("a", "Ann", "X")]), tmp_path, today=TODAY)
+    assert not (tmp_path / "gallery.js").exists()
+    for rel in ("p/a/index.html", "index.html", "people/index.html"):
+        assert "gallery" not in (tmp_path / rel).read_text(encoding="utf-8").lower()
+
+
+def test_invalid_gallery_changes_nothing(tmp_path, make_tree):
+    tree = _gallery_site(make_tree, [p("a", "Ann", "X")], gallery={"type": "fussel"})
+    build_site(tree, tmp_path, today=TODAY)
+    assert not (tmp_path / "gallery.js").exists()
+    assert "gallery" not in _page(tmp_path).lower()
+
+
+def test_gallery_block_and_attributes(tmp_path, make_tree):
+    tree = _gallery_site(make_tree, [p("a", "Ann", "X", body="Bio text.\n", parents=["b"]), p("b", "Bob", "X")])
+    build_site(tree, tmp_path, today=TODAY)
+    page = _page(tmp_path)
+    assert (tmp_path / "gallery.js").exists()
+    assert 'id="gallery"' in page and "hidden" in page.split('id="gallery"')[1].split(">")[0]
+    assert 'data-gallery-url="https://x.example/photos/"' in page
+    assert 'data-gallery-type="fussel"' in page
+    assert 'data-gallery-key="ann-x"' in page
+    assert 'data-gallery-explicit="0"' in page
+    assert 'data-gallery-name="Ann X"' in page
+    assert "<h2>Photos</h2>" in page
+    assert 'src="../../gallery.js?v=' in page
+    assert page.index("Bio text.") < page.index('id="gallery"') < page.index('<section class="family">')
+
+
+def test_gallery_id_overrides_the_slug(tmp_path, make_tree):
+    tree = _gallery_site(make_tree, [p("a", "Ann", "X", gallery_id="the-ann")])
+    build_site(tree, tmp_path, today=TODAY)
+    page = _page(tmp_path)
+    assert 'data-gallery-key="the-ann"' in page and 'data-gallery-explicit="1"' in page
+
+
+def test_gallery_label_is_escaped(tmp_path, make_tree):
+    tree = _gallery_site(make_tree, [p("a", "Ann", "X")], gallery={**GALLERY, "label": "<b>x</b>"})
+    build_site(tree, tmp_path, today=TODAY)
+    page = _page(tmp_path)
+    assert "<b>x</b>" not in page and "&lt;b&gt;x&lt;/b&gt;" in page
+
+
+def test_header_link_on_every_page(tmp_path, make_tree):
+    tree = _gallery_site(make_tree, [p("a", "Ann", "X")])
+    build_site(tree, tmp_path, today=TODAY)
+    link = '<a class="site-gallery" href="https://x.example/photos/" target="_blank" rel="noopener">Photos</a>'
+    for rel in ("index.html", "people/index.html", "places/index.html", "relate/index.html", "tree/index.html",
+                "timeline/index.html", "p/a/index.html"):
+        assert link in (tmp_path / rel).read_text(encoding="utf-8"), rel
+
+
+def test_redacted_living_person_has_no_gallery_block(tmp_path, make_tree):
+    people = [
+        p("old", "Old", "Timer", birth=Event(date="1900"), death=Event(date="1950")),
+        p("kid", "Kid", "Now", birth=Event(date="2020")),
+    ]
+    tree = _gallery_site(make_tree, people, privacy={"living": "placeholder"})
+    build_site(tree, tmp_path, today=TODAY)
+    assert 'id="gallery"' in _page(tmp_path, "old")
+    for page_dir in (tmp_path / "p").iterdir():
+        if page_dir.name != "old":
+            assert 'id="gallery"' not in (page_dir / "index.html").read_text(encoding="utf-8")
+
+
+def test_nameless_person_has_no_gallery_block(tmp_path, make_tree):
+    tree = _gallery_site(make_tree, [{"id": "a"}])
+    build_site(tree, tmp_path, today=TODAY)
+    assert 'id="gallery"' not in _page(tmp_path)
+
+
+def test_long_name_key_is_not_truncated(tmp_path, make_tree):
+    tree = _gallery_site(make_tree, [p("a", "Ann", "z" * 70)])
+    build_site(tree, tmp_path, today=TODAY)
+    assert 'data-gallery-key="ann-' + "z" * 70 + '"' in _page(tmp_path)
