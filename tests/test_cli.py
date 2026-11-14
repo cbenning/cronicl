@@ -201,3 +201,46 @@ def test_build_refuses_to_write_over_the_data_folder(tmp_path, write):
     assert (root / "people" / "a.md").exists() and (root / "media" / "keep.jpg").exists()
     assert main(["build", "--dir", str(root), "--out", str(root / "people")]) == 2
     assert (root / "people" / "a.md").exists()
+
+
+def _site_with_a_living_person(tmp_path, write, site_yml):
+    data = tmp_path / "data"
+    run("init", "--dir", data)
+    write(data, "site.yml", site_yml)
+    write(data, "people/kid.md", "---\nid: kid\nname:\n  given: Secretname\n  surname: Livingperson\nbirth: 2020\n---\n")
+    return data
+
+
+def _everything(out: Path) -> str:
+    return "".join(p.read_text(encoding="utf-8", errors="ignore") for p in out.rglob("*") if p.is_file() and p.suffix in (".html", ".json"))
+
+
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "site_yml",
+    [
+        "schema_version: 2\nprivacy:\n  living: nope\n",
+        "schema_version: 2\nprivacy: hidden\n",
+        "schema_version: 2\nprivacy:\n  living:\n",
+        "schema_version: 2\nprivacy:\n\tliving: hidden\n",  # tab: unreadable
+        "- a\n- b\n",
+    ],
+)
+def test_a_broken_privacy_setting_fails_closed_even_when_errors_are_ignored(tmp_path, write, site_yml):
+    data = _site_with_a_living_person(tmp_path, write, site_yml)
+    assert run("build", "--dir", data, "--out", tmp_path / "out", "--ignore-errors") == 0
+    assert "Secretname" not in _everything(tmp_path / "out")
+
+
+def test_a_bad_cutoff_does_not_crash_the_build(tmp_path, write):
+    data = _site_with_a_living_person(tmp_path, write, "schema_version: 2\nprivacy:\n  living: placeholder\n  cutoff_years: abc\n")
+    assert run("build", "--dir", data, "--out", tmp_path / "out") == 0
+    assert "Secretname" not in _everything(tmp_path / "out")
+
+
+def test_mode_words_and_text_numbers_in_site_yml_work(tmp_path, write):
+    data = _site_with_a_living_person(tmp_path, write, "schema_version: 2\nprivacy:\n  living: Placeholder\n  cutoff_years: '25'\n  id_salt: s\n")
+    assert run("build", "--dir", data, "--out", tmp_path / "out") == 0
+    assert "Secretname" not in _everything(tmp_path / "out")

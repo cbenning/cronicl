@@ -25,6 +25,7 @@ from .model import Event, Tree
 from .places import group_places, place_index
 from .privacy import is_living, redact
 from .relations import Relations, build_relations
+from .settings import place_groups, privacy_settings, site_text
 from .slug import fold_slug, folds_cleanly, slugify
 from .stats import site_stats
 from .store import cites_of
@@ -296,7 +297,7 @@ def _home_context(visible: Tree, site: dict, payloads: dict, timeline: dict, rel
                   recent: list[dict] | None) -> dict:
     """Everything the home page prints, derived from the redacted tree."""
     names = {pid: person.display_name for pid, person in visible.people.items()}
-    intro = str(site.get("intro", "") or "").strip()
+    intro = site_text(site, "intro")
     on_this_day = sorted(
         (
             {
@@ -345,20 +346,14 @@ def build_site(
 ) -> BuildSummary:
     out_dir = Path(out_dir)
     _clear_generated(out_dir)
-    privacy = tree.site.get("privacy", {}) or {}
-    visible = redact(
-        tree,
-        mode=privacy.get("living", "full"),
-        today=today,
-        cutoff_years=int(privacy.get("cutoff_years", 100)),
-        salt=str(privacy.get("id_salt", "")),
-    )
+    privacy = privacy_settings(tree.site)
+    visible = redact(tree, mode=privacy.living, today=today, cutoff_years=privacy.cutoff_years, salt=privacy.salt)
     relations = build_relations(visible)
     layout = compute_layout(visible)
-    title = str(tree.site.get("title", "Family Tree"))
+    title = site_text(tree.site, "title", "Family Tree")
     home = home_person(visible, relations) or ""
 
-    cutoff = int(privacy.get("cutoff_years", 100))
+    cutoff = privacy.cutoff_years
     living = {pid for pid, person in visible.people.items() if is_living(person, today, cutoff)}
     timeline = build_timeline(visible, relations, living)
     payloads = {pid: person_payload(visible, pid, relations, timeline) for pid in sorted(visible.people)}
@@ -418,7 +413,7 @@ def build_site(
         "places/index.html",
         env.get_template("places.html").render(
             title=title, v=versions, home=home, root="../", active="places", places=places,
-            groups=group_places(places, tree.site.get("place_groups") if isinstance(tree.site.get("place_groups"), dict) else None),
+            groups=group_places(places, place_groups(tree.site)),
         ),
     )
     put(

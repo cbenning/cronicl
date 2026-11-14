@@ -20,6 +20,7 @@ from .history import recent_changes
 from .layout import LayoutError
 from .new import plan_new
 from .privacy import is_living
+from .settings import privacy_settings
 from .relations import build_relations
 from .render import build_site, dumps
 from .schema import PERSON_SCHEMA
@@ -136,10 +137,9 @@ def cmd_build(args) -> int:
     if warnings:
         _print_issues(warnings, "text")
     today = date.today()
-    privacy = tree.site.get("privacy", {}) or {}
-    if privacy.get("living", "full") == "full":
-        cutoff = int(privacy.get("cutoff_years", 100))
-        living = sum(1 for person in tree.people.values() if is_living(person, today, cutoff))
+    privacy = privacy_settings(tree.site)
+    if privacy.living == "full":
+        living = sum(1 for person in tree.people.values() if is_living(person, today, privacy.cutoff_years))
         if living:
             who = "1 person is" if living == 1 else f"{living} people are"
             print(
@@ -199,10 +199,7 @@ def cmd_edit_living(args) -> int:
 
 def cmd_gaps(args) -> int:
     tree, _ = load_tree(Path(args.dir))
-    privacy = tree.site.get("privacy", {}) or {}
-    gaps = find_gaps(
-        tree, build_relations(tree), today=date.today(), cutoff_years=int(privacy.get("cutoff_years", 100))
-    )
+    gaps = find_gaps(tree, build_relations(tree), today=date.today(), cutoff_years=privacy_settings(tree.site).cutoff_years)
     if args.limit is not None:
         gaps = gaps[: args.limit]
     if args.format == "json":
