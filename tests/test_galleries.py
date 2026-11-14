@@ -114,8 +114,15 @@ def test_portraits_is_a_valid_key_and_defaults_to_true():
     assert gallery_config({"gallery": {**GOOD, "portraits": True}})["portraits"] is True
 
 
-@pytest.mark.parametrize("value", ["off", 0, [], None, "false"])
+@pytest.mark.parametrize("value", ["maybe", 2, [], None, ""])
 def test_a_portraits_value_that_is_not_a_bool_warns_and_counts_as_true(value):
     gallery = {**GOOD, "portraits": value}
     assert codes(issues_for(gallery)) == ["W-GALLERY-PORTRAITS"]
     assert gallery_config({"gallery": gallery})["portraits"] is True
+
+
+@pytest.mark.parametrize("value, expected", [("false", False), ("No", False), ("off", False), ("true", True), ("yes", True)])
+def test_portraits_accepts_text_booleans(value, expected):
+    gallery = {**GOOD, "portraits": value}
+    assert issues_for(gallery) == []
+    assert gallery_config({"gallery": gallery})["portraits"] is expected

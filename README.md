@@ -197,6 +197,43 @@ there are no couple files. A partner's death never sets `end`, and nothing is in
 divorce, annulment or a split. Old `marriages:` entries (with `date:`) still load, and `famsite fix --apply`
 rewrites them as `partnerships:` entries (and bumps `schema_version` to 2).
 
+## Validation
+
+`famsite check` (also `famsite validate`) reads everything you edit and reports what it cannot use, with the file,
+the key and what to do. It never changes a file. `--format json` gives machine-readable output and `--strict`
+makes warnings fail too.
+
+`famsite build` and `famsite serve` print errors in full (an error stops the build) but only one line for
+warnings, such as `3 warnings: 2 W-UNKNOWN-KEY, 1 W-BAD-LIVING (run famsite check for details)`. Run `check` for
+the list.
+
+What it reports, besides broken references, dates and ids:
+
+| Code | Meaning |
+|---|---|
+| `W-UNKNOWN-KEY` | a key that nothing reads, at any level of a person file or `site.yml`, with a "did you mean" when it looks like a misspelling (`birht` for `birth`) |
+| `W-DUPLICATE-KEY` | the same key twice in one block; the later value wins |
+| `W-BAD-LIVING` | a person's `living:` is not `true` or `false`; it is ignored |
+| `E-PRIVACY-MODE` | `privacy` is not a mapping, or `privacy.living` is not `full`, `placeholder` or `hidden` |
+| `E-PRIVACY-SALT` | `privacy.id_salt` is a list or mapping |
+| `W-PRIVACY-NO-SALT` | redaction is on but there is no `id_salt`, so the anonymised ids can be guessed |
+| `W-PRIVACY-CUTOFF` | `privacy.cutoff_years` is not a whole number of at least 1; 100 is used |
+| `W-SITE-VALUE`, `W-PLACE-GROUPS` | a `site.yml` value of the wrong kind; it is ignored |
+| `E-VALIDATOR` | a check failed unexpectedly; the message names the file or step |
+
+**Your own keys.** A key that starts with `x-` or `x_` (any case), such as `x-nickname: Annie`, is yours: it is
+kept and never reported. It works at every level. (Inside `gallery:` it only silences the unknown-key warning:
+everything there is published to visitors.)
+
+**Values stay text.** `site.yml` is read the way person files are: `NO` is `NO`, `1066` is `1066`, and nothing is
+turned into a boolean or a date behind your back. Where a yes/no is expected, write `true`, `yes`, `on`, `1` or
+`false`, `no`, `off`, `0` in any case. Where a number is expected, write plain digits.
+
+**Fails closed.** If `site.yml` cannot be read, or `privacy` is broken, a build that you force to continue with
+`--ignore-errors` treats living people as `placeholder`, never as public. Fix the error and the real setting applies.
+One side effect: anonymised ids come from the exact `id_salt` text. A salt that YAML used to read as a number
+(one starting with `0` and made only of digits) now reads as typed, so those ids change once.
+
 ## Adding people
 
 The loop that works best once the first import is done:

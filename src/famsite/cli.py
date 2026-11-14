@@ -20,6 +20,7 @@ from .history import recent_changes
 from .layout import LayoutError
 from .new import plan_new
 from .privacy import is_living
+from .settings import privacy_settings
 from .relations import build_relations
 from .render import build_site, dumps
 from .schema import PERSON_SCHEMA
@@ -34,6 +35,30 @@ privacy:
   cutoff_years: 100
   id_salt: {salt}
 """
+
+
+def _summary(issues, severity: str, lead: str) -> str:
+    chosen = [i for i in issues if i.severity == severity]
+    if not chosen:
+        return ""
+    counts: dict[str, int] = {}
+    for issue in chosen:
+        counts[issue.code] = counts.get(issue.code, 0) + 1
+    ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    parts = [f"{n} {code}" for code, n in ordered[:5]]
+    if len(ordered) > 5:
+        parts.append("...")
+    return f"{lead}{len(chosen)} {severity}{'' if len(chosen) == 1 else 's'}: {', '.join(parts)} (run famsite check for details)"
+
+
+def warning_summary(issues) -> str:
+    """One line standing in for the individual warnings of a build; `famsite check` has the details."""
+    return _summary(issues, "warning", "")
+
+
+def error_summary(issues) -> str:
+    """What a build forced to continue with --ignore-errors says it is ignoring."""
+    return _summary(issues, "error", "ignoring ")
 
 
 def _print_issues(issues, fmt: str) -> None:
@@ -132,14 +157,17 @@ def cmd_build(args) -> int:
         _print_issues(errors, "text")
         print("error: fix the problems above or use --ignore-errors", file=sys.stderr)
         return 1
-    warnings = [i for i in issues if i.severity == "warning"]
-    if warnings:
-        _print_issues(warnings, "text")
+    summary = warning_summary(issues)
+    if summary:
+        print(summary)
+    if errors:  # only reachable with --ignore-errors
+        print(error_summary(errors))
+        if privacy_settings(tree.site).broken:
+            print("privacy setting unusable: living people are treated as placeholders")
     today = date.today()
-    privacy = tree.site.get("privacy", {}) or {}
-    if privacy.get("living", "full") == "full":
-        cutoff = int(privacy.get("cutoff_years", 100))
-        living = sum(1 for person in tree.people.values() if is_living(person, today, cutoff))
+    privacy = privacy_settings(tree.site)
+    if privacy.living == "full":
+        living = sum(1 for person in tree.people.values() if is_living(person, today, privacy.cutoff_years))
         if living:
             who = "1 person is" if living == 1 else f"{living} people are"
             print(
@@ -199,10 +227,7 @@ def cmd_edit_living(args) -> int:
 
 def cmd_gaps(args) -> int:
     tree, _ = load_tree(Path(args.dir))
-    privacy = tree.site.get("privacy", {}) or {}
-    gaps = find_gaps(
-        tree, build_relations(tree), today=date.today(), cutoff_years=int(privacy.get("cutoff_years", 100))
-    )
+    gaps = find_gaps(tree, build_relations(tree), today=date.today(), cutoff_years=privacy_settings(tree.site).cutoff_years)
     if args.limit is not None:
         gaps = gaps[: args.limit]
     if args.format == "json":
@@ -288,7 +313,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("init", parents=[common], help="create a new famsite folder")
     p.set_defaults(func=cmd_init)
 
-    p = sub.add_parser("check", parents=[common], help="report problems (read-only)")
+    p = sub.add_parser("check", aliases=["validate"], parents=[common], help="report problems (read-only); also named validate")
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.add_argument("--strict", action="store_true", help="exit 1 on warnings too")
     p.set_defaults(func=cmd_check)

@@ -691,3 +691,17 @@ def test_gallery_display_styles_exist(tmp_path, make_tree):
     assert ".gallery-lightbox" in "".join(reduced)
     printed = css.split("@media print", 1)[1].split("}", 1)[0]
     assert ".gallery-lightbox" in printed
+
+
+def test_settings_in_odd_shapes_never_raise(tmp_path, make_tree):
+    people = [p("old", "Old", "Timer", birth=Event(date="1900"), death=Event(date="1950")), p("kid", "Kid", "Now", birth=Event(date="2020"))]
+    tree = make_tree(people)
+    tree.site = {"privacy": {"living": "Placeholder", "cutoff_years": "25", "id_salt": "s"}}
+    build_site(tree, tmp_path / "a", today=TODAY)
+    assert "Kid" not in (tmp_path / "a/index.json").read_text(encoding="utf-8")
+    tree.site = {"title": ["x"], "intro": {"a": 1}}
+    build_site(tree, tmp_path / "b", today=TODAY)
+    page = (tmp_path / "b/index.html").read_text(encoding="utf-8")
+    assert "Family Tree" in page and "['x']" not in page and "{'a': 1}" not in page
+    tree.site = {"place_groups": "Ontario"}
+    build_site(tree, tmp_path / "c", today=TODAY)

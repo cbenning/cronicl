@@ -1,5 +1,7 @@
+import pytest
+
 from famsite.model import Event, Partnership, Person
-from famsite.store import dump_person, load_tree, split_frontmatter
+from famsite.store import dump_person, load_site, load_tree, split_frontmatter
 
 
 def test_loads_person_with_defaults(tmp_path, write):
@@ -289,3 +291,59 @@ def test_gallery_id_is_in_the_schema():
     from famsite.schema import PERSON_SCHEMA
 
     assert PERSON_SCHEMA["properties"]["gallery_id"]["type"] == "string"
+
+
+def test_site_yml_values_stay_text(tmp_path, write):
+    write(tmp_path, "site.yml", "title: 1066\nhome: NO\nintro: yes\nschema_version: 2\nprivacy:\n  cutoff_years: 100\n")
+    site, issues = load_site(tmp_path)
+    assert issues == []
+    assert site["title"] == "1066" and site["home"] == "NO" and site["intro"] == "yes"
+    assert site["privacy"]["cutoff_years"] == "100" and site["schema_version"] == "2"
+
+
+@pytest.mark.parametrize("version", ["3", "[1]", "abc"])
+def test_a_bad_schema_version_is_an_error(tmp_path, write, version):
+    write(tmp_path, "site.yml", f"schema_version: {version}\n")
+    _, issues = load_site(tmp_path)
+    assert [i.code for i in issues] == ["E-SCHEMA-VERSION"]
+
+
+def test_duplicate_keys_in_front_matter_are_reported(tmp_path, write):
+    write(tmp_path, "people/a.md", "---\nname: A\nbirth: 1950\nbirth: 1960\n---\n")
+    tree, issues = load_tree(tmp_path)
+    dup = [i for i in issues if i.code == "W-DUPLICATE-KEY"]
+    assert len(dup) == 1 and "'birth'" in dup[0].message and dup[0].path == "people/a.md"
+    assert tree.people["a"].birth.date == "1960"
+
+
+def test_nested_duplicate_keys_are_reported(tmp_path, write):
+    write(tmp_path, "people/a.md", "---\nname:\n  given: A\n  given: B\nevents:\n  - type: x\n    type: y\n---\n")
+    _, issues = load_tree(tmp_path)
+    assert [i.code for i in issues].count("W-DUPLICATE-KEY") == 2
+
+
+def test_no_duplicates_no_warning(tmp_path, write):
+    write(tmp_path, "people/a.md", "---\nname: A\nbirth: 1950\n---\n")
+    _, issues = load_tree(tmp_path)
+    assert [i.code for i in issues if i.code == "W-DUPLICATE-KEY"] == []
+
+
+def test_duplicate_keys_in_site_yml_are_reported(tmp_path, write):
+    write(tmp_path, "site.yml", "title: A\ntitle: B\n")
+    site, issues = load_site(tmp_path)
+    assert site["title"] == "B"
+    assert [(i.code, i.path) for i in issues] == [("W-DUPLICATE-KEY", "site.yml")]
+
+
+@pytest.mark.parametrize("text", ["privacy:\n\t living: hidden\n", "- a\n- b\n", "just text\n"])
+def test_an_unreadable_site_yml_is_flagged(tmp_path, write, text):
+    write(tmp_path, "site.yml", text)
+    site, issues = load_site(tmp_path)
+    assert site == {"_unreadable": True}
+    assert [i.code for i in issues] == ["E-BAD-SITE-YML"]
+
+
+@pytest.mark.parametrize("text", ["", "# just a comment\n", "---\n"])
+def test_an_empty_site_yml_is_fine(tmp_path, write, text):
+    write(tmp_path, "site.yml", text)
+    assert load_site(tmp_path) == ({}, [])

@@ -21,19 +21,63 @@ PERSON_KEYS = (
 # ---------------------------------------------------------------- parsing
 
 
+class _TextLoader(yaml.BaseLoader):
+    """Keeps every scalar a string (No, Null, 1066 stay what the author wrote) and remembers repeated keys."""
+
+    def __init__(self, stream):
+        super().__init__(stream)
+        self.duplicates: list[str] = []
+        self.merge_keys = False
+
+    def construct_mapping(self, node, deep=False):
+        seen: set = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=True)
+            try:
+                hash(key)
+            except TypeError:
+                continue  # a list or mapping used as a key: the base class reports it as a YAML error
+            if key == "<<":
+                self.merge_keys = True
+            if key in seen:
+                self.duplicates.append(str(key))
+            seen.add(key)
+        return super().construct_mapping(node, deep=deep)
+
+
+def load_yaml_text(raw: str, *, allow_merge: bool = True) -> tuple[object, list[str]]:
+    """Parse YAML with every scalar as text; returns the data and the names of keys written twice in one mapping.
+
+    This loader does not apply merge keys (`<<`). Where a silent miss could be harmful (site.yml carries the privacy
+    setting) the caller passes allow_merge=False and a merge key is an error instead of an ignored line.
+    """
+    loader = _TextLoader(raw)
+    try:
+        data = loader.get_single_data()
+    finally:
+        loader.dispose()
+    if loader.merge_keys and not allow_merge:
+        raise yaml.YAMLError("merge keys (<<) are not supported in site.yml; write the values out")
+    return data, loader.duplicates
+
+
 def split_frontmatter(text: str) -> tuple[dict, str]:
+    data, body, _ = split_frontmatter_checked(text)
+    return data, body
+
+
+def split_frontmatter_checked(text: str) -> tuple[dict, str, list[str]]:
     text = text.lstrip("﻿").replace("\r\n", "\n")
     match = _FRONTMATTER.match(text)
     if not match:
-        return {}, text.strip("\n")
+        return {}, text.strip("\n"), []
     raw = match.group(1) or ""
-    # BaseLoader keeps every scalar a string: No/Null/1066 stay what the author wrote.
-    data = yaml.load(raw, Loader=yaml.BaseLoader) if raw.strip() else {}
+    data, duplicates = load_yaml_text(raw) if raw.strip() else ({}, [])
     if data is None:
         data = {}
     if not isinstance(data, dict):
         raise ValueError("frontmatter must be a mapping")
-    return data, match.group(2).strip("\n")
+    return data, match.group(2).strip("\n"), duplicates
 
 
 def _opt(value):
@@ -222,6 +266,7 @@ def _make_person(data: dict, body: str, path: Path) -> Person:
         birth=_parse_event(data.get("birth")),
         death=_parse_event(data.get("death")),
         living=_parse_bool(data.get("living")),
+        living_text=str(data["living"]).strip() if data.get("living") is not None else None,
         portrait=_opt(data.get("portrait")),
         gallery_id=_opt(data.get("gallery_id")),
         parents=_as_list(data.get("parents")),
@@ -251,11 +296,13 @@ def read_records(data_dir: Path) -> tuple[list[Person], list[Issue]]:
     issues: list[Issue] = []
     for path in sorted((data_dir / "people").glob("*.md")):
         try:
-            data, body = split_frontmatter(path.read_text(encoding="utf-8"))
+            data, body, duplicates = split_frontmatter_checked(path.read_text(encoding="utf-8"))
             _validate_shapes(data)
         except (ValueError, yaml.YAMLError, UnicodeDecodeError) as exc:
             issues.append(Issue("E-BAD-FRONTMATTER", f"cannot parse frontmatter: {exc}", _rel(path, data_dir)))
             continue
+        for key in duplicates:
+            issues.append(Issue("W-DUPLICATE-KEY", f"duplicate key {key!r}; the later value is used", _rel(path, data_dir)))
         people.append(_make_person(data, body, path))
     return people, issues
 
@@ -264,15 +311,21 @@ def load_site(data_dir: Path) -> tuple[dict, list[Issue]]:
     path = Path(data_dir) / "site.yml"
     if not path.exists():
         return {}, [Issue("W-NO-SITE-YML", "site.yml not found; using defaults")]
+    unreadable = {"_unreadable": True}  # the owner's intent is unknown, so settings fail closed
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except yaml.YAMLError as exc:
-        return {}, [Issue("E-BAD-SITE-YML", f"cannot parse site.yml: {exc}", "site.yml")]
+        data, duplicates = load_yaml_text(path.read_text(encoding="utf-8"), allow_merge=False)
+    except (yaml.YAMLError, UnicodeDecodeError) as exc:
+        return unreadable, [Issue("E-BAD-SITE-YML", f"cannot parse site.yml: {exc}", "site.yml")]
+    if data is None or data == "":
+        data = {}
     if not isinstance(data, dict):
-        return {}, [Issue("E-BAD-SITE-YML", "site.yml must be a mapping", "site.yml")]
-    issues: list[Issue] = []
-    if data.get("schema_version") not in (None, 1, 2):
-        issues.append(Issue("E-SCHEMA-VERSION", f"unsupported schema_version {data.get('schema_version')!r}", "site.yml"))
+        return unreadable, [Issue("E-BAD-SITE-YML", "site.yml must be a mapping", "site.yml")]
+    issues: list[Issue] = [
+        Issue("W-DUPLICATE-KEY", f"duplicate key {key!r}; the later value is used", "site.yml") for key in duplicates
+    ]
+    version = data.get("schema_version")
+    if version is not None and not (isinstance(version, str) and version.strip() in ("1", "2")):
+        issues.append(Issue("E-SCHEMA-VERSION", f"unsupported schema_version {version!r}", "site.yml"))
     return data, issues
 
 

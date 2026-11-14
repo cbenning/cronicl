@@ -201,3 +201,141 @@ def test_build_refuses_to_write_over_the_data_folder(tmp_path, write):
     assert (root / "people" / "a.md").exists() and (root / "media" / "keep.jpg").exists()
     assert main(["build", "--dir", str(root), "--out", str(root / "people")]) == 2
     assert (root / "people" / "a.md").exists()
+
+
+def _site_with_a_living_person(tmp_path, write, site_yml):
+    data = tmp_path / "data"
+    run("init", "--dir", data)
+    write(data, "site.yml", site_yml)
+    write(data, "people/kid.md", "---\nid: kid\nname:\n  given: Secretname\n  surname: Livingperson\nbirth: 2020\n---\n")
+    return data
+
+
+def _everything(out: Path) -> str:
+    return "".join(p.read_text(encoding="utf-8", errors="ignore") for p in out.rglob("*") if p.is_file() and p.suffix in (".html", ".json"))
+
+
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "site_yml",
+    [
+        "schema_version: 2\nprivacy:\n  living: nope\n",
+        "schema_version: 2\nprivacy: hidden\n",
+        "schema_version: 2\nprivacy:\n  living:\n",
+        "schema_version: 2\nprivacy:\n\tliving: hidden\n",  # tab: unreadable
+        "- a\n- b\n",
+    ],
+)
+def test_a_broken_privacy_setting_fails_closed_even_when_errors_are_ignored(tmp_path, write, site_yml):
+    data = _site_with_a_living_person(tmp_path, write, site_yml)
+    assert run("build", "--dir", data, "--out", tmp_path / "out", "--ignore-errors") == 0
+    assert "Secretname" not in _everything(tmp_path / "out")
+    assert not (tmp_path / "out" / "p" / "kid").exists()  # nor the real id
+
+
+def test_a_bad_cutoff_does_not_crash_the_build(tmp_path, write):
+    data = _site_with_a_living_person(tmp_path, write, "schema_version: 2\nprivacy:\n  living: placeholder\n  cutoff_years: abc\n")
+    assert run("build", "--dir", data, "--out", tmp_path / "out") == 0
+    assert "Secretname" not in _everything(tmp_path / "out")
+
+
+def test_mode_words_and_text_numbers_in_site_yml_work(tmp_path, write):
+    data = _site_with_a_living_person(tmp_path, write, "schema_version: 2\nprivacy:\n  living: Placeholder\n  cutoff_years: '25'\n  id_salt: s\n")
+    assert run("build", "--dir", data, "--out", tmp_path / "out") == 0
+    assert "Secretname" not in _everything(tmp_path / "out")
+
+
+def test_warning_summary_formats():
+    from famsite.cli import warning_summary
+    from famsite.issues import Issue
+
+    assert warning_summary([]) == ""
+    assert warning_summary([Issue("W-A", "x")]) == "1 warning: 1 W-A (run famsite check for details)"
+    many = [Issue("W-UNKNOWN-KEY", "x")] * 3 + [Issue("W-BAD-LIVING", "x")] + [Issue(f"W-C{n}", "x") for n in range(5)]
+    text = warning_summary(many)
+    assert text.startswith("9 warnings: 3 W-UNKNOWN-KEY, 1 W-BAD-LIVING, 1 W-C0, 1 W-C1, 1 W-C2, ... (run famsite check for details)")
+
+
+def test_build_prints_one_summary_line_for_warnings(tmp_path, write, capsys):
+    data = tmp_path / "data"
+    run("init", "--dir", data)
+    write(data, "people/a.md", "---\nid: a\nname: Ann Lee\nbirht: 1950\nlivng: no\nliving: maybe\n---\n")
+    capsys.readouterr()
+    assert run("build", "--dir", data, "--out", tmp_path / "out") == 0
+    out = capsys.readouterr().out
+    assert "3 warnings: 2 W-UNKNOWN-KEY, 1 W-BAD-LIVING (run famsite check for details)" in out
+    assert "did you mean" not in out and "unknown key" not in out
+
+
+def test_build_prints_errors_in_full_and_stops(tmp_path, write, capsys):
+    data = tmp_path / "data"
+    run("init", "--dir", data)
+    write(data, "people/a.md", "---\nid: a\nname: Ann Lee\nparents: [ghost]\n---\n")
+    capsys.readouterr()
+    assert run("build", "--dir", data, "--out", tmp_path / "out") == 1
+    assert "E-DANGLING-REF" in capsys.readouterr().out
+
+
+def test_validate_is_an_alias_for_check(tmp_path, write, capsys):
+    data = tmp_path / "data"
+    run("init", "--dir", data)
+    write(data, "people/a.md", "---\nid: a\nname: Ann Lee\nbirht: 1950\n---\n")
+    capsys.readouterr()
+    code_check = run("check", "--dir", data, "--format", "json")
+    first = capsys.readouterr().out
+    code_validate = run("validate", "--dir", data, "--format", "json")
+    assert capsys.readouterr().out == first and code_check == code_validate == 0
+    assert run("validate", "--dir", data, "--strict") == 1
+
+
+def test_a_merge_key_in_site_yml_fails_closed(tmp_path, write, capsys):
+    data = _site_with_a_living_person(
+        tmp_path, write, "schema_version: 2\nbase: &b\n  living: hidden\n  id_salt: s\nprivacy:\n  <<: *b\n"
+    )
+    assert run("check", "--dir", data) == 1
+    assert "E-BAD-SITE-YML" in capsys.readouterr().out
+    assert run("build", "--dir", data, "--out", tmp_path / "out", "--ignore-errors") == 0
+    assert "Secretname" not in _everything(tmp_path / "out") and not (tmp_path / "out" / "p" / "kid").exists()
+
+
+@pytest.mark.parametrize("site_yml", ["schema_version: 2\nplace_groups:\n  [a]: x\n", "schema_version: 2\n? [a, b]\n: y\n"])
+def test_a_list_used_as_a_key_is_an_error_not_a_crash(tmp_path, write, capsys, site_yml):
+    data = _site_with_a_living_person(tmp_path, write, site_yml)
+    assert run("check", "--dir", data) == 1
+    assert "E-BAD-SITE-YML" in capsys.readouterr().out
+    assert run("build", "--dir", data, "--out", tmp_path / "out", "--ignore-errors") == 0
+    assert "Secretname" not in _everything(tmp_path / "out")
+
+
+def test_a_list_used_as_a_key_in_a_person_file_is_an_error(tmp_path, write, capsys):
+    data = tmp_path / "data"
+    run("init", "--dir", data)
+    write(data, "people/a.md", "---\nname: A\n[note]: hello\n---\n")
+    capsys.readouterr()
+    assert run("check", "--dir", data) == 1
+    assert "E-BAD-FRONTMATTER" in capsys.readouterr().out
+
+
+def test_ignoring_errors_says_what_was_ignored(tmp_path, write, capsys):
+    data = _site_with_a_living_person(tmp_path, write, "schema_version: 2\nprivacy: hidden\n")
+    capsys.readouterr()
+    assert run("build", "--dir", data, "--out", tmp_path / "out", "--ignore-errors") == 0
+    out = capsys.readouterr().out
+    assert "ignoring 1 error: 1 E-PRIVACY-MODE (run famsite check for details)" in out
+    assert "living people are treated as placeholders" in out
+
+
+def test_a_text_cutoff_really_applies(tmp_path, write):
+    from datetime import date
+
+    born = date.today().year - 30
+    person = f"---\nid: mid\nname:\n  given: Midlife\n  surname: Person\nbirth: {born}\n---\n"
+    for cutoff, shown in (("25", True), ("100", False)):
+        data = tmp_path / f"data{cutoff}"
+        run("init", "--dir", data)
+        write(data, "site.yml", f"schema_version: 2\nprivacy:\n  living: placeholder\n  cutoff_years: '{cutoff}'\n  id_salt: s\n")
+        write(data, "people/mid.md", person)
+        assert run("build", "--dir", data, "--out", tmp_path / f"out{cutoff}") == 0
+        assert ("Midlife" in _everything(tmp_path / f"out{cutoff}")) is shown, cutoff

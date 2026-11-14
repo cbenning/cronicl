@@ -9,6 +9,7 @@ from .media import ALLOWED, MAX_BYTES, resolve, safe_relative
 from .model import END_REASONS, PARTNERSHIP_TYPES, Person, Tree
 from .relations import build_relations
 from .slug import is_valid_id
+from .validate import person_issues, site_issues
 
 
 def has_errors(issues: list[Issue]) -> bool:
@@ -70,95 +71,122 @@ def _cycle_members(parents: dict[str, list[str]]) -> set[str]:
     return bad
 
 
-def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue]:
-    issues: list[Issue] = list(load_issues or [])
-    relations = build_relations(tree)
-    issues += relations.issues
-
-    for key, valid in (("edit_url", valid_edit_url), ("contact", valid_contact)):
-        value = (tree.site or {}).get(key)
-        if value and not valid(value):
+def _check_person(person: Person, issues: list[Issue]) -> None:
+    where = person.location
+    if not is_valid_id(person.id):
+        issues.append(Issue("E-INVALID-ID", f"person id {person.id!r} is not a valid id", where))
+    if person.path is not None and person.path.name != f"{person.id}.md":
+        issues.append(Issue("W-FILENAME-DRIFT", f"file name does not match id {person.id!r}; run fix", where))
+    if not (person.given or person.surname):
+        issues.append(Issue("W-NO-NAME", f"{person.id}: person has no name", where))
+    if person.sex not in ("M", "F", "U"):
+        issues.append(Issue("W-BAD-SEX", f"{person.id}: sex {person.sex!r} is not M, F or U", where))
+    if person.portrait:
+        _check_portrait(person, issues)
+    if person.birth:
+        _check_date(person.birth.date, "birth", person, issues)
+    if person.death:
+        _check_date(person.death.date, "death", person, issues)
+    for entry in person.events:
+        label = entry.type or "event"
+        if not entry.type:
+            issues.append(Issue("W-EVENT-NO-TYPE", f"{person.id}: an event has no type", where))
+        _check_date(entry.date, label, person, issues)
+        _check_date(entry.start, f"{label} start", person, issues)
+        _check_date(entry.end, f"{label} end", person, issues)
+        begun, ended = parse_date(entry.start), parse_date(entry.end)
+        if begun and ended and (ended.year, ended.month or 0, ended.day or 0) < (begun.year, begun.month or 0, begun.day or 0):
+            issues.append(
+                Issue("W-END-BEFORE-START", f"{person.id}: {label} ends ({entry.end}) before it starts ({entry.start})", where)
+            )
+    for entry in person.partnerships:
+        _check_date(entry.start, "partnership start", person, issues)
+        if entry.end != "unknown":
+            _check_date(entry.end, "partnership end", person, issues)
+        if entry.type and entry.type not in PARTNERSHIP_TYPES:
             issues.append(
                 Issue(
-                    "W-BAD-LINK",
-                    f"{key} {str(value)!r} is not an allowed link (edit_url needs https://... and {{id}}; contact is mailto:, http:// or https://)",
-                    "site.yml",
+                    "W-PARTNERSHIP-TYPE-UNKNOWN",
+                    f"{person.id}: partnership type {entry.type!r} is not one of {', '.join(PARTNERSHIP_TYPES)}",
+                    where,
+                )
+            )
+        if entry.end_reason and entry.end_reason not in END_REASONS:
+            issues.append(
+                Issue(
+                    "W-END-REASON-UNKNOWN",
+                    f"{person.id}: end_reason {entry.end_reason!r} is not one of {', '.join(END_REASONS)}",
+                    where,
                 )
             )
 
-    issues += gallery_issues(tree.site or {}, tree.people)
 
-    home = (tree.site or {}).get("home")
-    if home and str(home) not in tree.people:
-        issues.append(Issue("W-HOME-UNKNOWN", f"home {str(home)!r} is not a person id; the default home person is used", "site.yml"))
+def _guard(label: str, step, issues: list[Issue], path: str | None = None) -> None:
+    """Run one validation step; an unexpected exception becomes an issue instead of hiding every other finding."""
+    try:
+        step()
+    except Exception as exc:  # noqa: BLE001 - the point is to survive any bug in a rule
+        issues.append(Issue("E-VALIDATOR", f"{label}: validation failed: {exc}", path))
+
+
+def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue]:
+    issues: list[Issue] = list(load_issues or [])
+    try:
+        relations = build_relations(tree)
+    except Exception as exc:  # noqa: BLE001
+        issues.append(Issue("E-VALIDATOR", f"relations: validation failed: {exc}"))
+        return sorted(issues, key=lambda i: (i.path or "", i.code, i.message))
+    issues += relations.issues
+
+    def site_step() -> None:
+        for key, valid in (("edit_url", valid_edit_url), ("contact", valid_contact)):
+            value = (tree.site or {}).get(key)
+            if value and not valid(value):
+                issues.append(
+                    Issue(
+                        "W-BAD-LINK",
+                        f"{key} {str(value)!r} is not an allowed link (edit_url needs https://... and {{id}}; contact is mailto:, http:// or https://)",
+                        "site.yml",
+                    )
+                )
+
+        issues.extend(gallery_issues(tree.site or {}, tree.people))
+
+        home = (tree.site or {}).get("home")
+        if home and str(home) not in tree.people:
+            issues.append(Issue("W-HOME-UNKNOWN", f"home {str(home)!r} is not a person id; the default home person is used", "site.yml"))
+        issues.extend(site_issues(tree.site or {}, tree.people))
+
+    _guard("site.yml", site_step, issues, "site.yml")
 
     for person in tree.people.values():
-        where = person.location
-        if not is_valid_id(person.id):
-            issues.append(Issue("E-INVALID-ID", f"person id {person.id!r} is not a valid id", where))
-        if person.path is not None and person.path.name != f"{person.id}.md":
-            issues.append(Issue("W-FILENAME-DRIFT", f"file name does not match id {person.id!r}; run fix", where))
-        if not (person.given or person.surname):
-            issues.append(Issue("W-NO-NAME", f"{person.id}: person has no name", where))
-        if person.sex not in ("M", "F", "U"):
-            issues.append(Issue("W-BAD-SEX", f"{person.id}: sex {person.sex!r} is not M, F or U", where))
-        if person.portrait:
-            _check_portrait(person, issues)
-        if person.birth:
-            _check_date(person.birth.date, "birth", person, issues)
-        if person.death:
-            _check_date(person.death.date, "death", person, issues)
-        for entry in person.events:
-            label = entry.type or "event"
-            if not entry.type:
-                issues.append(Issue("W-EVENT-NO-TYPE", f"{person.id}: an event has no type", where))
-            _check_date(entry.date, label, person, issues)
-            _check_date(entry.start, f"{label} start", person, issues)
-            _check_date(entry.end, f"{label} end", person, issues)
-            begun, ended = parse_date(entry.start), parse_date(entry.end)
-            if begun and ended and (ended.year, ended.month or 0, ended.day or 0) < (begun.year, begun.month or 0, begun.day or 0):
-                issues.append(
-                    Issue("W-END-BEFORE-START", f"{person.id}: {label} ends ({entry.end}) before it starts ({entry.start})", where)
-                )
-        for entry in person.partnerships:
-            _check_date(entry.start, "partnership start", person, issues)
-            if entry.end != "unknown":
-                _check_date(entry.end, "partnership end", person, issues)
-            if entry.type and entry.type not in PARTNERSHIP_TYPES:
-                issues.append(
-                    Issue(
-                        "W-PARTNERSHIP-TYPE-UNKNOWN",
-                        f"{person.id}: partnership type {entry.type!r} is not one of {', '.join(PARTNERSHIP_TYPES)}",
-                        where,
-                    )
-                )
-            if entry.end_reason and entry.end_reason not in END_REASONS:
-                issues.append(
-                    Issue(
-                        "W-END-REASON-UNKNOWN",
-                        f"{person.id}: end_reason {entry.end_reason!r} is not one of {', '.join(END_REASONS)}",
-                        where,
-                    )
-                )
+        _guard(person.id, lambda person=person: _check_person(person, issues), issues, person.location)
+        _guard(person.id, lambda person=person: issues.extend(person_issues(person)), issues, person.location)
 
-    for cid, couple in sorted(relations.couples.items()):
-        for entry in couple.partnerships:
-            start, end = parse_date(entry.start), parse_date(entry.end)
-            if start and end and (end.year, end.month or 0, end.day or 0) < (start.year, start.month or 0, start.day or 0):
-                issues.append(
-                    Issue(
-                        "W-END-BEFORE-START",
-                        f"{cid}: partnership ends ({entry.end}) before it starts ({entry.start})",
-                        tree.people[couple.partners[0]].location,
+    def couples_step() -> None:
+        for cid, couple in sorted(relations.couples.items()):
+            for entry in couple.partnerships:
+                start, end = parse_date(entry.start), parse_date(entry.end)
+                if start and end and (end.year, end.month or 0, end.day or 0) < (start.year, start.month or 0, start.day or 0):
+                    issues.append(
+                        Issue(
+                            "W-END-BEFORE-START",
+                            f"{cid}: partnership ends ({entry.end}) before it starts ({entry.start})",
+                            tree.people[couple.partners[0]].location,
+                        )
                     )
-                )
 
-    cycle_members = _cycle_members(relations.parents)
-    for pid in sorted(cycle_members):
-        issues.append(Issue("E-CYCLE", f"{pid}: person is their own ancestor", tree.people[pid].location))
-    if not cycle_members:
-        conflict = generation_conflict(tree)
-        if conflict:
-            issues.append(Issue("E-GENERATION-CONFLICT", conflict))
+    _guard("couples", couples_step, issues)
+
+    def cycles_step() -> None:
+        cycle_members = _cycle_members(relations.parents)
+        for pid in sorted(cycle_members):
+            issues.append(Issue("E-CYCLE", f"{pid}: person is their own ancestor", tree.people[pid].location))
+        if not cycle_members:
+            conflict = generation_conflict(tree)
+            if conflict:
+                issues.append(Issue("E-GENERATION-CONFLICT", conflict))
+
+    _guard("cycles", cycles_step, issues)
 
     return sorted(issues, key=lambda i: (i.path or "", i.code, i.message))
