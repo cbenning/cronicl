@@ -399,6 +399,12 @@ async function main() {
   check('the tree opens the same after the timeline as when opened directly', afterTimeline === direct, afterTimeline + ' vs ' + direct);
 
   // ---- site pages lay out as one column
+  const barShape = [];
+  for (const path of ['/index.html', '/people/index.html', '/tree.html', '/p/smith-bob/', '/relate/index.html']) {
+    await send('Page.navigate', { url: base + path }); await sleep(900);
+    barShape.push(await ev(`JSON.stringify(['.site-bar', '.site-title', '.site-bar nav', '.site-search'].map((q) => { const r = document.querySelector(q).getBoundingClientRect(); return [q, Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; }))`));
+  }
+  check('the top bar is the same on every page', new Set(barShape).size === 1, barShape.join('\n'));
   for (const path of ['/index.html', '/people/index.html', '/places/index.html', '/relate/index.html']) {
     await send('Page.navigate', { url: base + path }); await sleep(700);
     const col = await ev(`(() => { const m = document.querySelector('main'); const kids = [...m.children].filter((c) => !c.hidden && c.getBoundingClientRect().height > 0); const tops = kids.map((c) => c.getBoundingClientRect().top); const input = document.querySelector('main input[type="search"]'); return { stacked: tops.every((t, i) => i === 0 || t >= tops[i - 1]) && new Set(kids.map((c) => Math.round(c.getBoundingClientRect().left))).size === 1, inputH: input ? input.getBoundingClientRect().height : 0 }; })()`);

@@ -934,7 +934,7 @@
         if (!n) return;
         var r = treeSvg.getBoundingClientRect();
         // on a phone the person's sheet covers the bottom 60% of the screen: centre in what is left above it
-        var visible = window.matchMedia && window.matchMedia('(max-width: 40rem)').matches ? r.height * 0.4 : r.height;
+        var visible = window.matchMedia && window.matchMedia('(max-width: 40rem)').matches ? Math.max(80, window.innerHeight * 0.4 - r.top) : r.height;
         tx = r.width / 2 - (n.x + n.w / 2) * scale;
         ty = visible / 2 - (n.y + n.h / 2) * scale;
       }

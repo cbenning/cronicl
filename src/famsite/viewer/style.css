@@ -295,3 +295,6 @@ img.avatar { object-fit: cover; }
 .relate-pick { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .relate-pick select { max-width: 100%; padding: .35rem .5rem; }
 #relate-answer { font-size: 1.15rem; margin-top: var(--space-4); }
+
+/* The viewer's own row of tabs sits under the shared site bar */
+.viewbar { padding-inline: max(var(--space-4), calc((100% - 60rem) / 2 + var(--space-4))); background: var(--surface-2); }

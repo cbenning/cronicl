@@ -9,17 +9,16 @@
 <link rel="stylesheet" href="style.css?v={{ v.css }}">
 </head>
 <body>
-<header class="bar">
-  <h1><a href="index.html">{{ title }}</a></h1>
+{% include "_header.html" %}
+<div class="bar viewbar">
   <nav id="tabs" aria-label="Views">
     <a href="#/tree" data-view="focus">Tree</a>
     <a href="#/tree" data-view="tree">Overview</a>
     <a href="#/timeline" data-view="timeline">Timeline</a>
   </nav>
-  <a class="bar-link" href="people/index.html">People</a>
-  <input id="search" type="search" placeholder="Search people" autocomplete="off" aria-label="Search people">
+  <input id="search" type="search" placeholder="Find in the tree" autocomplete="off" aria-label="Find a person in the tree">
   <ul id="results" hidden></ul>
-</header>
+</div>
 <main>
   <div id="views">
     <div id="focus-bar" hidden></div>
