@@ -31,6 +31,21 @@ class Partnership:
 
 
 @dataclass
+class LifeEvent:
+    """An event or attribute beyond birth and death: occupation, burial, immigration, residence, ..."""
+
+    type: str = ""
+    date: str | None = None
+    start: str | None = None
+    end: str | None = None
+    place: str | None = None
+    value: str | None = None
+    note: str | None = None
+    cite: list[str] = field(default_factory=list)
+    extra: dict = field(default_factory=dict)
+
+
+@dataclass
 class Person:
     id: str
     given: str | None = None
@@ -45,6 +60,7 @@ class Person:
     spouse: list[str] = field(default_factory=list)
     children: list[str] = field(default_factory=list)
     partnerships: list[Partnership] = field(default_factory=list)
+    events: list[LifeEvent] = field(default_factory=list)
     gedcom_id: str | None = None
     gedcom_extra: str | None = None
     body: str = ""

@@ -6,14 +6,14 @@ from pathlib import Path
 import yaml
 
 from .issues import Issue
-from .model import Event, Partnership, Person, Tree
+from .model import Event, LifeEvent, Partnership, Person, Tree
 from .slug import FALLBACK_SLUG, slugify
 
 _FRONTMATTER = re.compile(r"\A---[ \t]*\n(?:(.*?)\n)?---[ \t]*(?:\n|\Z)(.*)\Z", re.S)
 _DATE_LIKE = re.compile(r"^~?\d{4}(-\d{2}(-\d{2})?)?$")
 PERSON_KEYS = (
     "id", "name", "sex", "birth", "death", "living", "portrait",
-    "parents", "spouse", "children", "marriages", "partnerships",
+    "parents", "spouse", "children", "marriages", "partnerships", "events",
     "gedcom_id", "gedcom_extra",
 )
 
@@ -94,6 +94,38 @@ def _as_list(value) -> list[str]:
     return []
 
 
+_EVENT_KEYS = ("type", "date", "start", "end", "place", "value", "note", "cite")
+
+
+def cites_of(value) -> list[str]:
+    """Citations as a list: one string is one citation, a list keeps its non-empty strings, anything else is none."""
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if isinstance(value, list):
+        return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+    return []
+
+
+def _parse_events(data: dict) -> list[LifeEvent]:
+    out: list[LifeEvent] = []
+    for item in _partnership_items(data.get("events")):  # one mapping is one entry, as for partnerships
+        out.append(
+            LifeEvent(
+                type=_opt(item.get("type")) or "",
+                date=_opt(item.get("date")),
+                start=_opt(item.get("start")),
+                end=_opt(item.get("end")),
+                place=_opt(item.get("place")),
+                value=_opt(item.get("value")),
+                note=_opt(item.get("note")),
+                cite=cites_of(item.get("cite")),
+                extra={k: v for k, v in item.items() if k not in _EVENT_KEYS},
+            )
+        )
+    return out
+
+
 _PARTNERSHIP_KEYS = ("with", "type", "start", "end", "end_reason", "place", "note", "date")
 
 
@@ -155,6 +187,15 @@ def _validate_shapes(data: dict) -> None:
     _require_mapping_of_text(data.get("death"), "death", ("date", "place"))
     for key in ("parents", "spouse", "children"):
         _require_text_list(data.get(key), key)
+    entries = data.get("events")
+    if entries is not None and not isinstance(entries, (dict, list)):
+        raise ValueError("events must be a list of mappings")
+    for item in [entries] if isinstance(entries, dict) else entries or []:
+        if not isinstance(item, dict):
+            raise ValueError("events entries must be mappings")
+        for field_name in _EVENT_KEYS[:-1]:
+            _require_text(item.get(field_name), f"events.{field_name}")
+        _require_text_list(item.get("cite"), "events.cite")
     for key in ("partnerships", "marriages"):
         entries = data.get(key)
         if entries is not None and not isinstance(entries, (str, dict, list)):
@@ -186,6 +227,7 @@ def _make_person(data: dict, body: str, path: Path) -> Person:
         spouse=_as_list(data.get("spouse")),
         children=_as_list(data.get("children")),
         partnerships=_parse_partnerships(data),
+        events=_parse_events(data),
         gedcom_id=_opt(data.get("gedcom_id")),
         gedcom_extra=_opt(data.get("gedcom_extra")),
         body=body,
@@ -305,6 +347,26 @@ def _partnership_lines(partnerships: list[Partnership]) -> list[str]:
     return lines
 
 
+def _event_entry_lines(events: list[LifeEvent]) -> list[str]:
+    if not events:
+        return []
+    lines = ["events:"]
+    for entry in events:
+        fields = (
+            ("type", entry.type), ("date", entry.date), ("start", entry.start), ("end", entry.end),
+            ("place", entry.place), ("value", entry.value), ("note", entry.note),
+        )
+        block = [f"{key}: {_scalar(value)}" for key, value in fields if value]
+        if entry.cite:
+            block += ["cite:"] + [f"  - {_scalar(text)}" for text in entry.cite]
+        block += _extra_lines(entry.extra, 0)
+        if not block:
+            continue
+        lines.append(f"  - {block[0]}")
+        lines += [f"    {line}" for line in block[1:]]
+    return lines
+
+
 def _extra_block(text: str) -> list[str]:
     header = "gedcom_extra: |2-" if text[:1] in (" ", "\t") else "gedcom_extra: |-"
     return [header] + [("  " + line) if line else "" for line in text.split("\n")]
@@ -339,6 +401,7 @@ def dump_person(person: Person) -> str:
     lines += _list_lines("spouse", person.spouse)
     lines += _list_lines("children", person.children)
     lines += _partnership_lines(person.partnerships)
+    lines += _event_entry_lines(person.events)
     if person.gedcom_id:
         lines.append(f"gedcom_id: {_scalar(person.gedcom_id)}")
     if person.gedcom_extra:

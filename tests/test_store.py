@@ -226,3 +226,45 @@ def test_portrait_must_be_text(tmp_path, write):
     write(tmp_path, "people/a.md", "---\nname: A\nportrait: [a.jpg, b.jpg]\n---\n")
     _, issues = load_tree(tmp_path)
     assert [i.code for i in issues if i.severity == "error"] == ["E-BAD-FRONTMATTER"]
+
+
+PERSON_WITH_EVENTS = """---
+id: a
+name:
+  given: Ann
+events:
+  - type: occupation
+    value: Carpenter
+    cite: Census 1911
+  - type: immigration
+    date: 1952-04
+    place: Halifax, NS
+    note: Aboard the Arosa Kulm
+    cite:
+      - Passenger list
+      - Family letter
+    ship: Arosa Kulm
+---
+"""
+
+
+def test_events_round_trip(tmp_path, write):
+    write(tmp_path, "people/a.md", PERSON_WITH_EVENTS)
+    tree, _ = load_tree(tmp_path)
+    person = tree.people["a"]
+    assert [(e.type, e.date, e.place, e.value, e.note, e.cite, e.extra) for e in person.events] == [
+        ("occupation", None, None, "Carpenter", None, ["Census 1911"], {}),
+        ("immigration", "1952-04", "Halifax, NS", None, "Aboard the Arosa Kulm", ["Passenger list", "Family letter"], {"ship": "Arosa Kulm"}),
+    ]
+    assert "events" not in person.extra
+    again, _ = split_frontmatter(dump_person(person))
+    assert again["events"][0] == {"type": "occupation", "value": "Carpenter", "cite": ["Census 1911"]}
+    assert again["events"][1]["ship"] == "Arosa Kulm" and list(again["events"][1])[:2] == ["type", "date"]
+
+
+def test_events_as_one_mapping_and_bad_shapes(tmp_path, write):
+    write(tmp_path, "people/a.md", "---\nname: A\nevents:\n  type: burial\n  date: 1991\n---\n")
+    write(tmp_path, "people/b.md", "---\nname: B\nevents: [burial]\n---\n")
+    tree, issues = load_tree(tmp_path)
+    assert [(e.type, e.date) for e in tree.people["a"].events] == [("burial", "1991")]
+    assert [(i.code, i.path) for i in issues if i.severity == "error"] == [("E-BAD-FRONTMATTER", "people/b.md")]
