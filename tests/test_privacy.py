@@ -138,3 +138,13 @@ def test_a_living_persons_events_never_reach_the_output(tmp_path, make_tree):
     assert b"Blacksmith" in everything
     for secret in (b"Zookeeper", b"Secretnote", b"Secretsource"):
         assert secret not in everything
+
+
+@pytest.mark.parametrize(
+    "birth, living",
+    [("AFT 1920", True), ("BET 1920 AND 1950", True), ("ABT 1950", True), ("ABT 1920", False), ("BET 1700 AND 1750", False), ("ABT 1700", False),
+     ("AFT 1700", True), ("unknown", True), ("BEF 1700", False), ("1700", False)],
+)
+def test_qualified_birth_dates_never_make_a_possibly_living_person_look_dead(birth, living):
+    person = Person(id="x", birth=Event(date=birth))
+    assert is_living(person, TODAY) is living

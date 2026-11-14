@@ -23,7 +23,7 @@ def sample(make_tree):
             p("smith-bob", "Bob", "Smith", birth=Event(date="1950", place="Vancouver, BC"),
               parents=["smith-john", "brown-mary"]),
             p("nodates", "No", "Dates"),
-            p("weird", "We", "Ird", birth=Event(date="BET 1900 AND 1910")),
+            p("weird", "We", "Ird", birth=Event(date="around the turn of the century")),
         ]
     )
 

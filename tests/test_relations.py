@@ -229,3 +229,15 @@ def test_approximate_year_and_exact_date_are_one_partnership_but_other_months_ar
         ]
     )
     assert len(build_relations(apart).couples["a+b"].partnerships) == 2
+
+
+def test_partnership_starts_agree_across_qualifiers(make_tree):
+    tree = make_tree(
+        [
+            {"id": "a", "given": "A", "partnerships": [Partnership(with_id="b", type="marriage", start="ABT 1850")]},
+            {"id": "b", "given": "B", "partnerships": [Partnership(with_id="a", type="marriage", start="1850-03")]},
+        ]
+    )
+    couple = build_relations(tree).couples["a+b"]
+    assert len(couple.partnerships) == 1 and couple.partnerships[0].start == "1850-03"
+    assert [i.code for i in build_relations(tree).issues] == []

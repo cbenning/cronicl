@@ -55,7 +55,7 @@ def test_missing_name_is_a_warning(make_tree):
 def test_unparsable_dates_are_warnings(make_tree):
     tree = make_tree(
         [
-            named("a", birth=Event(date="BET 1900 AND 1910"), partnerships=[Partnership("b", type="marriage", start="sometime")]),
+            named("a", birth=Event(date="around the turn of the century"), partnerships=[Partnership("b", type="marriage", start="sometime")]),
             named("b"),
         ]
     )

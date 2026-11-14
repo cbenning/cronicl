@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from .dates import parse_date
+from .dates import latest_year
 from .model import Person
 
 
@@ -12,7 +12,7 @@ def is_living(person: Person, today: date, cutoff_years: int = 100) -> bool:
         return person.living
     if person.death is not None:
         return False
-    birth = parse_date(person.birth.date) if person.birth else None
-    if birth is None:
+    year = latest_year(person.birth.date) if person.birth else None
+    if year is None:
         return True
-    return today.year - birth.year < cutoff_years
+    return today.year - year < cutoff_years

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .dates import plain_form
 from .issues import Issue
 from .model import Partnership, Tree
 
@@ -57,7 +58,7 @@ def _starts_agree(a: str | None, b: str | None) -> bool:
     """Missing agrees with anything; a less precise date agrees with a more precise one that starts with it."""
     if a is None or b is None:
         return True
-    a, b = a.lstrip("~"), b.lstrip("~")
+    a, b = plain_form(a) or a, plain_form(b) or b
     return a.startswith(b) or b.startswith(a)
 
 
@@ -71,7 +72,7 @@ def _merge(group: CouplePartnership, entry: Partnership, pair: tuple[str, ...], 
         current = getattr(group, name)
         if name == "start" and current is not None:
             # _same_partnership already established that the two starts agree: keep the more precise one.
-            if len(value.lstrip("~")) > len(current.lstrip("~")):
+            if len(plain_form(value) or value) > len(plain_form(current) or current):
                 group.start = value
             continue
         if current is None:
@@ -86,7 +87,7 @@ def _merge(group: CouplePartnership, entry: Partnership, pair: tuple[str, ...], 
 
 
 def _start_key(group: CouplePartnership) -> tuple[bool, str]:
-    return (group.start is None, (group.start or "").lstrip("~"))
+    return (group.start is None, plain_form(group.start) or (group.start or ""))
 
 
 def build_relations(tree: Tree) -> Relations:

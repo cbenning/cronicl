@@ -4,7 +4,11 @@ import calendar
 import re
 from dataclasses import dataclass
 
-_CRONICL = re.compile(r"^(~?)(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$")
+_PLAIN = r"(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?"
+_CRONICL = re.compile(r"^(~?)(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$")  # a plain date, or the legacy "~" approximate form
+_KEYWORD = re.compile(rf"^(ABT|CAL|EST|BEF|AFT)\s+{_PLAIN}$", re.I)
+_BETWEEN = re.compile(rf"^BET\s+{_PLAIN}\s+AND\s+{_PLAIN}$", re.I)
+_SPAN = re.compile(rf"^(?:FROM\s+({_PLAIN})(?:\s+TO\s+({_PLAIN}))?|TO\s+({_PLAIN}))$", re.I)
 _GEDCOM = re.compile(r"^(?:(ABT|CAL|EST)\s+)?(?:(\d{1,2})\s+)?(?:([A-Z]{3})\s+)?(\d{3,4})$")
 _MONTHS = {
     m: i
@@ -20,15 +24,11 @@ class ParsedDate:
     month: int | None
     day: int | None
     approx: bool
+    qualifier: str | None = None  # ABT (also CAL, EST), BEF, AFT or BET
+    last_year: int | None = None  # the second year of "BET a AND b"
 
 
-def parse_date(text: str | None) -> ParsedDate | None:
-    if text is None:
-        return None
-    match = _CRONICL.match(text.strip())
-    if not match:
-        return None
-    approx, year_s, month_s, day_s = match.groups()
+def _ymd(year_s: str, month_s: str | None, day_s: str | None) -> tuple[int, int | None, int | None] | None:
     year = int(year_s)
     if year == 0:
         return None
@@ -38,7 +38,84 @@ def parse_date(text: str | None) -> ParsedDate | None:
         return None
     if day is not None and not 1 <= day <= calendar.monthrange(year, month)[1]:
         return None
-    return ParsedDate(year, month, day, bool(approx))
+    return year, month, day
+
+
+def _squash(text: str) -> str:
+    return " ".join(text.split())
+
+
+def parse_date(text: str | None) -> ParsedDate | None:
+    """A date: YYYY[-MM[-DD]], optionally with ABT/CAL/EST, BEF, AFT or BET .. AND .. (any case), or the legacy ~ form."""
+    if text is None:
+        return None
+    raw = _squash(text)
+    plain = _CRONICL.match(raw)
+    if plain:
+        tilde, y, m, d = plain.groups()
+        ymd = _ymd(y, m, d)
+        return ParsedDate(*ymd, bool(tilde)) if ymd else None
+    keyword = _KEYWORD.match(raw)
+    if keyword:
+        word, y, m, d = keyword.groups()
+        ymd = _ymd(y, m, d)
+        if ymd is None:
+            return None
+        word = word.upper()
+        return ParsedDate(*ymd, True, "ABT" if word in ("ABT", "CAL", "EST") else word)
+    between = _BETWEEN.match(raw)
+    if between:
+        y1, m1, d1, y2, m2, d2 = between.groups()
+        first, last = _ymd(y1, m1, d1), _ymd(y2, m2, d2)
+        if first is None or last is None:
+            return None
+        return ParsedDate(*first, True, "BET", last[0])
+    return None
+
+
+def is_unknown(text: str | None) -> bool:
+    """The word `unknown` where a date belongs: it happened, when is not known."""
+    return text is not None and text.strip().casefold() == "unknown"
+
+
+def parse_span(text: str | None) -> tuple[str | None, str | None] | None:
+    """`FROM a TO b`, `FROM a` or `TO b` as (a, b) with the end points as written; None for anything else."""
+    if text is None:
+        return None
+    match = _SPAN.match(_squash(text))
+    if not match:
+        return None
+    start, end_after_from, only_end = match.group(1), match.group(5), match.group(9)
+    first = start
+    last = end_after_from if start else only_end
+    for part in (first, last):
+        if part and (_CRONICL.match(part) is None or parse_date(part) is None):
+            return None
+    return first, last
+
+
+def latest_year(text: str | None) -> int | None:
+    """The latest year a birth date allows, for privacy: an uncertain date must never make a living person look dead.
+
+    BET a AND b is b; ABT, BEF and plain dates are their year; AFT and unknown or unreadable dates give no year.
+    """
+    parsed = parse_date(text)
+    if parsed is None or parsed.qualifier == "AFT":
+        return None
+    return parsed.last_year if parsed.qualifier == "BET" else parsed.year
+
+
+def plain_form(text: str | None) -> str | None:
+    """The first date of a value without its qualifier: 'ABT 1850-03' is '1850-03'. None when unreadable."""
+    parsed = parse_date(text)
+    if parsed is None:
+        return None
+    out = f"{parsed.year:04d}"
+    if parsed.month:
+        out += f"-{parsed.month:02d}"
+    if parsed.day:
+        out += f"-{parsed.day:02d}"
+    return out
 
 
 def date_year(text: str | None) -> int | None:
@@ -84,21 +161,43 @@ def year_position(year: int, month: int | None, day: int | None) -> float:
     return round(year + 0.5, 3)
 
 
-def format_date(text: str | None) -> str:
-    """Write a date in words: '12 March 1941', 'about 1941'. Unparseable text is returned as written."""
-    if text is None:
-        return ""
-    raw = text.strip()
-    parsed = parse_date(raw)
-    if parsed is None:
-        return raw
+def _words(text: str) -> str:
+    """A plain date in words: '12 March 1941'."""
+    parsed = parse_date(text)
     parts = []
     if parsed.day:
         parts.append(str(parsed.day))
     if parsed.month:
         parts.append(calendar.month_name[parsed.month])
     parts.append(str(parsed.year))
-    return ("about " if parsed.approx else "") + " ".join(parts)
+    return " ".join(parts)
+
+
+def format_date(text: str | None) -> str:
+    """Write a date in words: '12 March 1941', 'about 1941', 'between 1880 and 1890', '1900 to 1950'.
+
+    Unparseable text is returned as written.
+    """
+    if text is None:
+        return ""
+    raw = _squash(text)
+    if is_unknown(raw):
+        return "date unknown"
+    span = parse_span(raw)
+    if span:
+        first, last = span
+        if first and last:
+            return f"{_words(first)} to {_words(last)}"
+        return f"from {_words(first)}" if first else f"until {_words(last)}"
+    parsed = parse_date(raw)
+    if parsed is None:
+        return raw
+    if parsed.qualifier == "BET":
+        first, last = (re.sub(r"^BET\s+", "", raw, flags=re.I)).split(" AND ", 1) if " AND " in raw else re.split(r"\s+and\s+", re.sub(r"^BET\s+", "", raw, flags=re.I), 1, flags=re.I)
+        return f"between {_words(first)} and {_words(last)}"
+    body = re.sub(r"^(?:ABT|CAL|EST|BEF|AFT)\s+", "", raw, flags=re.I).lstrip("~")
+    prefix = {"ABT": "about ", "BEF": "before ", "AFT": "after "}.get(parsed.qualifier, "about " if parsed.approx else "")
+    return prefix + _words(body)
 
 
 def from_gedcom(text: str) -> tuple[str, bool]:
