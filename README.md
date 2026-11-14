@@ -217,7 +217,8 @@ Before you publish a site that contains living people, set `privacy.living` to `
 `site.yml`. While it is `full`, `build` prints `W-PRIVACY-OFF` with the number of people the privacy rules treat
 as living: that is a reminder that they are all published.
 
-`famsite build --out public` writes a folder of plain files that any static host can serve. Unless you configure a
+`famsite build --out public` writes a folder of plain files that any static host can serve (see
+[Deploying](#deploying) and [Password protection](#password-protection)). Unless you configure a
 [photo gallery](#photo-gallery), the site makes no external requests: no web fonts, scripts or analytics are loaded
 from anywhere.
 
@@ -240,6 +241,164 @@ privacy:
 
 `edit_url` must be an `https://` address containing `{id}`; `contact` must be `mailto:`, `http://` or `https://`.
 `check` warns about anything else. People hidden or replaced by privacy redaction get neither link.
+
+## Deploying
+
+`famsite build --out public` writes a folder of plain files: HTML, JSON, JavaScript, CSS and your portraits. Any
+static host can serve it, and nothing runs on the server. `famsite serve` is only for looking at the site while
+you edit it; do not use it to publish. Before publishing, set `privacy.living` to `placeholder` or `hidden` in
+`site.yml` (see [Publishing](#publishing)).
+
+Every page uses relative addresses, so the site works at the root of a domain or in a subfolder
+(`example.com/family/`). Each build clears only the files it generates, so `rsync --delete` of the output
+folder is safe. The home page's "recently updated" list reads the data folder's git history, so a build in a
+fresh clone needs the full history, not a shallow copy.
+
+### GitHub Pages
+
+Keep your data folder (`people/`, `media/`, `site.yml`) in a GitHub repository. In the repository's *Settings,
+Pages*, set *Source* to *GitHub Actions*, then add `.github/workflows/site.yml`:
+
+```yaml
+name: Publish site
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # the full history, for "recently updated"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install famsite    # or however you install famsite; see the note below
+      - run: famsite build --out public
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+Every push to `main` rebuilds and publishes the site. With `edit_url` pointing at the repository (see
+[Publishing](#publishing)), a relative can use "Edit this page" on GitHub, and the change goes live by itself.
+The action versions above were current when this was written; use the current major versions. The `pip install`
+line is the one part that depends on where you keep famsite: use the package name once it is published, or
+`pip install git+https://<where-your-copy-lives>` until then.
+
+**A GitHub Pages site is public, even when its repository is private.** Only organisations on GitHub Enterprise
+Cloud can restrict a Pages site to people with access to the repository. Plan accordingly: redact living people,
+and see [Password protection](#password-protection) for gated alternatives.
+
+### Your own server
+
+```sh
+famsite build --out out
+rsync -a --delete out/ you@yourhost:/var/www/family/
+```
+
+Point any web server at that folder. The files are static; there is nothing to configure beyond HTTPS.
+
+### Netlify, Cloudflare Pages, Vercel and similar
+
+Connect the repository, set the build command to `pip install famsite && famsite build --out public` and the
+publish directory to `public`. These hosts clone with a shallow history by default: turn on a full clone (or
+accept that the home page's "recently updated" list is short).
+
+## Password protection
+
+A static site has no logins of its own, so a password has to come from the host or from a service in front of it.
+Whatever you choose, keep living people redacted (`privacy.living: placeholder`): a password controls who gets
+in, not what they pass on.
+
+| If you have | Use | Notes |
+|---|---|---|
+| Your own web server | HTTP Basic auth | Simplest and sturdiest; nothing is served before the password is accepted |
+| A static host and want real per-person access | Cloudflare Pages plus Cloudflare Access | No shared password; relatives sign in with an emailed code |
+| GitHub Pages | See below | Pages cannot require a login on its own |
+
+### Basic auth on your own server
+
+Serve the site over HTTPS only (Basic auth sends the password with every request, so over plain HTTP it is
+readable by anyone on the network). Create the password file outside the web root, never in git, with bcrypt:
+
+```sh
+htpasswd -B -c /etc/nginx/family.htpasswd family
+```
+
+nginx:
+
+```nginx
+location / {
+    auth_basic "Family";
+    auth_basic_user_file /etc/nginx/family.htpasswd;
+    add_header X-Robots-Tag "noindex, nofollow" always;
+}
+```
+
+Apache (`.htaccess`, with `mod_headers`):
+
+```apache
+AuthType Basic
+AuthName "Family"
+AuthUserFile /home/you/.htpasswd-family
+Require valid-user
+Header set X-Robots-Tag "noindex, nofollow"
+```
+
+Use a long passphrase and share it with the family. Consider rate limiting failed logins (fail2ban or your
+host's equivalent). The login dialog is the browser's own and there is no logout; for a family site that is
+usually acceptable.
+
+### Cloudflare Pages with Cloudflare Access
+
+Cloudflare Pages hosts the static files (connect the repository as above) and Cloudflare Access puts a login in
+front of them. In the Cloudflare dashboard, under *Zero Trust*, add a *self-hosted application* covering your
+Pages hostname (and any custom domain), with a policy that allows the email addresses of your family and the
+*One-time PIN* login method. Each relative then gets a code by email; you can remove one person without changing
+a shared password. Cloudflare's free plan covers up to 50 users at the time of writing. Menu names change, so
+follow Cloudflare's current documentation for the exact steps.
+
+### GitHub Pages
+
+GitHub Pages itself has no password option (see the note above). Putting Cloudflare in front of it with a
+custom domain looks like protection but is not: Pages answers by hostname, so someone who sends requests to
+GitHub's servers with your hostname can reach the site without passing Cloudflare. If you need a real gate,
+use Cloudflare Pages (above) or your own server instead. If you stay on GitHub Pages, the realistic choices are
+a public site with living people redacted, and (weakest) pages encrypted in the browser with a tool such as
+StatiCrypt. Encrypted files are still public, so anyone can try passwords against them offline: that is only as
+strong as a long passphrase, and this site is many files, not one page.
+
+### Keeping search engines out
+
+None of the above affects search engines on a public site. The `X-Robots-Tag` lines above ask them not to index
+a protected site. A public site can add a `robots.txt` that disallows everything and a
+`<meta name="robots" content="noindex">` in its pages; famsite does not generate either yet, and well-behaved
+crawlers only.
+
+### A gallery behind a login
+
+The photo gallery (see below) is a separate site with its own protection. A gallery that itself requires a login
+is not supported yet: the browser fetches its `people.json` without credentials, so the photos block stays hidden.
+A gallery that is public, or protected only by being hard to find, works as described.
 
 ## Photo gallery
 
