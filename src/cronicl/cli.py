@@ -66,7 +66,8 @@ def _print_issues(issues, fmt: str) -> None:
         print(json.dumps([i.to_dict() for i in issues], indent=2))
         return
     for issue in issues:
-        print(f"{issue.severity.upper():7} {issue.code} {issue.path or '-'}: {issue.message}")
+        where = f"{issue.path}:{issue.line}" if issue.path and issue.line else (issue.path or "-")
+        print(f"{issue.severity.upper():7} {issue.code} {where}: {issue.message}")
 
 
 def _git_dirty(path: Path) -> bool | None:

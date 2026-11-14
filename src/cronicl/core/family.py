@@ -216,6 +216,7 @@ class _Reader:
                 else:
                     partnerships.append(Partnership(with_id=b, note=note))
             first = self.people[a]
+            first.couple_records.append((b, record, source, line))
             if partnerships:
                 first.partnerships.extend(partnerships)
             else:
@@ -251,6 +252,10 @@ def read_family(data_dir: Path) -> tuple[list[Person], list[Issue]]:
         if result.error:
             reader.problem("E-BAD-FAMILY", f"cannot parse {source}: {result.error}", source, result.error_line)
             continue
+        top = set(result.top_duplicates)
+        for key, line in result.duplicates:
+            if (key, line) not in top:
+                reader.problem("W-DUPLICATE-KEY", f"duplicate key {key!r}; the later value is used", source, line)
         for line in result.merge_keys:
             reader.problem("E-BAD-FAMILY", "merge keys (<<) are not supported; write the values out", source, line)
         if result.merge_keys:

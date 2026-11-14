@@ -77,6 +77,7 @@ class Person:
     id_pinned: bool = False
     source: str | None = None  # family.yml (or family/x.yml), relative to the data folder; None for the legacy layout
     line: int | None = None  # the line of this person's record in `source`
+    couple_records: list = field(default_factory=list)  # (partner id, raw couple record, source, line) filed under this person
     raw: object = None  # the record as loaded from family.yml (a yamltext.Mapping), for validation; never written back
 
     @property

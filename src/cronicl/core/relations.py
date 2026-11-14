@@ -94,9 +94,21 @@ def build_relations(tree: Tree) -> Relations:
     people = tree.people
     issues: list[Issue] = []
 
+    def line_of(pid: str, key: str | None = None) -> int | None:
+        person = people[pid]
+        raw = person.raw
+        if key and raw is not None and hasattr(raw, "lines") and key in raw.lines:
+            return raw.lines[key]
+        return person.line
+
     def dangling(owner: str, field_name: str, target: str) -> None:
         issues.append(
-            Issue("E-DANGLING-REF", f"{owner}: {field_name} {target!r} does not exist", people[owner].location)
+            Issue(
+                "E-DANGLING-REF",
+                f"{owner}: {field_name} {target!r} does not exist",
+                people[owner].location,
+                line_of(owner, field_name.split(".")[0]),
+            )
         )
 
     # Effective parents: declared `parents` first, then down-declared `children`, in sorted order.
@@ -120,6 +132,7 @@ def build_relations(tree: Tree) -> Relations:
                     "W-TOO-MANY-PARENTS",
                     f"{pid}: {len(declared[pid])} parents declared; using {declared[pid][:2]}",
                     people[pid].location,
+                    line_of(pid, "parents"),
                 )
             )
             declared[pid] = declared[pid][:2]

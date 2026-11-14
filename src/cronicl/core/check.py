@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from .dates import parse_date
+from dataclasses import replace
+from pathlib import Path
+
+from .dates import is_unknown, parse_date, parse_span
+from .familycheck import family_person_issues
 from .issues import Issue
 from .generations import generation_conflict
 from .media import ALLOWED, MAX_BYTES, resolve, safe_relative
@@ -15,10 +19,16 @@ def has_errors(issues: list[Issue]) -> bool:
 
 
 def _check_date(value: str | None, label: str, person: Person, out: list[Issue]) -> None:
-    if value and parse_date(value) is None:
+    if value and not is_unknown(value) and parse_span(value) is None and parse_date(value) is None:
         out.append(
             Issue("W-DATE-UNPARSED", f"{person.id}: {label} date {value!r} is not a recognised date", person.location)
         )
+
+
+def _data_dir(person: Person):
+    """The data folder a person was read from (family.yml sits in it; legacy files sit one folder down)."""
+    depth = len(Path(person.source).parts) if person.source else 2
+    return person.path.parents[depth - 1]
 
 
 def _check_portrait(person: Person, out: list[Issue]) -> None:
@@ -32,7 +42,7 @@ def _check_portrait(person: Person, out: list[Issue]) -> None:
         return
     if person.path is None:
         return
-    media = person.path.parent.parent / "media"
+    media = _data_dir(person) / "media"
     found = resolve(media, value)
     if found is None:
         candidate = media / value
@@ -73,7 +83,8 @@ def _check_person(person: Person, issues: list[Issue]) -> None:
     where = person.location
     if not is_valid_id(person.id):
         issues.append(Issue("E-INVALID-ID", f"person id {person.id!r} is not a valid id", where))
-    if person.path is not None and person.path.name != f"{person.id}.md":
+    legacy = person.source is None
+    if legacy and person.path is not None and person.path.name != f"{person.id}.md":
         issues.append(Issue("W-FILENAME-DRIFT", f"file name does not match id {person.id!r}; run fix", where))
     if not (person.given or person.surname):
         issues.append(Issue("W-NO-NAME", f"{person.id}: person has no name", where))
@@ -81,6 +92,8 @@ def _check_person(person: Person, issues: list[Issue]) -> None:
         issues.append(Issue("W-BAD-SEX", f"{person.id}: sex {person.sex!r} is not M, F or U", where))
     if person.portrait:
         _check_portrait(person, issues)
+    if not legacy:
+        return  # dates, events and couples of a family.yml person are checked from the raw record (familycheck)
     if person.birth:
         _check_date(person.birth.date, "birth", person, issues)
     if person.death:
@@ -136,9 +149,14 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
         return sorted(issues, key=lambda i: (i.path or "", i.code, i.message))
     issues += relations.issues
 
+    def person_step(person: Person) -> None:
+        local: list[Issue] = []
+        _check_person(person, local)
+        issues.extend(replace(i, line=person.line) if person.source and i.line is None else i for i in local)
+        issues.extend(person_issues(person) if person.source is None else family_person_issues(person))
+
     for person in tree.people.values():
-        _guard(person.id, lambda person=person: _check_person(person, issues), issues, person.location)
-        _guard(person.id, lambda person=person: issues.extend(person_issues(person)), issues, person.location)
+        _guard(person.id, lambda person=person: person_step(person), issues, person.location)
 
     def couples_step() -> None:
         for cid, couple in sorted(relations.couples.items()):
@@ -158,7 +176,7 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
     def cycles_step() -> None:
         cycle_members = _cycle_members(relations.parents)
         for pid in sorted(cycle_members):
-            issues.append(Issue("E-CYCLE", f"{pid}: person is their own ancestor", tree.people[pid].location))
+            issues.append(Issue("E-CYCLE", f"{pid}: person is their own ancestor", tree.people[pid].location, tree.people[pid].line))
         if not cycle_members:
             conflict = generation_conflict(tree)
             if conflict:
