@@ -37,6 +37,11 @@ SITES = {
     "gallery-bad": "gallery:\n  type: fussel\n  url: 5\n  portraits: maybe\n",
     "version-list": "schema_version: [1]\n",
     "unicode": "title: Familie Müller 🌳\nintro: 日本語\n",
+    "complex-key-list": "place_groups:\n  [a]: x\n",
+    "complex-key-explicit": "? [a, b]\n: y\n",
+    "complex-key-map": "{a: b}: c\n",
+    "merge-key": "base: &b\n  living: hidden\n  id_salt: s\nprivacy:\n  <<: *b\n",
+    "alias-whole-block": "p: &p\n  living: hidden\n  id_salt: s\nprivacy: *p\n",
 }
 
 PEOPLE = {
@@ -66,6 +71,9 @@ PEOPLE = {
     "gallery-id-list": "---\nname: A\ngallery_id: [a]\n---\n",
     "portrait-list": "---\nname: A\nportrait: [a]\n---\n",
     "tab-indent": "---\nname:\n\tgiven: A\n---\n",
+    "complex-key-list": "---\nname: A\n[note]: hello\n---\n",
+    "complex-key-map": "---\nname: A\n{a: b}: c\n---\n",
+    "merge-key": "---\nbase: &b\n  given: X\nname:\n  <<: *b\n---\n",
 }
 
 

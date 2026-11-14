@@ -27,24 +27,37 @@ class _TextLoader(yaml.BaseLoader):
     def __init__(self, stream):
         super().__init__(stream)
         self.duplicates: list[str] = []
+        self.merge_keys = False
 
     def construct_mapping(self, node, deep=False):
         seen: set = set()
         for key_node, _ in node.value:
             key = self.construct_object(key_node, deep=True)
+            try:
+                hash(key)
+            except TypeError:
+                continue  # a list or mapping used as a key: the base class reports it as a YAML error
+            if key == "<<":
+                self.merge_keys = True
             if key in seen:
                 self.duplicates.append(str(key))
             seen.add(key)
         return super().construct_mapping(node, deep=deep)
 
 
-def load_yaml_text(raw: str) -> tuple[object, list[str]]:
-    """Parse YAML with every scalar as text; returns the data and the names of keys written twice in one mapping."""
+def load_yaml_text(raw: str, *, allow_merge: bool = True) -> tuple[object, list[str]]:
+    """Parse YAML with every scalar as text; returns the data and the names of keys written twice in one mapping.
+
+    This loader does not apply merge keys (`<<`). Where a silent miss could be harmful (site.yml carries the privacy
+    setting) the caller passes allow_merge=False and a merge key is an error instead of an ignored line.
+    """
     loader = _TextLoader(raw)
     try:
         data = loader.get_single_data()
     finally:
         loader.dispose()
+    if loader.merge_keys and not allow_merge:
+        raise yaml.YAMLError("merge keys (<<) are not supported in site.yml; write the values out")
     return data, loader.duplicates
 
 
@@ -300,7 +313,7 @@ def load_site(data_dir: Path) -> tuple[dict, list[Issue]]:
         return {}, [Issue("W-NO-SITE-YML", "site.yml not found; using defaults")]
     unreadable = {"_unreadable": True}  # the owner's intent is unknown, so settings fail closed
     try:
-        data, duplicates = load_yaml_text(path.read_text(encoding="utf-8"))
+        data, duplicates = load_yaml_text(path.read_text(encoding="utf-8"), allow_merge=False)
     except (yaml.YAMLError, UnicodeDecodeError) as exc:
         return unreadable, [Issue("E-BAD-SITE-YML", f"cannot parse site.yml: {exc}", "site.yml")]
     if data is None or data == "":

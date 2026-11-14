@@ -37,20 +37,28 @@ privacy:
 """
 
 
-def warning_summary(issues) -> str:
-    """One line standing in for the individual warnings of a build; `famsite check` has the details."""
-    warnings = [i for i in issues if i.severity == "warning"]
-    if not warnings:
+def _summary(issues, severity: str, lead: str) -> str:
+    chosen = [i for i in issues if i.severity == severity]
+    if not chosen:
         return ""
     counts: dict[str, int] = {}
-    for issue in warnings:
+    for issue in chosen:
         counts[issue.code] = counts.get(issue.code, 0) + 1
     ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
     parts = [f"{n} {code}" for code, n in ordered[:5]]
     if len(ordered) > 5:
         parts.append("...")
-    word = "warning" if len(warnings) == 1 else "warnings"
-    return f"{len(warnings)} {word}: {', '.join(parts)} (run famsite check for details)"
+    return f"{lead}{len(chosen)} {severity}{'' if len(chosen) == 1 else 's'}: {', '.join(parts)} (run famsite check for details)"
+
+
+def warning_summary(issues) -> str:
+    """One line standing in for the individual warnings of a build; `famsite check` has the details."""
+    return _summary(issues, "warning", "")
+
+
+def error_summary(issues) -> str:
+    """What a build forced to continue with --ignore-errors says it is ignoring."""
+    return _summary(issues, "error", "ignoring ")
 
 
 def _print_issues(issues, fmt: str) -> None:
@@ -152,6 +160,10 @@ def cmd_build(args) -> int:
     summary = warning_summary(issues)
     if summary:
         print(summary)
+    if errors:  # only reachable with --ignore-errors
+        print(error_summary(errors))
+        if privacy_settings(tree.site).broken:
+            print("privacy setting unusable: living people are treated as placeholders")
     today = date.today()
     privacy = privacy_settings(tree.site)
     if privacy.living == "full":

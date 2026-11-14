@@ -701,6 +701,7 @@ def test_settings_in_odd_shapes_never_raise(tmp_path, make_tree):
     assert "Kid" not in (tmp_path / "a/index.json").read_text(encoding="utf-8")
     tree.site = {"title": ["x"], "intro": {"a": 1}}
     build_site(tree, tmp_path / "b", today=TODAY)
-    assert "<title>Family Tree" in (tmp_path / "b/index.html").read_text(encoding="utf-8") or "Family Tree" in (tmp_path / "b/index.html").read_text(encoding="utf-8")
+    page = (tmp_path / "b/index.html").read_text(encoding="utf-8")
+    assert "Family Tree" in page and "['x']" not in page and "{'a': 1}" not in page
     tree.site = {"place_groups": "Ontario"}
     build_site(tree, tmp_path / "c", today=TODAY)
