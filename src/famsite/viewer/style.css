@@ -308,3 +308,9 @@ img.avatar { object-fit: cover; }
 #modes { display: flex; gap: .25rem; }
 #modes a { padding: .3rem .8rem; border-radius: 6px; text-decoration: none; color: inherit; border: 1px solid transparent; }
 #modes a[aria-current="page"] { border-color: var(--node-line); background: var(--node); font-weight: 600; }
+
+/* Places grouped by country */
+.index .groups { color: var(--muted); }
+.index .country { margin-top: var(--space-5); }
+.index .country > h2 { border-bottom: 1px solid var(--border); padding-bottom: var(--space-1); }
+.index h3 { font-size: 1.05rem; margin: var(--space-3) 0 var(--space-1); }

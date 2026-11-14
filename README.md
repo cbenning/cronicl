@@ -57,7 +57,10 @@ read-only utilities. There is deliberately no bulk form.
   (`localStorage`, never sent anywhere); until then relations are told from the home person's side.
   `relate/index.html` answers "how are these two people related?" for any pair (`?a=<id>&b=<id>`). Kinship is
   worked out in the browser from `kin.json`; pages without JavaScript simply omit the line.
-- `places/index.html` lists every place named in the files and who was born, died or married there.
+- `places/index.html` lists every place named in the files and who was born, died or married there, grouped by
+  the last part of the name ("Hamburg, Germany" is under Germany). Nothing is guessed: a region such as
+  "Ontario" is its own group unless `site.yml` folds it in (`place_groups: {Ontario: Canada, Holland: Netherlands}`,
+  matched ignoring case). A name with no comma that is not a group's own name goes under "Other places".
 - `tree/` is the family tree and `timeline/` is the timeline: two pages of one viewer, described next. Every
   address means one thing:
 
@@ -226,6 +229,9 @@ intro: |                       # Markdown, shown on the home page
 home: hollings-nora-doreen     # the person the tree opens on (an id)
 edit_url: https://github.com/example/family/edit/main/people/{id}.md   # adds "Edit this page"
 contact: mailto:family@example.org    # adds "Suggest a correction" (a mailto: or https:// link)
+place_groups:                  # optional: fold a region into its country on the places page
+  Ontario: Canada
+  British Columbia: Canada
 privacy:
   living: placeholder
   cutoff_years: 100

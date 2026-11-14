@@ -21,7 +21,7 @@ from .lineage import ancestor_tree, count_descendants, descendant_outline
 from .links import page_links
 from .media import ALLOWED, resolve
 from .model import Event, Tree
-from .places import place_index
+from .places import group_places, place_index
 from .privacy import is_living, redact
 from .relations import Relations, build_relations
 from .slug import slugify
@@ -396,7 +396,10 @@ def build_site(
     ]
     put(
         "places/index.html",
-        env.get_template("places.html").render(title=title, v=versions, home=home, root="../", active="places", places=places),
+        env.get_template("places.html").render(
+            title=title, v=versions, home=home, root="../", active="places", places=places,
+            groups=group_places(places, tree.site.get("place_groups") if isinstance(tree.site.get("place_groups"), dict) else None),
+        ),
     )
     put(
         "relate/index.html",

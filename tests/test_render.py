@@ -534,3 +534,16 @@ def test_the_old_viewer_address_forwards(tmp_path, make_tree):
     build_site(sample(make_tree), tmp_path, today=TODAY)
     old = (tmp_path / "tree.html").read_text(encoding="utf-8")
     assert "location.replace(" in old and "tree/" in old and "timeline/" in old and 'id="tree"' not in old
+
+
+def test_places_page_is_grouped_by_country(tmp_path, make_tree):
+    tree = make_tree([
+        p("a", "Ann", "X", birth=Event(date="1900", place="Hamburg, Germany")),
+        p("b", "Bo", "X", birth=Event(date="1901", place="Duncan, British Columbia, Canada")),
+        p("c", "Cy", "X", birth=Event(date="1902", place="Barrie, Ontario, Canada")),
+    ])
+    tree.site = {"place_groups": {"British Columbia": "Canada"}}
+    build_site(tree, tmp_path, today=TODAY)
+    page = (tmp_path / "places/index.html").read_text(encoding="utf-8")
+    assert page.index('id="c-canada"') < page.index('id="pl-duncan-british-columbia-canada"') < page.index('id="c-germany"')
+    assert 'href="#c-germany"' in page

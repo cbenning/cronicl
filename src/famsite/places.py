@@ -39,3 +39,48 @@ def place_index(tree: Tree, relations: Relations) -> list[dict]:
         entries = sorted(group["entries"], key=lambda e: (e["date"] or "9999", e["id"], e["what"]))
         out.append({"place": place, "slug": slug, "entries": entries})
     return out
+
+
+def group_places(places: list[dict], aliases: dict | None = None) -> list[dict]:
+    """Group places by the last comma-separated part of their name ("Hamburg, Germany" goes under Germany).
+
+    Nothing is inferred: the group is whatever the name ends with. `aliases` (site.yml `place_groups`, matched
+    ignoring case) folds a region into its country. A name with no comma joins a group only when it is that
+    group's own name ("Germany"); every other one-part name goes under "Other places", which sorts last.
+    """
+    folded_aliases = {str(k).strip().casefold(): str(v).strip() for k, v in (aliases or {}).items() if str(v).strip()}
+
+    def named(part: str) -> str:
+        return folded_aliases.get(part.casefold(), part)
+
+    def parts_of(place: str) -> list[str]:
+        return [piece.strip() for piece in place.split(",") if piece.strip()]
+
+    groups: dict[str, dict] = {}
+    for entry in places:
+        pieces = parts_of(entry["place"])
+        if len(pieces) >= 2:
+            name = named(pieces[-1])
+            groups.setdefault(name.casefold(), {"name": name, "places": []})["places"].append(entry)
+    other: list[dict] = []
+    for entry in places:
+        pieces = parts_of(entry["place"])
+        if len(pieces) >= 2:
+            continue
+        key = named(pieces[0]).casefold() if pieces else ""
+        if key in groups:
+            groups[key]["places"].append(entry)
+        else:
+            other.append(entry)
+    ordered = sorted(groups.values(), key=lambda g: (slugify(g["name"]), g["name"].casefold()))
+    for group in ordered:  # keep the places in the order they were given (alphabetical)
+        group["places"].sort(key=lambda e: places.index(e))
+    taken = {"other"}
+    out: list[dict] = []
+    for group in ordered:
+        slug = unique_id(slugify(group["name"]) or "group", taken)
+        taken.add(slug)
+        out.append({"name": group["name"], "slug": slug, "places": group["places"]})
+    if other:
+        out.append({"name": "Other places", "slug": "other", "places": other})
+    return out
