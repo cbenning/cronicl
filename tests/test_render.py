@@ -2,7 +2,7 @@ import json
 from datetime import date
 
 from famsite.model import Event, LifeEvent
-from famsite.render import build_site, dumps, person_payload
+from famsite.render import build_site, dumps, page_links, person_payload
 
 TODAY = date(2026, 10, 10)
 
@@ -489,3 +489,27 @@ def test_page_prints_facts_notes_and_sources_escaped(tmp_path, make_tree):
     assert "Carpenter &lt;b&gt;" in page and "Carpenter <b>" not in page
     assert "Source: Census 1911" in page and "Source: Parish register" in page
     assert "Self-employed" in page and "Graduation" in page and "May 1960 – 1975" in page
+
+
+def test_page_links():
+    site = {"edit_url": "https://example.org/fam/edit/main/people/{id}.md", "contact": "mailto:tree@example.org"}
+    assert page_links(site, "smith-bob", "Bob & Co? #1") == [
+        {"href": "https://example.org/fam/edit/main/people/smith-bob.md", "text": "Edit this page"},
+        {"href": "mailto:tree@example.org?subject=Correction%3A%20Bob%20%26%20Co%3F%20%231%20%28smith-bob%29",
+         "text": "Suggest a correction"}]
+    assert page_links({"contact": "https://example.org/contact"}, "a", "A") == [
+        {"href": "https://example.org/contact", "text": "Suggest a correction"}]
+    assert page_links({"edit_url": "https://example.org/no-placeholder", "contact": "javascript:alert(1)"}, "a", "A") == []
+    assert page_links({}, "a", "A") == []
+
+
+def test_links_are_printed_for_real_people_only(tmp_path, make_tree):
+    tree = make_tree([
+        p("old", "Old", "X", birth=Event(date="1800")),
+        p("kid", "Kid", "X", birth=Event(date="2000"), parents=["old"]),
+    ])
+    tree.site = {"privacy": {"living": "placeholder", "id_salt": "s"}, "contact": "mailto:tree@example.org"}
+    build_site(tree, tmp_path, today=TODAY)
+    pages = {f.parent.name: f.read_text(encoding="utf-8") for f in (tmp_path / "p").glob("*/index.html")}
+    assert "Suggest a correction" in pages["old"]
+    assert all("Suggest a correction" not in html for pid, html in pages.items() if pid != "old")

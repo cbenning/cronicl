@@ -92,6 +92,9 @@
     {{ outline(descendants) }}
   </details>
   {% endif %}
+  {% if links %}
+  <footer class="page-foot">{% for link in links %}<a href="{{ link.href }}">{{ link.text }}</a>{% endfor %}</footer>
+  {% endif %}
 </main>
 </body>
 </html>

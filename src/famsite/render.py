@@ -18,6 +18,7 @@ from .home import home_person
 from .kin import build_kin
 from .layout import compute_layout
 from .lineage import ancestor_tree, count_descendants, descendant_outline
+from .links import page_links
 from .media import ALLOWED, resolve
 from .model import Event, Tree
 from .places import place_index
@@ -416,6 +417,7 @@ def build_site(
             person_template.render(
                 title=title, person=payload, ancestors=ancestor_tree(visible, relations, pid),
                 descendants=outline, descendant_count=count_descendants(outline),
+                links=page_links(tree.site, pid, payload["name"]) if pid in tree.people else [],
                 v=versions, home=home, root="../../"
             ),
         )

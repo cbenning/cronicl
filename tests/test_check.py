@@ -160,3 +160,9 @@ def test_event_checks(make_tree):
         LifeEvent(type="moved-house", date="1940"),
     ]}])
     assert sorted(i.code for i in check_tree(tree)) == ["W-DATE-UNPARSED", "W-END-BEFORE-START", "W-EVENT-NO-TYPE"]
+
+
+def test_bad_site_links_are_reported(make_tree):
+    tree = make_tree([{"id": "a", "given": "A"}])
+    tree.site = {"edit_url": "https://example.org/x", "contact": "javascript:alert(1)"}
+    assert [i.code for i in check_tree(tree)].count("W-BAD-LINK") == 2

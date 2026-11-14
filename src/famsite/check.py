@@ -3,6 +3,7 @@ from __future__ import annotations
 from .dates import parse_date
 from .issues import Issue
 from .layout import generation_conflict
+from .links import valid_contact, valid_edit_url
 from .media import ALLOWED, MAX_BYTES, resolve, safe_relative
 from .model import END_REASONS, PARTNERSHIP_TYPES, Person, Tree
 from .relations import build_relations
@@ -72,6 +73,17 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
     issues: list[Issue] = list(load_issues or [])
     relations = build_relations(tree)
     issues += relations.issues
+
+    for key, valid in (("edit_url", valid_edit_url), ("contact", valid_contact)):
+        value = (tree.site or {}).get(key)
+        if value and not valid(value):
+            issues.append(
+                Issue(
+                    "W-BAD-LINK",
+                    f"{key} {str(value)!r} is not an allowed link (edit_url needs https://... and {{id}}; contact is mailto:, http:// or https://)",
+                    "site.yml",
+                )
+            )
 
     home = (tree.site or {}).get("home")
     if home and str(home) not in tree.people:
