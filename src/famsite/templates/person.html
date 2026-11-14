@@ -35,6 +35,12 @@
       {% if person.years %}<p class="years">{{ person.years }}</p>{% endif %}
       <p class="kin" data-kin-for="{{ person.id }}" hidden></p>
       {% if person.summary %}<p class="summary">{{ person.summary }}</p>{% endif %}
+      {% if person.facts %}
+      <dl class="attrs">
+        {% for fact in person.facts %}<dt>{{ fact.label }}</dt><dd>{{ fact.text }}{% if fact.note %}<span class="note">{{ fact.note }}</span>{% endif %}{% for c in fact.cite %}<span class="cite">Source: {{ c }}</span>{% endfor %}</dd>
+        {% endfor %}
+      </dl>
+      {% endif %}
       <nav class="pills" aria-label="Views">
         <a class="pill" href="{{ root }}tree.html#/focus/{{ person.id }}">Focus tree</a>
         <a class="pill" href="{{ root }}tree.html#/timeline/{{ person.id }}">Timeline</a>
@@ -68,7 +74,7 @@
       {% for e in person.events %}
       <li class="{{ 'own' if e.role == 'self' else 'rel' }}">
         <span class="when">{{ e.when }}</span>
-        <span class="what">{{ e.text }}{% if e.place %} in {{ e.place }}{% endif %}{% if e.age is not none %} <span class="age">(age {% if e.age_approx %}~{% endif %}{{ e.age }})</span>{% endif %}</span>
+        <span class="what">{{ e.text }}{% if e.place %} in {{ e.place }}{% endif %}{% if e.age is not none %} <span class="age">(age {% if e.age_approx %}~{% endif %}{{ e.age }})</span>{% endif %}{% if e.note %}<span class="note">{{ e.note }}</span>{% endif %}{% for c in e.cite %}<span class="cite">Source: {{ c }}</span>{% endfor %}</span>
       </li>
       {% endfor %}
     </ol>

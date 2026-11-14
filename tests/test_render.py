@@ -1,7 +1,7 @@
 import json
 from datetime import date
 
-from famsite.model import Event
+from famsite.model import Event, LifeEvent
 from famsite.render import build_site, dumps, person_payload
 
 TODAY = date(2026, 10, 10)
@@ -472,3 +472,20 @@ def test_a_removed_portrait_leaves_no_stale_copy(tmp_path, make_tree):
         person.portrait = None
     build_site(tree, out, today=TODAY, media_dir=media)
     assert not (out / "media").exists()
+
+
+def test_page_prints_facts_notes_and_sources_escaped(tmp_path, make_tree):
+    tree = make_tree([{
+        "id": "a", "given": "Ann",
+        "birth": Event(date="1920", extra={"cite": "Parish register", "note": "At home"}),
+        "events": [
+            LifeEvent(type="occupation", value="Carpenter <b>", note="Self-employed", cite=["Census 1911"]),
+            LifeEvent(type="graduation"),
+            LifeEvent(type="residence", start="1960-05", end="1975", place="Surrey", cite=["Directory"]),
+        ],
+    }])
+    build_site(tree, tmp_path, today=TODAY)
+    page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
+    assert "Carpenter &lt;b&gt;" in page and "Carpenter <b>" not in page
+    assert "Source: Census 1911" in page and "Source: Parish register" in page
+    assert "Self-employed" in page and "Graduation" in page and "May 1960 – 1975" in page

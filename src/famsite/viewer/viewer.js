@@ -611,6 +611,37 @@
             more.className = 'read-more';
             body.appendChild(more);
           }
+          if (p.facts && p.facts.length) {
+            var factSection = document.createElement('section');
+            factSection.className = 'rel-group panel-facts';
+            var factHead = document.createElement('h3');
+            factHead.textContent = 'Facts';
+            factSection.appendChild(factHead);
+            var factList = document.createElement('ul');
+            p.facts.forEach(function (fact) {
+              var li = document.createElement('li');
+              li.textContent = fact.label + (fact.text ? ': ' + fact.text : '');
+              factList.appendChild(li);
+            });
+            factSection.appendChild(factList);
+            body.appendChild(factSection);
+          }
+          var own = (p.events || []).filter(function (e) { return e.role === 'self'; });
+          if (own.length) {
+            var evSection = document.createElement('section');
+            evSection.className = 'rel-group panel-events';
+            var evHead = document.createElement('h3');
+            evHead.textContent = 'Events';
+            evSection.appendChild(evHead);
+            var evList = document.createElement('ul');
+            own.forEach(function (e) {
+              var li = document.createElement('li');
+              li.textContent = (e.when ? e.when + ' · ' : '') + e.text + (e.place ? ' in ' + e.place : '');
+              evList.appendChild(li);
+            });
+            evSection.appendChild(evList);
+            body.appendChild(evSection);
+          }
           [
             ['Parents', p.parents], ['Partners', p.spouses], ['Siblings', p.siblings], ['Children', p.children]
           ].forEach(function (pair) {

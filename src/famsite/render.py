@@ -12,6 +12,7 @@ import jinja2
 from markdown_it import MarkdownIt
 
 from .dates import age_between, date_year, format_date, format_years, parse_date
+from .facts import fact_label
 from .focus import focus_people, focus_tree, hidden_counts
 from .home import home_person
 from .kin import build_kin
@@ -24,6 +25,7 @@ from .privacy import is_living, redact
 from .relations import Relations, build_relations
 from .slug import slugify
 from .stats import site_stats
+from .store import cites_of
 from .timeline import build_timeline, event_text
 
 _PACKAGE = Path(__file__).parent
@@ -121,6 +123,24 @@ def _partnership(entry) -> dict:
     }
 
 
+def _event_origin(tree: Tree, source: dict) -> tuple[str | None, list[str]]:
+    """The note and citations written on the entry a timeline event came from."""
+    kind, _, rest = source["id"].partition(":")
+    pid, _, index = rest.partition(":")
+    person = tree.people.get(pid)
+    if person is None:
+        return None, []
+    if kind in ("birth", "death"):
+        event = person.birth if kind == "birth" else person.death
+        extra = event.extra if event else {}
+        note = extra.get("note")
+        return (note.strip() or None if isinstance(note, str) else None), cites_of(extra.get("cite"))
+    if kind == "fact" and index.isdigit() and int(index) < len(person.events):
+        entry = person.events[int(index)]
+        return entry.note, list(entry.cite)
+    return None, []
+
+
 def life_summary(payload: dict) -> str:
     """One or two sentences about a life, in words: "Born 12 March 1941 in Guelph. Died 2021, aged 80." """
 
@@ -169,8 +189,22 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
             if source.get(optional):
                 entry[optional] = source[optional]
         entry["when"] = format_date(source["date"])
+        if source.get("end"):
+            entry["when"] += " – " + format_date(source["end"])
+        note, cite = _event_origin(tree, source) if row["role"] == "self" else (None, [])
+        entry["note"], entry["cite"] = note, cite
         entry.update(role=row["role"], text=row["text"], age=row["age"], age_approx=row["age_approx"])
         events.append(entry)
+    facts = [
+        {
+            "label": fact_label(entry.type),
+            "text": entry.value or entry.place or entry.date or entry.start or "",
+            "note": entry.note,
+            "cite": list(entry.cite),
+        }
+        for entry in person.events
+        if parse_date(entry.date or entry.start) is None
+    ]
     payload = {
         "id": pid,
         "name": person.display_name,
@@ -186,6 +220,7 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
         "age_at_death_approx": bool(age is not None and (born.approx or died.approx)),
         "siblings": _siblings(tree, rel, pid),
         "events": events,
+        "facts": facts,
         "parents": parents,
         "spouses": spouses,
         "children": children,

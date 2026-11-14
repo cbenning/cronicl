@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from famsite.model import Event, Partnership
+from famsite.model import Event, LifeEvent, Partnership
 from famsite.privacy import redact
 from famsite.render import life_summary, person_payload
 
@@ -128,3 +128,26 @@ def test_life_summary(payload, expected):
 def test_payload_has_summary(make_tree):
     tree = make_tree([{"id": "a", "given": "Ann", "birth": Event(date="1941-03-12", place="Guelph")}])
     assert person_payload(tree, "a")["summary"] == "Born 12 March 1941 in Guelph."
+
+
+def fact_tree(make_tree):
+    return make_tree([{
+        "id": "a", "given": "Ann",
+        "birth": Event(date="1920", extra={"cite": "Parish register", "note": "At home"}),
+        "events": [
+            LifeEvent(type="occupation", value="Carpenter <b>", note="Self-employed", cite=["Census 1911"]),
+            LifeEvent(type="graduation"),
+            LifeEvent(type="residence", start="1960-05", end="1975", place="Surrey", cite=["Directory"]),
+        ],
+    }])
+
+
+def test_payload_facts_notes_and_cites(make_tree):
+    payload = person_payload(fact_tree(make_tree), "a")
+    assert payload["facts"] == [
+        {"label": "Occupation", "text": "Carpenter <b>", "note": "Self-employed", "cite": ["Census 1911"]},
+        {"label": "Graduation", "text": "", "note": None, "cite": []},
+    ]
+    birth, lived = payload["events"]
+    assert (birth["note"], birth["cite"]) == ("At home", ["Parish register"])
+    assert (lived["when"], lived["text"], lived["place"], lived["cite"]) == ("May 1960 – 1975", "lived", "Surrey", ["Directory"])
