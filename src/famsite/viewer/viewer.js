@@ -86,18 +86,28 @@
     return { lines: lines, truncated: truncated };
   }
 
-  // Greedy interval packing: returns a lane index for each item so items in one lane never overlap.
-  function parseRoute(hash) {
+  // The in-page address of each page's view. The tree page: nothing is everyone, `#<id>` selects a person and
+  // `#focus/<id>` shows one person's line. The timeline page: `#<id>` is that person's row. Old single-page
+  // forms (`#/tree/<id>`, `#/focus/<id>`, `#/timeline/<id>`) still parse.
+  function parseRoute(hash, page) {
     var parts = String(hash || '').replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
-    if (!parts.length) return { view: 'tree', id: null };
+    var bare = page === 'timeline' ? 'timeline' : 'tree';
+    if (!parts.length) return { view: bare, id: null };
     if (parts[0] === 'tree' || parts[0] === 'timeline' || parts[0] === 'focus') {
       return { view: parts[0], id: parts[1] || null };
     }
-    return { view: 'tree', id: parts[0] };
+    return { view: bare, id: parts[0] };
   }
 
   function routeHash(view, id) {
-    return '#/' + view + (id ? '/' + encodeURIComponent(id) : '');
+    if (view === 'focus') return '#focus' + (id ? '/' + encodeURIComponent(id) : '');
+    return '#' + (id ? encodeURIComponent(id) : '');
+  }
+
+  // The address of a view, from any page; `root` is the path back to the site root ("", "../", "../../").
+  function pageUrl(root, view, id) {
+    var page = view === 'timeline' ? 'timeline/' : 'tree/';
+    return root + page + (id || view === 'focus' ? routeHash(view, id) : '');
   }
 
   function yearPosition(ev) {
@@ -383,7 +393,9 @@
     var panel = $('panel');
     var search = $('search');
     var results = $('results');
-    var tabs = Array.prototype.slice.call(document.querySelectorAll('#tabs a'));
+    var PAGE = document.body.getAttribute('data-page') === 'timeline' ? 'timeline' : 'tree';
+    var ROOT = (document.querySelector('meta[name="famsite-root"]') || {}).content || '';
+    var modeLinks = Array.prototype.slice.call(document.querySelectorAll('#modes a'));
     var focusBar = $('focus-bar');
     var legendEl = $('legend');
     var controls = $('tree-controls');
@@ -394,7 +406,6 @@
     }
     // The person the viewer said is them, else the site's home person.
     var home = savedMe() || metaHome;
-    var treeTab = document.querySelector('#tabs a[data-view="focus"]');
 
     var canvas = document.createElement('canvas').getContext('2d');
     function measureWith(font) {
@@ -427,7 +438,7 @@
 
     function go(view, id) {
       var next = routeHash(view, id);
-      if (location.hash === next) route();
+      if ((location.hash || '#') === next) route();
       else location.hash = next;
     }
 
@@ -445,22 +456,27 @@
       if (!treeLike || view !== 'focus') setHidden(focusBar, true);
       if (!treeLike) legendEl.hidden = true;
       controls.hidden = !treeLike;
-      tabs.forEach(function (a) {
-        var active = a.getAttribute('data-view') === view;
+      modeLinks.forEach(function (a) {
+        var active = a.getAttribute('data-mode') === (view === 'focus' ? 'line' : 'all');
         if (active) a.setAttribute('aria-current', 'page');
         else a.removeAttribute('aria-current');
       });
     }
 
-    // The Tree tab always leads to a focused tree: the selected person's, else the home person's.
+    // "This person's line" leads to the selected person's focused tree, else the home person's; "Everyone" to the whole tree.
     function updateTreeTab(id) {
-      if (treeTab) treeTab.setAttribute('href', id ? routeHash('focus', id) : '#/tree');
+      modeLinks.forEach(function (a) {
+        a.setAttribute('href', a.getAttribute('data-mode') === 'line' ? routeHash('focus', id) : routeHash('tree', null));
+      });
     }
 
     function route() {
-      // no route: the person who said "this is me" gets their own tree, everyone else the overall tree
-      if (!location.hash) history.replaceState(null, '', savedMe() ? routeHash('focus', savedMe()) : routeHash('tree', null));
-      var r = parseRoute(location.hash);
+      var r = parseRoute(location.hash, PAGE);
+      // an old single-page address names a view that lives on the other page
+      if ((PAGE === 'timeline') !== (r.view === 'timeline')) {
+        location.replace(pageUrl(ROOT, r.view, r.id));
+        return;
+      }
       showView(r.view);
       updateTreeTab(r.id || state.selected || home);
       if (r.view === 'focus' && r.id) {
@@ -525,7 +541,7 @@
       panel.textContent = '';
       tree.refresh();
       timeline.refresh();
-      if (state.view === 'tree' && parseRoute(location.hash).id) go('tree', null);
+      if (state.view === 'tree' && parseRoute(location.hash, PAGE).id) go('tree', null);
     }
 
     // The kinship line in the panel: how this person relates to the viewer ("Your grandmother").
@@ -534,7 +550,7 @@
       var kin = root.famsiteKin, site = root.famsiteSite;
       if (!kin || !site) return;
       if (!kinData) {
-        kinData = fetch('kin.json').then(function (r) { return r.json(); }).then(function (d) { return d.people; })
+        kinData = fetch(ROOT + 'kin.json').then(function (r) { return r.json(); }).then(function (d) { return d.people; })
           .catch(function () { return null; });
       }
       kinData.then(function (kinPeople) {
@@ -576,7 +592,7 @@
       var body = document.createElement('div');
       body.textContent = 'Loading…';
       panel.appendChild(body);
-      fetch('data/people/' + id + '.json')
+      fetch(ROOT + 'data/people/' + id + '.json')
         .then(function (r) { return r.json(); })
         .then(function (p) {
           if (state.selected !== id) return;
@@ -612,17 +628,17 @@
             a.className = 'pill';
             pills.appendChild(a);
           }
-          if (state.view === 'timeline') pill(routeHash('tree', id), 'Show in tree');
-          pill(routeHash('focus', id), 'Focus tree');
-          pill(routeHash('timeline', id), 'Timeline');
-          pill('p/' + id + '/', 'Page');
+          if (PAGE === 'timeline') pill(pageUrl(ROOT, 'tree', id), 'Show in tree');
+          pill(pageUrl(ROOT, 'focus', id), 'Their line');
+          if (PAGE !== 'timeline') pill(pageUrl(ROOT, 'timeline', id), 'Timeline');
+          pill(ROOT + 'p/' + id + '/', 'Page');
           body.appendChild(pills);
           if (p.bodyHtml) {
             var bio = document.createElement('div');
             bio.className = 'bio';
             bio.innerHTML = p.bodyHtml;
             body.appendChild(bio);
-            var more = link('p/' + id + '/', 'Read more');
+            var more = link(ROOT + 'p/' + id + '/', 'Read more');
             more.className = 'read-more';
             body.appendChild(more);
           }
@@ -1050,7 +1066,7 @@
           apply(focusCache[id]);
           return;
         }
-        fetch('focus/' + encodeURIComponent(id) + '.json')
+        fetch(ROOT + 'focus/' + encodeURIComponent(id) + '.json')
           .then(function (r) {
             if (!r.ok) throw new Error('missing');
             return r.json();
@@ -1084,8 +1100,8 @@
         }
         if (loading) return;
         loading = Promise.all([
-          fetch('layout.json').then(function (r) { return r.json(); }),
-          fetch('index.json').then(function (r) { return r.json(); })
+          fetch(ROOT + 'layout.json').then(function (r) { return r.json(); }),
+          fetch(ROOT + 'index.json').then(function (r) { return r.json(); })
         ]).then(function (loaded) {
           fullLayout = loaded[0];
           state.index = loaded[1];
@@ -1198,7 +1214,7 @@
         showFocus: showFocus,
         showFull: showFull,
         has: has,
-        refresh: function () { rebuild(); }
+        refresh: function () { if (state.layout) rebuild(); }
       };
     })();
 
@@ -1487,8 +1503,8 @@
         if (!state.timeline) {
           if (loading) return;
           loading = Promise.all([
-            fetch('timeline.json').then(function (r) { return r.json(); }),
-            state.index ? Promise.resolve(state.index) : fetch('index.json').then(function (r) { return r.json(); })
+            fetch(ROOT + 'timeline.json').then(function (r) { return r.json(); }),
+            state.index ? Promise.resolve(state.index) : fetch(ROOT + 'index.json').then(function (r) { return r.json(); })
           ]).then(function (loaded) {
             state.timeline = loaded[0];
             if (!state.index) {
@@ -1639,12 +1655,12 @@
     }
     search.addEventListener('input', function () { showResults(search.value); });
     search.addEventListener('focus', function () {
-      if (!state.index) tree.ensure();
+      if (!state.index && PAGE === 'tree') tree.ensure();
     });
 
     window.addEventListener('hashchange', route);
-    tree.ensure();
-    if (parseRoute(location.hash).view === 'timeline') route();
+    if (PAGE === 'timeline') route();
+    else tree.ensure();
   }
 
   var api = {
@@ -1653,6 +1669,7 @@
     boundsOf: boundsOf,
     wrapName: wrapName,
     parseRoute: parseRoute,
+    pageUrl: pageUrl,
     visibleRange: visibleRange,
     spanBar: spanBar,
     barRect: barRect,

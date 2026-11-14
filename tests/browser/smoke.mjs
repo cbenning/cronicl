@@ -46,9 +46,23 @@ async function main() {
     writeFileSync(`${shots}/${name}.png`, Buffer.from(r.result.data, 'base64'));
   };
   const click = (sel) => ev(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return false; e.dispatchEvent(new MouseEvent('click', {bubbles: true})); return true; })()`);
-  const goto = async (hash) => { await ev(`location.hash = ${JSON.stringify(hash)}`); await sleep(500); };
+  // Old-style test addresses ('#/tree/x', '#/focus/x', '#/timeline/x') mapped to the page and in-page hash that own them now.
+  const where = (h) => {
+    let m;
+    if ((m = /^#\/timeline(?:\/(.*))?$/.exec(h))) return ['timeline', m[1] ? '#' + m[1] : ''];
+    if ((m = /^#\/focus\/(.*)$/.exec(h))) return ['tree', '#focus/' + m[1]];
+    if ((m = /^#\/tree(?:\/(.*))?$/.exec(h))) return ['tree', m[1] ? '#' + m[1] : ''];
+    if ((m = /^#\/(.+)$/.exec(h))) return ['tree', '#' + m[1]];
+    return ['tree', ''];
+  };
+  const goto = async (h) => {
+    const [page, hash] = where(h);
+    if ((await ev('location.pathname')).endsWith('/' + page + '/')) await ev(`location.hash = ${JSON.stringify(hash || '#')}`);
+    else { await send('Page.navigate', { url: base + '/' + page + '/' + hash }); await sleep(1300); }
+    await sleep(500);
+  };
 
-  await send('Page.navigate', { url: base + '/tree.html#/tree' });
+  await send('Page.navigate', { url: base + '/tree/' });
   await sleep(1500);
 
   // ---- tree
@@ -97,7 +111,7 @@ async function main() {
   check('panel lists siblings', /Siblings/.test(await ev(`document.getElementById('panel').textContent`)));
   check('panel has action pills', (await ev(`document.querySelectorAll('#panel .pill').length`)) >= 3);
   check('node is highlighted', (await ev(`document.querySelectorAll('.node.selected').length`)) === 1);
-  check('url records the selection', (await ev(`location.hash`)) === '#/tree/smith-bob');
+  check('url records the selection', (await ev(`location.hash`)) === '#smith-bob');
   check('selected person lights up connectors', (await ev(`document.querySelectorAll('.edge.hi').length`)) >= 1);
   check('relatives are marked', (await ev(`document.querySelectorAll('.node.lin, .node.related').length`)) >= 2);
   check('unrelated people and lines are faded', (await ev(`document.querySelectorAll('.node.dim').length`)) >= 1);
@@ -130,7 +144,7 @@ async function main() {
   await sleep(300);
   check('close button hides the panel', (await ev(`document.getElementById('panel').hidden`)) === true);
   check('close deselects the node', (await ev(`document.querySelectorAll('.node.selected').length`)) === 0);
-  check('close clears the url selection', (await ev(`location.hash`)) === '#/tree');
+  check('close clears the url selection', (await ev(`location.hash`)) === '');
   check('close removes all highlighting', (await ev(`document.querySelectorAll('.edge.hi, .edge.dim, .node.dim, .node.related, .node.lin').length`)) === 0);
   check('close hides the legend', (await ev(`document.getElementById('legend').hidden`)) === true);
   await click('.node[data-id="smith-john"]');
@@ -158,39 +172,38 @@ async function main() {
   check('focused tree leaves siblings out', !focusIds.includes('smith-tom'));
   check('focus bar names the person', /Focused on Amy Smith/.test(await ev(`document.getElementById('focus-bar').textContent`)));
   check('focus person is marked', (await ev(`document.querySelectorAll('.node.focus').length`)) === 1);
-  check('tree tab is current in focus', (await ev(`document.querySelector('#tabs a[data-view="focus"]').getAttribute('aria-current')`)) === 'page');
+  check('"This person\'s line" is current in a focused tree', (await ev(`document.querySelector('#modes a[data-mode="line"]').getAttribute('aria-current')`)) === 'page');
   await shot('tree-focus');
   await click('.node[data-id="smith-bob"]');
   await sleep(500);
-  check('selecting inside the focus keeps the focus url', (await ev(`location.hash`)) === '#/focus/smith-amy');
+  check('selecting inside the focus keeps the focus url', (await ev(`location.hash`)) === '#focus/smith-amy');
   check('selecting inside the focus highlights', (await ev(`document.querySelectorAll('.edge.hi').length`)) >= 1);
   await click('#panel .close');
   await sleep(200);
-  check('closing the panel keeps the focus', (await ev(`location.hash`)) === '#/focus/smith-amy' && (await ev(`!document.getElementById('focus-bar').hidden`)));
+  check('closing the panel keeps the focus', (await ev(`location.hash`)) === '#focus/smith-amy' && (await ev(`!document.getElementById('focus-bar').hidden`)));
   await ev(`(() => { const s = document.getElementById('search'); s.value = 'tom'; s.dispatchEvent(new Event('input')); })()`);
   await sleep(200);
   await ev(`document.querySelector('#results button').click()`);
   await sleep(600);
-  check('searching for someone outside the focus refocuses', (await ev(`location.hash`)) === '#/focus/smith-tom');
+  check('searching for someone outside the focus refocuses', (await ev(`location.hash`)) === '#focus/smith-tom');
   await ev(`document.querySelector('#focus-bar a.back').click()`);
   await sleep(600);
-  check('"Show full tree" returns to the full tree on that person', (await ev(`location.hash`)) === '#/tree/smith-tom');
+  check('"Show full tree" returns to the full tree on that person', (await ev(`location.hash`)) === '#smith-tom');
   check('full tree is back and the bar is gone', (await ev(`document.querySelectorAll('.node').length`)) > 5 && (await ev(`document.getElementById('focus-bar').hidden`)) === true);
   await goto('#/tree');
   await click('.node[data-id="smith-bob"]');
   await sleep(600);
-  await ev(`document.querySelector('#panel a[href="#/focus/smith-bob"]').click()`);
+  await ev(`document.querySelector('#panel a[href$="#focus/smith-bob"]').click()`);
   await sleep(600);
-  check('panel "Focus tree" action focuses the person', (await ev(`location.hash`)) === '#/focus/smith-bob' && (await ev(`document.querySelectorAll('.node.focus').length`)) === 1);
+  check('panel "Their line" action focuses the person', (await ev(`location.hash`)) === '#focus/smith-bob' && (await ev(`document.querySelectorAll('.node.focus').length`)) === 1);
   await ev(`document.querySelector('#focus-bar a.back').click()`);
   await sleep(400);
 
   // ---- timeline
-  await ev(`document.querySelector('#tabs a[data-view="timeline"]').click()`);
-  await sleep(800);
-  check('timeline tab shows the timeline and really hides the tree', (await ev(`getComputedStyle(document.getElementById('timeline')).display !== 'none' && getComputedStyle(document.getElementById('tree')).display === 'none'`)) === true);
+  await goto('#/timeline');
+  check('the timeline page shows the timeline and really hides the tree', (await ev(`getComputedStyle(document.getElementById('timeline')).display !== 'none' && getComputedStyle(document.getElementById('tree')).display === 'none'`)) === true);
   check('the relationship legend never shows over the timeline', (await ev(`document.getElementById('legend').hidden`)) === true);
-  check('timeline tab is marked current', (await ev(`document.querySelector('#tabs a[data-view="timeline"]').getAttribute('aria-current')`)) === 'page');
+  check('the site nav marks Timeline current', (await ev(`document.querySelector('.site-bar nav a[aria-current="page"]').textContent`)) === 'Timeline');
   const tl = await ev(`(() => { const now = new Date().getFullYear(); const labels = [...document.querySelectorAll('#timeline-axis .tick-label')].map((t) => Number(t.textContent)); const r = (sel) => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect() : null; }; const bob = r('.span-row[data-id="smith-bob"] .bar'); const kid = r('.span-row[data-id="kid-now"] .bar'); const old = r('.span-row[data-id="old-open"] .bar'); const svg = r('#timeline-svg'); return { rows: document.querySelectorAll('.span-row').length, pills: document.querySelectorAll('.ev').length, maxLabel: Math.max.apply(null, labels), now, bobW: bob && bob.width, kidRight: kid && kid.right, oldW: old && old.width, svgRight: svg.right, living: !!document.querySelector('.span-row[data-id="kid-now"] .bar.open-living'), unknown: !!document.querySelector('.span-row[data-id="old-open"] .bar.open-unknown'), loneRow: !!document.querySelector('.span-row[data-id="lone-person"]') }; })()`);
   check('one lifespan row per dated person, and no event pills', tl.rows >= 5 && tl.pills === 0 && !tl.loneRow, JSON.stringify(tl));
   check('the axis does not run past next year', tl.maxLabel <= tl.now + 1, JSON.stringify(tl));
@@ -289,10 +302,10 @@ async function main() {
   await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
   await send('Page.navigate', { url: base + '/tree.html' }); await sleep(1500);
   const home = await ev(`document.querySelector('meta[name="famsite-home"]').content`);
-  check('with no route and nobody chosen the viewer opens the overall tree', (await ev('location.hash')) === '#/tree', await ev('location.hash'));
-  check('the Overview tab is current on the overall tree', (await ev(`document.querySelector('#tabs a[aria-current="page"]').textContent`)) === 'Overview');
+  check('with no route and nobody chosen the viewer opens the overall tree', (await ev('location.hash')) === '', await ev('location.hash'));
+  check('"Everyone" is current on the overall tree', (await ev(`document.querySelector('#modes a[aria-current="page"]').textContent`)) === 'Everyone');
   await goto('#/focus/' + home);
-  check('the Tree tab is current in a focused tree', (await ev(`document.querySelector('#tabs a[aria-current="page"]').textContent`)) === 'Tree');
+  check('"This person\'s line" is current in a focused tree', (await ev(`document.querySelector('#modes a[aria-current="page"]').textContent`)) === 'This person\'s line');
   const openH = await ev(`document.querySelector('.node rect').getBoundingClientRect().height`);
   check('nodes open at a readable size', openH >= 64 * 0.6, openH);
   await goto('#/tree');
@@ -309,7 +322,7 @@ async function main() {
   const h1 = await ev(`document.querySelector('.node rect').getBoundingClientRect().height`);
   check('the + button zooms in by one step', Math.abs(h1 / h0 - 1.4) < 0.02 || h1 === 64 * 3, h0 + ' -> ' + h1);
   await click('#tree-controls [data-act="home"]');
-  check('Home opens the home person\'s focused tree', (await ev('location.hash')) === '#/focus/' + home);
+  check('Home opens the home person\'s focused tree', (await ev('location.hash')) === '#focus/' + home);
   await goto('#/tree/smith-bob');
   const p0 = await ev(`document.querySelector('.node.selected rect').getBoundingClientRect().height`);
   await ev(`(() => { const t = document.getElementById('tree'); const pe = (type, id, x, target) => (target || t).dispatchEvent(new PointerEvent(type, { pointerId: id, clientX: x, clientY: 400, bubbles: true })); pe('pointerdown', 1, 500); pe('pointerdown', 2, 600); pe('pointermove', 2, 800, window); pe('pointerup', 1, 500, window); pe('pointerup', 2, 800, window); })()`);
@@ -354,7 +367,11 @@ async function main() {
   check('the relative page opens with its own name', (await ev(`document.querySelector('.hero h1')?.textContent`)) !== 'Bob Smith' && !!(await ev(`document.querySelector('.hero h1')?.textContent`)));
 
   await send('Page.navigate', { url: base + '/index.html#/tree/smith-bob' }); await sleep(1500);
-  check('an old viewer link is forwarded to tree.html', /\/tree\.html#\/tree\/smith-bob$/.test(await ev('location.href')), await ev('location.href'));
+  check('an old index.html viewer link ends on the tree page', /\/tree\/#smith-bob$/.test(await ev('location.href')), await ev('location.href'));
+  for (const [old, now] of [['/tree.html#/timeline/smith-bob', /\/timeline\/#smith-bob$/], ['/tree.html#/focus/smith-bob', /\/tree\/#focus\/smith-bob$/], ['/tree.html#/tree', /\/tree\/$/], ['/tree.html', /\/tree\/$/]]) {
+    await send('Page.navigate', { url: base + old }); await sleep(1300);
+    check('the old address ' + old + ' is forwarded', now.test(await ev('location.href')), await ev('location.href'));
+  }
 
   await send('Page.navigate', { url: base + '/people/index.html?q=' + encodeURIComponent('bob <b>"') }); await sleep(800);
   check('the people index filters by ?q= as plain text', (await ev(`(() => { const shown = [...document.querySelectorAll('[data-person]')].filter((li) => !li.hidden); return shown.length >= 0 && !document.querySelector('b:not([class])') && document.querySelector('.site-search input').value === 'bob <b>"'; })()`)) === true);
@@ -366,8 +383,8 @@ async function main() {
   check('a person page says how they relate to the home person', homeName === 'smith-bob' || /'s /.test(await ev(`document.querySelector('.kin').textContent`)), await ev(`document.querySelector('.kin').textContent`));
   await click('#set-me');
   check('"This is me" is remembered and the line turns to "This is you"', (await ev(`localStorage.getItem('famsite.me')`)) === 'smith-bob' && (await ev(`document.querySelector('.kin').textContent`)) === 'This is you');
-  await send('Page.navigate', { url: base + '/tree.html' }); await sleep(1500);
-  check('the viewer now opens on me', (await ev('location.hash')) === '#/focus/smith-bob', await ev('location.hash'));
+  await send('Page.navigate', { url: base + '/tree/' }); await sleep(1500);
+  check('the tree page still opens on everyone, and Home goes to me', (await ev('location.hash')) === '' && (await click('#tree-controls [data-act="home"]'), await sleep(600), await ev('location.hash')) === '#focus/smith-bob', await ev('location.hash'));
   await ev(`document.querySelector('.node:not(.focus)').dispatchEvent(new MouseEvent('click', { bubbles: true }))`); await sleep(600);
   check('the panel carries a kinship line', /^Your /.test(await ev(`(document.querySelector('#panel .kin') || {}).textContent || ''`)), await ev(`(document.querySelector('#panel .kin') || {}).textContent`));
   await ev(`localStorage.removeItem('famsite.me')`);
@@ -389,12 +406,12 @@ async function main() {
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
   await shot('person-page-light');
 
-  await send('Page.navigate', { url: base + '/tree.html#/tree/smith-bob' }); await sleep(1500);
+  await send('Page.navigate', { url: base + '/tree/#smith-bob' }); await sleep(1500);
   check('the panel shows the life summary and no separate places line', (await ev(`(() => { const s = document.querySelector('#panel .summary'); return !!s && /^Born /.test(s.textContent) && !document.querySelector('#panel .places'); })()`)) === true);
 
   await send('Page.navigate', { url: base + '/p/ellsworth-maude/' }); await sleep(800);
   check('the page hero shows the portrait in the avatar box', (await ev(`(() => { const i = document.querySelector('.hero img.avatar'); const b = i && i.getBoundingClientRect(); return !!i && i.naturalWidth > 0 && b.width === 112 && b.height === 112; })()`)) === true);
-  await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' }); await sleep(1500);
+  await send('Page.navigate', { url: base + '/tree/#ellsworth-maude' }); await sleep(1500);
   check('the panel and the tree node show the portrait', (await ev(`!!document.querySelector('#panel img.avatar') && !!document.querySelector('.node[data-id="ellsworth-maude"] image') && !document.querySelector('.node[data-id="smith-bob"] image')`)) === true);
 
   await goto('#/timeline/ellsworth-maude');
@@ -403,17 +420,17 @@ async function main() {
 
   // ---- opening on the timeline, then the whole tree
   await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
-  await send('Page.navigate', { url: base + '/tree.html#/timeline' }); await sleep(1500);
+  await send('Page.navigate', { url: base + '/timeline/' }); await sleep(1500);
   await goto('#/tree');
   const afterTimeline = await ev(`document.querySelector('#tree > g').getAttribute('transform')`);
   await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
-  await send('Page.navigate', { url: base + '/tree.html#/tree' }); await sleep(1500);
+  await send('Page.navigate', { url: base + '/tree/' }); await sleep(1500);
   const direct = await ev(`document.querySelector('#tree > g').getAttribute('transform')`);
   check('the tree opens the same after the timeline as when opened directly', afterTimeline === direct, afterTimeline + ' vs ' + direct);
 
   // ---- site pages lay out as one column
   const barShape = [];
-  for (const path of ['/index.html', '/people/index.html', '/tree.html', '/p/smith-bob/', '/relate/index.html']) {
+  for (const path of ['/index.html', '/people/index.html', '/tree/', '/timeline/', '/p/smith-bob/', '/relate/index.html']) {
     await send('Page.navigate', { url: base + path }); await sleep(900);
     barShape.push(await ev(`JSON.stringify(['.site-bar', '.site-title', '.site-bar nav', '.site-search'].map((q) => { const r = document.querySelector(q).getBoundingClientRect(); return [q, Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; }))`));
   }
@@ -428,7 +445,7 @@ async function main() {
 
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-  await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });
+  await send('Page.navigate', { url: base + '/tree/#ellsworth-maude' });
   await sleep(1500);
   const phone = await ev(`(() => { const p = document.getElementById('panel').getBoundingClientRect(); const h = document.querySelector('#panel h2').getBoundingClientRect(); const s = document.getElementById('search').getBoundingClientRect(); return { panelW: p.width, panelBottom: p.bottom, panelH: p.height, titleW: h.width, searchRight: s.right, pageW: document.documentElement.scrollWidth }; })()`);
   check('phone: the panel is a full-width bottom sheet', phone.panelW === 390 && Math.round(phone.panelBottom) === 844 && phone.panelH <= 844 * 0.6 + 1, JSON.stringify(phone));

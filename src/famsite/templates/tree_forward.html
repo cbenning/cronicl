@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ title }}</title>
+<script>
+// The viewer used to live here, with its views in the hash. Send old links to the page that now owns each view.
+(function () {
+  var h = location.hash, m = /^#\/(tree|focus|timeline)(?:\/(.*))?$/.exec(h), to = 'tree/';
+  if (m && m[1] === 'timeline') to = 'timeline/' + (m[2] ? '#' + m[2] : '');
+  else if (m && m[1] === 'focus') to = 'tree/#focus/' + (m[2] || '');
+  else if (m) to = 'tree/' + (m[2] ? '#' + m[2] : '');
+  else if (h.indexOf('#/') === 0 && h.length > 2) to = 'tree/#' + h.slice(2);
+  location.replace(to);
+})();
+</script>
+</head>
+<body>
+<p><a href="tree/">Open the family tree</a> or the <a href="timeline/">timeline</a>.</p>
+</body>
+</html>

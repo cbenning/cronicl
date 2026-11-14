@@ -302,3 +302,9 @@ img.avatar { object-fit: cover; }
 
 /* The viewer's own row of tabs sits under the shared site bar */
 .viewbar { padding-inline: max(var(--space-4), calc((100% - 60rem) / 2 + var(--space-4))); background: var(--surface-2); }
+
+/* Site nav: the current page, and the viewer's two ways to look at the tree */
+.site-bar nav a[aria-current="page"] { color: var(--accent); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+#modes { display: flex; gap: .25rem; }
+#modes a { padding: .3rem .8rem; border-radius: 6px; text-decoration: none; color: inherit; border: 1px solid transparent; }
+#modes a[aria-current="page"] { border-color: var(--node-line); background: var(--node); font-weight: 600; }

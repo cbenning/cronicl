@@ -80,7 +80,7 @@ def test_static_person_page_links_relatives_and_back(tmp_path, make_tree):
     build_site(sample(make_tree), tmp_path, today=TODAY)
     page = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
     assert 'href="../smith-john/"' in page
-    assert 'href="../../tree.html#/focus/smith-bob"' in page
+    assert 'href="../../tree/#focus/smith-bob"' in page
 
 
 def test_build_is_deterministic(tmp_path, make_tree):
@@ -263,8 +263,8 @@ def test_assets_are_versioned_by_content_so_a_rebuild_is_never_served_stale(tmp_
     root = Path(famsite.__file__).parent / "viewer"
     js = hashlib.sha256((root / "viewer.js").read_bytes()).hexdigest()[:12]
     css = hashlib.sha256((root / "style.css").read_bytes()).hexdigest()[:12]
-    index = (tmp_path / "tree.html").read_text(encoding="utf-8")
-    assert f'src="viewer.js?v={js}"' in index and f'href="style.css?v={css}"' in index
+    index = (tmp_path / "tree/index.html").read_text(encoding="utf-8")
+    assert f'src="../viewer.js?v={js}"' in index and f'href="../style.css?v={css}"' in index
     page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
     assert f'href="../../style.css?v={css}"' in page
 
@@ -291,12 +291,12 @@ def test_an_empty_site_has_no_home_person(tmp_path, make_tree):
 def test_home_and_viewer_are_separate_pages(tmp_path, make_tree):
     build_site(sample(make_tree), tmp_path, today=TODAY)
     home = (tmp_path / "index.html").read_text(encoding="utf-8")
-    viewer = (tmp_path / "tree.html").read_text(encoding="utf-8")
+    viewer = (tmp_path / "tree/index.html").read_text(encoding="utf-8")
     assert 'id="tree"' in viewer and 'id="tree"' not in home
     assert "location.replace('tree.html' + location.hash)" in home
     assert 'action="people/index.html"' in home
     page = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
-    assert 'href="../../tree.html#/focus/smith-bob"' in page and "index.html#/" not in page
+    assert 'href="../../tree/#focus/smith-bob"' in page and "index.html#/" not in page and "tree.html" not in page
     assert 'action="../../people/index.html"' in page
 
 
@@ -354,7 +354,7 @@ def test_places_page_lists_people_under_each_place(tmp_path, make_tree):
 def test_every_page_names_its_root_for_the_scripts(tmp_path, make_tree):
     build_site(sample(make_tree), tmp_path, today=TODAY)
     assert '<meta name="famsite-root" content="">' in (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert '<meta name="famsite-root" content="">' in (tmp_path / "tree.html").read_text(encoding="utf-8")
+    assert '<meta name="famsite-root" content="../">' in (tmp_path / "tree/index.html").read_text(encoding="utf-8")
     assert '<meta name="famsite-root" content="../">' in (tmp_path / "people/index.html").read_text(encoding="utf-8")
     page = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
     assert '<meta name="famsite-root" content="../../">' in page
@@ -513,3 +513,24 @@ def test_links_are_printed_for_real_people_only(tmp_path, make_tree):
     pages = {f.parent.name: f.read_text(encoding="utf-8") for f in (tmp_path / "p").glob("*/index.html")}
     assert "Suggest a correction" in pages["old"]
     assert all("Suggest a correction" not in html for pid, html in pages.items() if pid != "old")
+
+
+def test_each_view_has_its_own_address_and_one_nav(tmp_path, make_tree):
+    build_site(sample(make_tree), tmp_path, today=TODAY)
+    tree = (tmp_path / "tree/index.html").read_text(encoding="utf-8")
+    timeline = (tmp_path / "timeline/index.html").read_text(encoding="utf-8")
+    assert '<body data-page="tree">' in tree and '<body data-page="timeline">' in timeline
+    for page, root in ((tmp_path / "index.html", ""), (tmp_path / "people/index.html", "../"), (tmp_path / "tree/index.html", "../")):
+        text = page.read_text(encoding="utf-8")
+        assert f'<a href="{root}tree/"' in text and f'<a href="{root}timeline/"' in text
+        assert f'<a href="{root}places/index.html"' in text
+        assert root == "" or "tree.html" not in text  # the home page's old-link forwarder is the only mention
+    assert tree.count('aria-label="Site"') == 1 and 'id="tabs"' not in tree  # one nav; no second tab bar
+    assert '<a href="../tree/" aria-current="page">Tree</a>' in tree
+    assert '<a href="../timeline/" aria-current="page">Timeline</a>' in timeline
+
+
+def test_the_old_viewer_address_forwards(tmp_path, make_tree):
+    build_site(sample(make_tree), tmp_path, today=TODAY)
+    old = (tmp_path / "tree.html").read_text(encoding="utf-8")
+    assert "location.replace(" in old and "tree/" in old and "timeline/" in old and 'id="tree"' not in old

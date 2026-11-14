@@ -240,7 +240,7 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-_GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate", "media")
+_GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate", "media", "tree", "timeline")
 _GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json")
 
 
@@ -377,11 +377,11 @@ def build_site(
     put("timeline.json", dumps(public_timeline))
     versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css"), "site": _asset_version("site.js"), "kin": _asset_version("kin.js")}
     home_context = _home_context(visible, tree.site, payloads, timeline, relations, home, recent)
-    put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root="", **home_context))
+    put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root="", active="home", **home_context))
     put(
         "people/index.html",
         env.get_template("people.html").render(
-            title=title, v=versions, home=home, root="../", groups=_people_groups(visible, index)
+            title=title, v=versions, home=home, root="../", active="people", groups=_people_groups(visible, index)
         ),
     )
     places = [
@@ -396,13 +396,20 @@ def build_site(
     ]
     put(
         "places/index.html",
-        env.get_template("places.html").render(title=title, v=versions, home=home, root="../", places=places),
+        env.get_template("places.html").render(title=title, v=versions, home=home, root="../", active="places", places=places),
     )
     put(
         "relate/index.html",
         env.get_template("relate.html").render(title=title, v=versions, home=home, root="../", people=index),
     )
-    put("tree.html", env.get_template("tree.html").render(title=title, people=index, v=versions, home=home, root=""))
+    for page in ("tree", "timeline"):
+        put(
+            f"{page}/index.html",
+            env.get_template("viewer.html").render(
+                title=title, people=index, v=versions, home=home, root="../", page=page, active=page
+            ),
+        )
+    put("tree.html", env.get_template("tree_forward.html").render(title=title))
     person_template = env.get_template("person.html")
     for pid in sorted(visible.people):
         focused = compute_layout(focus_tree(visible, relations, pid))

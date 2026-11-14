@@ -78,7 +78,7 @@ def test_end_to_end_import_check_build(tmp_path, sample_ged):
     assert any((data / "archive").glob("sample-*.ged"))
     assert run("check", "--dir", data) == 0
     assert run("build", "--dir", data, "--out", out) == 0
-    for rel in ("index.html", "tree.html", "layout.json", "index.json", "viewer.js", "style.css", "p/smith-bob/index.html"):
+    for rel in ("index.html", "tree/index.html", "timeline/index.html", "layout.json", "index.json", "viewer.js", "style.css", "p/smith-bob/index.html"):
         assert (out / rel).exists(), rel
     # Privacy: Jane (born ~1952, no death) and Tom (born 2012) are living and must not appear.
     for rel, data_bytes in tree_files(out).items():

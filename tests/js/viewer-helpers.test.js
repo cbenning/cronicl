@@ -33,20 +33,32 @@ test('wrapName tolerates empty input', () => {
   assert.deepStrictEqual(v.wrapName('', MAX, measure), { lines: [''], truncated: false });
 });
 
-test('parseRoute understands views, ids and the legacy bare id', () => {
-  assert.deepStrictEqual(v.parseRoute(''), { view: 'tree', id: null });
-  assert.deepStrictEqual(v.parseRoute('#/tree'), { view: 'tree', id: null });
+test('parseRoute reads the in-page hash of each page, and the old forms', () => {
+  // tree page: nothing is the overall tree; a bare id selects; focus/<id> is one person's line
+  assert.deepStrictEqual(v.parseRoute('', 'tree'), { view: 'tree', id: null });
+  assert.deepStrictEqual(v.parseRoute('#', 'tree'), { view: 'tree', id: null });
+  assert.deepStrictEqual(v.parseRoute('#smith-bob', 'tree'), { view: 'tree', id: 'smith-bob' });
+  assert.deepStrictEqual(v.parseRoute('#focus/smith-bob', 'tree'), { view: 'focus', id: 'smith-bob' });
+  // timeline page: a bare id is that person's row
+  assert.deepStrictEqual(v.parseRoute('', 'timeline'), { view: 'timeline', id: null });
+  assert.deepStrictEqual(v.parseRoute('#smith-bob', 'timeline'), { view: 'timeline', id: 'smith-bob' });
+  // old single-page forms still parse
   assert.deepStrictEqual(v.parseRoute('#/tree/smith-bob'), { view: 'tree', id: 'smith-bob' });
   assert.deepStrictEqual(v.parseRoute('#/timeline'), { view: 'timeline', id: null });
   assert.deepStrictEqual(v.parseRoute('#/timeline/smith-bob'), { view: 'timeline', id: 'smith-bob' });
   assert.deepStrictEqual(v.parseRoute('#/smith-bob'), { view: 'tree', id: 'smith-bob' });
   assert.deepStrictEqual(v.parseRoute('#/focus/smith-bob'), { view: 'focus', id: 'smith-bob' });
-  assert.deepStrictEqual(v.parseRoute('#/focus'), { view: 'focus', id: null });
 });
 
-test('routeHash round-trips', () => {
-  assert.strictEqual(v.routeHash('timeline', 'a-b'), '#/timeline/a-b');
-  assert.strictEqual(v.routeHash('tree', null), '#/tree');
+test('routeHash and pageUrl write one predictable address per view', () => {
+  assert.strictEqual(v.routeHash('tree', null), '#');
+  assert.strictEqual(v.routeHash('tree', 'a-b'), '#a-b');
+  assert.strictEqual(v.routeHash('focus', 'a-b'), '#focus/a-b');
+  assert.strictEqual(v.routeHash('timeline', 'a-b'), '#a-b');
+  assert.strictEqual(v.pageUrl('../', 'tree', null), '../tree/');
+  assert.strictEqual(v.pageUrl('../', 'tree', 'a-b'), '../tree/#a-b');
+  assert.strictEqual(v.pageUrl('', 'focus', 'a-b'), 'tree/#focus/a-b');
+  assert.strictEqual(v.pageUrl('../../', 'timeline', 'a b'), '../../timeline/#a%20b');
 });
 
 test('yearPosition places dated events inside their year', () => {
