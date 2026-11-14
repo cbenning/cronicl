@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from .dates import ParsedDate, age_between, parse_date, year_position
+from .facts import fact_text
 from .model import Tree
 from .relations import Relations
 
-_TYPE_ORDER = {"birth": 0, "marriage": 1, "partnership": 1, "divorce": 2, "death": 3}
+_TYPE_ORDER = {"birth": 0, "marriage": 1, "partnership": 1, "fact": 1, "divorce": 2, "death": 3}
 
 
 def _event(event_id: str, kind: str, date_text: str | None, place: str | None, people: list[str]) -> dict | None:
@@ -51,6 +52,9 @@ def event_text(event: dict, names: dict[str, str], focus: str | None = None) -> 
         if own:
             return f"{noun.lower()} {'to' if kind == 'marriage' else 'with'} {others} ended"
         return f"{noun} of {joined} ended"
+    if etype == "fact":
+        text = fact_text(kind or "", event.get("value") or None)
+        return text if own else f"{joined} {text}"
     verb = "born" if etype == "birth" else "died"
     if focus is not None and people[0] == focus:
         return verb
@@ -84,6 +88,8 @@ def _person_rows(events: list[dict], info: dict, pid: str) -> list[tuple[dict, s
         if role is None:
             continue
         etype = event["type"]
+        if etype == "fact":
+            continue  # a fact belongs to its own person's list only
         if role == "parent":
             include = etype == "death"  # their wedding predates and is not about this person
         elif role == "spouse":
@@ -110,6 +116,13 @@ def build_timeline(tree: Tree, relations: Relations, living: set[str] | None = N
             e = _event(f"death:{pid}", "death", person.death.date, person.death.place, [pid])
             if e:
                 events.append(e)
+        for index, entry in enumerate(person.events):
+            e = _event(f"fact:{pid}:{index}", "fact", entry.date or entry.start, entry.place, [pid])
+            if e:
+                e["kind"] = entry.type
+                e["value"] = entry.value or ""
+                e["end"] = entry.end
+                events.append(e)
     for cid in sorted(relations.couples):
         couple = relations.couples[cid]
         if len(couple.partners) < 2:
@@ -131,7 +144,6 @@ def build_timeline(tree: Tree, relations: Relations, living: set[str] | None = N
         key=lambda e: (e["year"], e["month"] or 0, e["day"] or 0, _TYPE_ORDER[e["type"]], e["id"]),
     )
 
-    dated: set[str] = {pid for e in events for pid in e["people"]}
     people: dict[str, dict] = {}
     for pid in sorted(tree.people):
         spouses: list[str] = []
@@ -207,5 +219,5 @@ def build_timeline(tree: Tree, relations: Relations, living: set[str] | None = N
         "events": events,
         "people": people,
         "rows": rows,
-        "undated": sorted(pid for pid in tree.people if pid not in dated),
+        "undated": sorted(pid for pid in tree.people if pid not in set(rows)),
     }

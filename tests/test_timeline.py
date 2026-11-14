@@ -1,7 +1,7 @@
 import json
 from datetime import date
 
-from famsite.model import Event, Partnership
+from famsite.model import Event, LifeEvent, Partnership
 from famsite.relations import build_relations
 from famsite.render import build_site
 from famsite.timeline import build_timeline
@@ -347,3 +347,21 @@ def test_build_site_treats_living_by_the_privacy_rule(tmp_path, make_tree):
     build_site(tree, tmp_path, today=date(2026, 10, 10))
     people = json.loads((tmp_path / "timeline.json").read_text(encoding="utf-8"))["people"]
     assert people["b"]["span"]["open"] == "living" and people["f"]["span"]["open"] == "unknown"
+
+
+def test_facts_join_a_persons_own_events_only(make_tree):
+    tree = make_tree([
+        {"id": "mum", "given": "Mum", "events": [LifeEvent(type="occupation", value="Nurse", date="1930")]},
+        {"id": "me", "given": "Me", "birth": Event(date="1920"), "death": Event(date="1990"), "parents": ["mum"],
+         "events": [LifeEvent(type="immigration", date="1952-04", place="Halifax"),
+                    LifeEvent(type="residence", start="1960", end="1975", place="Surrey"),
+                    LifeEvent(type="burial", date="1991"), LifeEvent(type="moved-house", date="1940"),
+                    LifeEvent(type="occupation", value="Carpenter")]},
+    ])
+    tl = build_timeline(tree, build_relations(tree))
+    assert [(r["id"], r["text"]) for r in tl["people"]["me"]["events"]] == [
+        ("birth:me", "born"), ("fact:me:3", "moved house"), ("fact:me:0", "immigrated"),
+        ("fact:me:1", "lived"), ("death:me", "died"), ("fact:me:2", "buried")]
+    family = {e["id"]: e for e in tl["events"]}
+    assert family["fact:me:0"]["text"] == "Me immigrated" and family["fact:mum:0"]["text"] == "Mum worked as Nurse"
+    assert family["fact:me:1"]["end"] == "1975" and "fact:me:4" not in family
