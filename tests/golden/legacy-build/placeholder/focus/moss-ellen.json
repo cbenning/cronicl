@@ -418,6 +418,7 @@
       "y": 212
     },
     {
+      "ended": true,
       "id": "alder-dan+wu-meiling",
       "members": [
         "alder-dan",
@@ -427,13 +428,9 @@
         {
           "end": "1921",
           "end_reason": "annulment",
-          "start": "1920",
-          "type": "civil-union"
-        },
-        {
           "place": "Vancouver, BC",
           "start": "1920",
-          "type": "marriage"
+          "type": "civil-union"
         }
       ],
       "x": 480,

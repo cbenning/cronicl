@@ -6,8 +6,9 @@ name:
 sex: F
 birth: 1896
 death: 1975
-marriages:
+partnerships:
   - with: alder-dan
-    date: 1920
+    type: civil-union
+    start: 1920
     place: Vancouver, BC
 ---

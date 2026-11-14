@@ -31,6 +31,23 @@
       "year": 1700
     },
     {
+      "age": 25,
+      "age_approx": false,
+      "cite": [],
+      "date": "1725",
+      "day": null,
+      "id": "marriage:kerr-ivor+kerr-thea",
+      "kind": "marriage",
+      "month": null,
+      "note": null,
+      "place": "Bristol, England",
+      "role": "self",
+      "text": "married Thea Kerr",
+      "type": "marriage",
+      "when": "1725",
+      "year": 1725
+    },
+    {
       "age": 70,
       "age_approx": false,
       "cite": [],
@@ -60,7 +77,17 @@
       "id": "kerr-thea",
       "initials": "TK",
       "name": "Thea Kerr",
-      "partnerships": [],
+      "partnerships": [
+        {
+          "end": null,
+          "end_reason": null,
+          "note": null,
+          "place": "Bristol, England",
+          "start": "1725",
+          "text": "Married 1725 (Bristol, England)",
+          "type": "marriage"
+        }
+      ],
       "years": "1705–1790"
     }
   ],

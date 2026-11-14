@@ -60,6 +60,13 @@
         "kerr-ivor",
         "kerr-thea"
       ],
+      "partnerships": [
+        {
+          "place": "Bristol, England",
+          "start": "1725",
+          "type": "marriage"
+        }
+      ],
       "x": 204,
       "y": 64
     }

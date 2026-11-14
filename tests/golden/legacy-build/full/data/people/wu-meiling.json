@@ -36,28 +36,11 @@
       "cite": [],
       "date": "1920",
       "day": null,
-      "id": "marriage:alder-dan+wu-meiling:1",
-      "kind": "marriage",
-      "month": null,
-      "note": null,
-      "place": "Vancouver, BC",
-      "role": "self",
-      "text": "married Dan Alder",
-      "type": "marriage",
-      "when": "1920",
-      "year": 1920
-    },
-    {
-      "age": 24,
-      "age_approx": false,
-      "cite": [],
-      "date": "1920",
-      "day": null,
       "id": "partnership:alder-dan+wu-meiling",
       "kind": "civil-union",
       "month": null,
       "note": null,
-      "place": "",
+      "place": "Vancouver, BC",
       "role": "self",
       "text": "entered a civil union with Dan Alder",
       "type": "partnership",
@@ -133,19 +116,10 @@
           "end": "1921",
           "end_reason": "annulment",
           "note": null,
-          "place": null,
-          "start": "1920",
-          "text": "Civil union 1920 – annulled 1921",
-          "type": "civil-union"
-        },
-        {
-          "end": null,
-          "end_reason": null,
-          "note": null,
           "place": "Vancouver, BC",
           "start": "1920",
-          "text": "Married 1920 (Vancouver, BC)",
-          "type": "marriage"
+          "text": "Civil union 1920 – annulled 1921 (Vancouver, BC)",
+          "type": "civil-union"
         }
       ],
       "years": "1892–1971"

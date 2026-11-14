@@ -3,7 +3,10 @@
 The golden files are the truth the migration acceptance test compares against. They were captured once, from the
 old code, on 2026-11-14 with today fixed at 2026-10-10. Do not regenerate them from new code.
 
-Usage (old code only): python tests/golden/capture.py
+The fixture was last adjusted (one `marriages:` entry that merges cleanly instead of overlapping another union) and the golden
+files regenerated at commit 941cab1 (pre-rename code, package `famsite`).
+
+Usage (old code only, at that commit): python tests/golden/capture.py
 """
 import shutil
 import sys

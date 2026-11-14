@@ -186,29 +186,7 @@ class _Reader:
                         source,
                         record.get("events").lines[index] if isinstance(record.get("events"), Sequence) else line,
                     )
-            entries = [e for e in entries if (_text(e.get("type")) or "") in BEGIN + END]
-            entries = _in_date_order(entries)
-            partnerships: list[Partnership] = []
-            for entry in entries:
-                kind, date = _text(entry.get("type")), _text(entry.get("date"))
-                if kind in BEGIN:
-                    partnerships.append(
-                        Partnership(
-                            with_id=b, type=kind, start=date, place=_text(entry.get("place")), note=_text(entry.get("note")),
-                            cite=_texts(entry.get("cite")),
-                        )
-                    )
-                    continue
-                open_ones = [p for p in partnerships if p.end is None]
-                target = open_ones[-1] if open_ones else None
-                if target is None:
-                    target = Partnership(with_id=b)
-                    partnerships.append(target)
-                target.end = date or "unknown"
-                target.end_reason = kind if kind in ("divorce", "annulment", "separation") else None
-                target.place = target.place or (None if target.start else _text(entry.get("place")))
-                target.note = target.note or _text(entry.get("note"))
-                target.cite = target.cite or _texts(entry.get("cite"))
+            partnerships = partnerships_from_events(entries, b)
             note = _text(record.get("note"))
             if note:
                 if partnerships:
@@ -221,6 +199,35 @@ class _Reader:
                 first.partnerships.extend(partnerships)
             else:
                 first.spouse.append(b)
+
+
+def partnerships_from_events(entries, other: str) -> list[Partnership]:
+    """A couple's events (mappings with type, date, place, note, cite) as the Partnerships the model carries.
+
+    Events are taken in date order (undated ones keep their written place). A beginning event starts a partnership; an
+    ending event closes the latest open one, or makes a partnership of its own when nothing is open.
+    """
+    entries = [e for e in entries if (_text(e.get("type")) or "") in BEGIN + END]
+    partnerships: list[Partnership] = []
+    for entry in _in_date_order(entries):
+        kind, date = _text(entry.get("type")), _text(entry.get("date"))
+        if kind in BEGIN:
+            partnerships.append(
+                Partnership(with_id=other, type=kind, start=date, place=_text(entry.get("place")), note=_text(entry.get("note")),
+                            cite=_texts(entry.get("cite")))
+            )
+            continue
+        open_ones = [p for p in partnerships if p.end is None]
+        target = open_ones[-1] if open_ones else None
+        if target is None:
+            target = Partnership(with_id=other)
+            partnerships.append(target)
+        target.end = date or "unknown"
+        target.end_reason = kind if kind in ("divorce", "annulment", "separation") else None
+        target.place = target.place or (None if target.start else _text(entry.get("place")))
+        target.note = target.note or _text(entry.get("note"))
+        target.cite = target.cite or _texts(entry.get("cite"))
+    return partnerships
 
 
 def _in_date_order(entries: list[Mapping]) -> list[Mapping]:

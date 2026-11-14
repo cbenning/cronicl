@@ -15,6 +15,7 @@ from .checks import check_all
 from .core.edit import EditError, apply_living
 from .core.familyedit import plan_mark, plan_rename
 from .core.inplace import InplaceError
+from .core.migrate import MigrateRefused, apply_migration, plan_migration
 from .core.fix import apply_plan, plan_fix
 from .core.gaps import find_gaps
 from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import, write_import_family
@@ -263,6 +264,28 @@ def _cmd_edit_family(args) -> int:
     return 0
 
 
+def cmd_migrate(args) -> int:
+    root = Path(args.dir)
+    try:
+        plan = plan_migration(root)
+    except MigrateRefused as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"{plan.people} people, {plan.couples} couple records, {plan.events} events -> family.yml")
+    for note in plan.notes:
+        print(f"NOTE {note}")
+    print("the old people/ folder moves to archive/people-md/; site.yml gets schema_version: 3")
+    if not args.apply:
+        print("dry run; re-run with --apply (-a) to write these changes")
+        return 0
+    if _git_dirty(root) and not args.allow_dirty:
+        print("error: git working tree has uncommitted changes; commit them or use --allow-dirty", file=sys.stderr)
+        return 2
+    apply_migration(root, plan)
+    print(f"migrated {plan.people} people into family.yml")
+    return 0
+
+
 def cmd_rename(args) -> int:
     root = Path(args.dir)
     changes = plan_rename(root, args.old, args.new)
@@ -412,6 +435,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.add_argument("--strict", action="store_true", help="exit 1 on warnings too")
     p.set_defaults(func=cmd_check)
+
+    p = sub.add_parser("migrate", parents=[common], help="convert an old people/*.md folder to family.yml (preview unless --apply)")
+    p.add_argument("--allow-dirty", action="store_true", help="run even if the git tree has uncommitted changes")
+    _add_apply(p)
+    p.set_defaults(func=cmd_migrate)
 
     p = sub.add_parser("rename", parents=[common], help="change a person's id everywhere it is used (preview unless --apply)")
     p.add_argument("old", help="the current id")

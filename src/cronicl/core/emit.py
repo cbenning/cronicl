@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from .dates import parse_span, plain_form, to_modern
+from .dates import parse_span, plain_form, to_modern  # noqa: F401  (to_modern is re-exported)
 
 _PLAIN_SAFE = re.compile(r"^[^\s\-?:,\[\]{}#&*!|>'\"%@`][^\n]*$")
 _NEEDS_QUOTES = re.compile(r"(: |:$| #|[,\[\]{}]|\t|^\s|\s$|[\x00-\x1f\x7f  ﻿])")
@@ -206,7 +206,7 @@ def family(people: list[tuple[str, dict]], couples: list[tuple[str, str, dict]],
 def spec_from_person(p) -> dict:
     """The emit spec of a model `Person` (as the legacy reader and the GEDCOM importer produce it)."""
 
-    def vital(event):
+    def vital(event, empty_means_unknown=False):
         if event is None:
             return None
         extra = dict(event.extra)
@@ -216,7 +216,7 @@ def spec_from_person(p) -> dict:
         if only_date:
             return date
         if not (date or event.place or note or cite or extra):
-            return None
+            return "unknown" if empty_means_unknown else None  # `DEAT Y`: died, nothing else known
         return {"date": date, "place": event.place, "note": note, "cite": cite, "extra": extra}
 
     events = []
@@ -230,7 +230,7 @@ def spec_from_person(p) -> dict:
                  "also": list(p.also), "extra": dict(p.name_extra)},
         "sex": {"M": "male", "F": "female"}.get(p.sex, "unknown"),
         "birth": vital(p.birth),
-        "death": vital(p.death),
+        "death": vital(p.death, empty_means_unknown=True),
         "parents": list(p.parents),
         "events": events,
         "portrait": p.portrait,

@@ -44,6 +44,22 @@
     },
     {
       "approx": false,
+      "date": "1725",
+      "day": null,
+      "id": "marriage:kerr-ivor+kerr-thea",
+      "kind": "marriage",
+      "month": null,
+      "people": [
+        "kerr-ivor",
+        "kerr-thea"
+      ],
+      "place": "Bristol, England",
+      "text": "Ivor Kerr & Thea Kerr married",
+      "type": "marriage",
+      "year": 1725
+    },
+    {
+      "approx": false,
       "date": "1760",
       "day": null,
       "id": "death:nameless-one",
@@ -463,22 +479,6 @@
       "approx": false,
       "date": "1920",
       "day": null,
-      "id": "marriage:alder-dan+wu-meiling:1",
-      "kind": "marriage",
-      "month": null,
-      "people": [
-        "alder-dan",
-        "wu-meiling"
-      ],
-      "place": "Vancouver, BC",
-      "text": "Dan Alder & Meiling Wu married",
-      "type": "marriage",
-      "year": 1920
-    },
-    {
-      "approx": false,
-      "date": "1920",
-      "day": null,
       "id": "partnership:alder-dan+wu-meiling",
       "kind": "civil-union",
       "month": null,
@@ -486,7 +486,7 @@
         "alder-dan",
         "wu-meiling"
       ],
-      "place": "",
+      "place": "Vancouver, BC",
       "text": "Dan Alder & Meiling Wu entered a civil union",
       "type": "partnership",
       "year": 1920
