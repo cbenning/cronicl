@@ -1,7 +1,7 @@
 import pytest
 
-from famsite.model import Event, Partnership, Person
-from famsite.store import dump_person, load_site, load_tree, split_frontmatter
+from cronicl.model import Event, Partnership, Person
+from cronicl.store import dump_person, load_site, load_tree, split_frontmatter
 
 
 def test_loads_person_with_defaults(tmp_path, write):
@@ -288,7 +288,7 @@ def test_gallery_id_must_be_text(tmp_path, write):
 
 
 def test_gallery_id_is_in_the_schema():
-    from famsite.schema import PERSON_SCHEMA
+    from cronicl.schema import PERSON_SCHEMA
 
     assert PERSON_SCHEMA["properties"]["gallery_id"]["type"] == "string"
 

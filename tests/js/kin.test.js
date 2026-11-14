@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const k = require('../../src/famsite/viewer/kin.js');
+const k = require('../../src/cronicl/viewer/kin.js');
 
 const person = (sex, parents, partners) => ({ name: '', sex: sex || 'U', parents: parents || [], partners: partners || [] });
 const P = {

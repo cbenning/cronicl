@@ -1,6 +1,6 @@
-from famsite.home import home_person
-from famsite.model import Event
-from famsite.relations import build_relations
+from cronicl.home import home_person
+from cronicl.model import Event
+from cronicl.relations import build_relations
 
 
 def people():

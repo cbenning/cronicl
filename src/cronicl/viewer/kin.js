@@ -124,5 +124,5 @@
 
   var api = { kinship: kinship, phrase: phrase, sentence: sentence };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.famsiteKin = api;
+  else root.croniclKin = api;
 })(typeof window !== 'undefined' ? window : this);

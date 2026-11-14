@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const g = require('../../src/famsite/viewer/gallery.js');
+const g = require('../../src/cronicl/viewer/gallery.js');
 
 const BASE = 'https://x.example/photos/';
 

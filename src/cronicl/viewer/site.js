@@ -18,7 +18,7 @@
     return (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
   }
 
-  var ME_KEY = 'famsite.me';
+  var ME_KEY = 'cronicl.me';
 
   // Who is looking: the person the visitor said is them, else the home person. A saved id that is no longer in
   // the site is forgotten; a store that throws (private mode) is treated as empty.
@@ -49,10 +49,10 @@
   // The kinship line and the "This is me" button on a person page.
   function initKin(line) {
     var id = line.getAttribute('data-kin-for');
-    var base = metaContent('famsite-root');
-    var home = metaContent('famsite-home');
+    var base = metaContent('cronicl-root');
+    var home = metaContent('cronicl-home');
     var button = document.getElementById('set-me');
-    var kin = root.famsiteKin;
+    var kin = root.croniclKin;
     if (!kin) return;
     fetch(base + 'kin.json').then(function (r) { return r.json(); }).then(function (data) {
       var people = data.people;
@@ -90,9 +90,9 @@
   // The relate page: two pickers and one sentence.
   function initRelate(selectA, selectB) {
     var answer = document.getElementById('relate-answer');
-    var base = metaContent('famsite-root');
-    var home = metaContent('famsite-home');
-    var kin = root.famsiteKin;
+    var base = metaContent('cronicl-root');
+    var home = metaContent('cronicl-home');
+    var kin = root.croniclKin;
     if (!kin) return;
     fetch(base + 'kin.json').then(function (r) { return r.json(); }).then(function (data) {
       var people = data.people;
@@ -163,7 +163,7 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else if (typeof document !== 'undefined') {
-    root.famsiteSite = api;
+    root.croniclSite = api;
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
   }

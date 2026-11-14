@@ -2,9 +2,9 @@ from datetime import date
 
 import pytest
 
-from famsite.model import Event, LifeEvent, Partnership
-from famsite.privacy import redact
-from famsite.render import life_summary, person_payload
+from cronicl.model import Event, LifeEvent, Partnership
+from cronicl.privacy import redact
+from cronicl.render import life_summary, person_payload
 
 
 def p(pid, given, surname=None, **kw):

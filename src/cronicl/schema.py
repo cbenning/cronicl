@@ -13,7 +13,7 @@ _ID = {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64}
 
 PERSON_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "famsite person frontmatter (schema_version 2)",
+    "title": "cronicl person frontmatter (schema_version 2)",
     "type": "object",
     "properties": {
         "id": _ID,

@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-from famsite.cli import main
+from cronicl.cli import main
 
 
 def run(*argv):
@@ -150,7 +150,7 @@ def test_serve_sends_no_cache_headers_so_a_rebuilt_viewer_is_never_stale(tmp_pat
     import threading
     import urllib.request
 
-    from famsite.cli import NoCacheHandler, make_server
+    from cronicl.cli import NoCacheHandler, make_server
 
     (tmp_path / "viewer.js").write_text("console.log(1)", encoding="utf-8")
     server = make_server(tmp_path, 0)
@@ -248,14 +248,14 @@ def test_mode_words_and_text_numbers_in_site_yml_work(tmp_path, write):
 
 
 def test_warning_summary_formats():
-    from famsite.cli import warning_summary
-    from famsite.issues import Issue
+    from cronicl.cli import warning_summary
+    from cronicl.issues import Issue
 
     assert warning_summary([]) == ""
-    assert warning_summary([Issue("W-A", "x")]) == "1 warning: 1 W-A (run famsite check for details)"
+    assert warning_summary([Issue("W-A", "x")]) == "1 warning: 1 W-A (run cronicl check for details)"
     many = [Issue("W-UNKNOWN-KEY", "x")] * 3 + [Issue("W-BAD-LIVING", "x")] + [Issue(f"W-C{n}", "x") for n in range(5)]
     text = warning_summary(many)
-    assert text.startswith("9 warnings: 3 W-UNKNOWN-KEY, 1 W-BAD-LIVING, 1 W-C0, 1 W-C1, 1 W-C2, ... (run famsite check for details)")
+    assert text.startswith("9 warnings: 3 W-UNKNOWN-KEY, 1 W-BAD-LIVING, 1 W-C0, 1 W-C1, 1 W-C2, ... (run cronicl check for details)")
 
 
 def test_build_prints_one_summary_line_for_warnings(tmp_path, write, capsys):
@@ -265,7 +265,7 @@ def test_build_prints_one_summary_line_for_warnings(tmp_path, write, capsys):
     capsys.readouterr()
     assert run("build", "--dir", data, "--out", tmp_path / "out") == 0
     out = capsys.readouterr().out
-    assert "3 warnings: 2 W-UNKNOWN-KEY, 1 W-BAD-LIVING (run famsite check for details)" in out
+    assert "3 warnings: 2 W-UNKNOWN-KEY, 1 W-BAD-LIVING (run cronicl check for details)" in out
     assert "did you mean" not in out and "unknown key" not in out
 
 
@@ -323,7 +323,7 @@ def test_ignoring_errors_says_what_was_ignored(tmp_path, write, capsys):
     capsys.readouterr()
     assert run("build", "--dir", data, "--out", tmp_path / "out", "--ignore-errors") == 0
     out = capsys.readouterr().out
-    assert "ignoring 1 error: 1 E-PRIVACY-MODE (run famsite check for details)" in out
+    assert "ignoring 1 error: 1 E-PRIVACY-MODE (run cronicl check for details)" in out
     assert "living people are treated as placeholders" in out
 
 

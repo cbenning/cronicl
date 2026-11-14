@@ -260,7 +260,7 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
         elif tag in _EVENT_TAGS:
             kind, takes_value = _EVENT_TAGS[tag]
             if any(sub.tag == "DATE" and sub.value.strip() and not from_gedcom(sub.value)[1] for sub in child.children):
-                extra.append(child)  # a date famsite cannot convert stays exactly as written, in gedcom_extra
+                extra.append(child)  # a date cronicl cannot convert stays exactly as written, in gedcom_extra
                 continue
             happened = _event(child, kind, xref, extra, issues)
             text = child.value.strip()

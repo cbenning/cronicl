@@ -296,7 +296,7 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else {
-    root.famsiteGallery = api;
+    root.croniclGallery = api;
     if (root.document) {
       if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', function () { init(root.document); });
       else init(root.document);

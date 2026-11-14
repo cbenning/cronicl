@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from famsite.history import recent_changes
+from cronicl.history import recent_changes
 
 
 def git(root, *args, when):

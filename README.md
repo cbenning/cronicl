@@ -1,28 +1,28 @@
-# famsite
+# cronicl
 
 Keep a family tree as plain markdown files in git and generate a static, pan-and-zoom website from them.
 GEDCOM is supported as a separate one-way import tool.
 
-Status: v0.1. Design: `docs/superpowers/specs/2026-10-10-famsite-design.md`.
+Status: v0.1. Design: `docs/superpowers/specs/2026-10-10-cronicl-design.md`.
 
 ## Quick start
 
 ```bash
 uv sync
-export FAMSITE_DIR=~/my-family            # or pass --dir / -C on every command
-uv run famsite init                       # creates site.yml, people/, archive/
-uv run famsite import-gedcom tree.ged     # preview: counts and warnings
-uv run famsite import-gedcom tree.ged -a  # write the files
-uv run famsite check
-uv run famsite search ashby              # find ids
-uv run famsite edit mark-deceased ashby-greta -a
-uv run famsite serve                      # http://127.0.0.1:8000/
+export CRONICL_DIR=~/my-family            # or pass --dir / -C on every command
+uv run cronicl init                       # creates site.yml, people/, archive/
+uv run cronicl import-gedcom tree.ged     # preview: counts and warnings
+uv run cronicl import-gedcom tree.ged -a  # write the files
+uv run cronicl check
+uv run cronicl search ashby              # find ids
+uv run cronicl edit mark-deceased ashby-greta -a
+uv run cronicl serve                      # http://127.0.0.1:8000/
 ```
 
 ## Commands
 
-Every command that works on a famsite folder takes `--dir DIR` (`-C DIR`), before or after the subcommand.
-If it is omitted, `$FAMSITE_DIR` is used, and failing that the current directory. Every command that writes
+Every command that works on a cronicl folder takes `--dir DIR` (`-C DIR`), before or after the subcommand.
+If it is omitted, `$CRONICL_DIR` is used, and failing that the current directory. Every command that writes
 files previews by default and needs `--apply` (`-a`).
 
 | Command | What it does |
@@ -167,7 +167,7 @@ events:                     # anything beyond birth and death
 Free-form biography in markdown.
 ```
 
-Only a name is required. `id:` is optional; `famsite fix` pins it.
+Only a name is required. `id:` is optional; `cronicl fix` pins it.
 
 ### Events, notes and sources
 
@@ -194,17 +194,17 @@ and anything else it does not know, stays in `gedcom_extra`. Imports made before
 `parents` is the canonical up-reference. `children`, `spouse` and `partnerships` may be declared on either
 end and are merged: `start` on one file and `end` on the other make one partnership. Couples are derived;
 there are no couple files. A partner's death never sets `end`, and nothing is inferred; `end` is only for
-divorce, annulment or a split. Old `marriages:` entries (with `date:`) still load, and `famsite fix --apply`
+divorce, annulment or a split. Old `marriages:` entries (with `date:`) still load, and `cronicl fix --apply`
 rewrites them as `partnerships:` entries (and bumps `schema_version` to 2).
 
 ## Validation
 
-`famsite check` (also `famsite validate`) reads everything you edit and reports what it cannot use, with the file,
+`cronicl check` (also `cronicl validate`) reads everything you edit and reports what it cannot use, with the file,
 the key and what to do. It never changes a file. `--format json` gives machine-readable output and `--strict`
 makes warnings fail too.
 
-`famsite build` and `famsite serve` print errors in full (an error stops the build) but only one line for
-warnings, such as `3 warnings: 2 W-UNKNOWN-KEY, 1 W-BAD-LIVING (run famsite check for details)`. Run `check` for
+`cronicl build` and `cronicl serve` print errors in full (an error stops the build) but only one line for
+warnings, such as `3 warnings: 2 W-UNKNOWN-KEY, 1 W-BAD-LIVING (run cronicl check for details)`. Run `check` for
 the list.
 
 What it reports, besides broken references, dates and ids:
@@ -238,12 +238,12 @@ One side effect: anonymised ids come from the exact `id_salt` text. A salt that 
 
 The loop that works best once the first import is done:
 
-1. `famsite gaps` lists who is missing a name, a date, a place or parents, best-connected people first.
-2. `famsite search WORD` finds the ids you need for parents, spouses and children.
-3. `famsite new --given Bob --surname Smith --birth 1950-03-12 --parents smith-john brown-mary` previews a new
+1. `cronicl gaps` lists who is missing a name, a date, a place or parents, best-connected people first.
+2. `cronicl search WORD` finds the ids you need for parents, spouses and children.
+3. `cronicl new --given Bob --surname Smith --birth 1950-03-12 --parents smith-john brown-mary` previews a new
    file; add `-a` to write it. Or edit a file in `people/` by hand.
-4. `famsite check` reports anything that does not hold together.
-5. `famsite serve` shows the result.
+4. `cronicl check` reports anything that does not hold together.
+5. `cronicl serve` shows the result.
 
 The table above, "Declare relationships on whichever file you are editing", is the reference for which file to
 touch when you add a relative.
@@ -254,7 +254,7 @@ Before you publish a site that contains living people, set `privacy.living` to `
 `site.yml`. While it is `full`, `build` prints `W-PRIVACY-OFF` with the number of people the privacy rules treat
 as living: that is a reminder that they are all published.
 
-`famsite build --out public` writes a folder of plain files that any static host can serve (see
+`cronicl build --out public` writes a folder of plain files that any static host can serve (see
 [Deploying](#deploying) and [Password protection](#password-protection)). Unless you configure a
 [photo gallery](#photo-gallery), the site makes no external requests: no web fonts, scripts or analytics are loaded
 from anywhere.
@@ -281,8 +281,8 @@ privacy:
 
 ## Deploying
 
-`famsite build --out public` writes a folder of plain files: HTML, JSON, JavaScript, CSS and your portraits. Any
-static host can serve it, and nothing runs on the server. `famsite serve` is only for looking at the site while
+`cronicl build --out public` writes a folder of plain files: HTML, JSON, JavaScript, CSS and your portraits. Any
+static host can serve it, and nothing runs on the server. `cronicl serve` is only for looking at the site while
 you edit it; do not use it to publish. Before publishing, set `privacy.living` to `placeholder` or `hidden` in
 `site.yml` (see [Publishing](#publishing)).
 
@@ -319,8 +319,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install famsite    # or however you install famsite; see the note below
-      - run: famsite build --out public
+      - run: pip install cronicl    # or however you install cronicl; see the note below
+      - run: cronicl build --out public
       - uses: actions/upload-pages-artifact@v4
         with:
           path: public
@@ -338,7 +338,7 @@ jobs:
 Every push to `main` rebuilds and publishes the site. With `edit_url` pointing at the repository (see
 [Publishing](#publishing)), a relative can use "Edit this page" on GitHub, and the change goes live by itself.
 The action versions above were current when this was written; use the current major versions. The `pip install`
-line is the one part that depends on where you keep famsite: use the package name once it is published, or
+line is the one part that depends on where you keep cronicl: use the package name once it is published, or
 `pip install git+https://<where-your-copy-lives>` until then.
 
 **A GitHub Pages site is public, even when its repository is private.** Only organisations on GitHub Enterprise
@@ -348,7 +348,7 @@ and see [Password protection](#password-protection) for gated alternatives.
 ### Your own server
 
 ```sh
-famsite build --out out
+cronicl build --out out
 rsync -a --delete out/ you@yourhost:/var/www/family/
 ```
 
@@ -356,7 +356,7 @@ Point any web server at that folder. The files are static; there is nothing to c
 
 ### Netlify, Cloudflare Pages, Vercel and similar
 
-Connect the repository, set the build command to `pip install famsite && famsite build --out public` and the
+Connect the repository, set the build command to `pip install cronicl && cronicl build --out public` and the
 publish directory to `public`. These hosts clone with a shallow history by default: turn on a full clone (or
 accept that the home page's "recently updated" list is short).
 
@@ -428,7 +428,7 @@ strong as a long passphrase, and this site is many files, not one page.
 
 None of the above affects search engines on a public site. The `X-Robots-Tag` lines above ask them not to index
 a protected site. A public site can add a `robots.txt` that disallows everything and a
-`<meta name="robots" content="noindex">` in its pages; famsite does not generate either yet, and well-behaved
+`<meta name="robots" content="noindex">` in its pages; cronicl does not generate either yet, and well-behaved
 crawlers only.
 
 ### A gallery behind a login
@@ -439,7 +439,7 @@ A gallery that is public, or protected only by being hard to find, works as desc
 
 ## Photo gallery
 
-If you keep your photos in a [Fussel](https://github.com/cbenning/fussel) gallery, famsite can show a few of a
+If you keep your photos in a [Fussel](https://github.com/cbenning/fussel) gallery, cronicl can show a few of a
 person's photos on their page, with a link to the rest. Add this to `site.yml`:
 
 ```yaml
@@ -462,7 +462,7 @@ gallery:
   fails, by the one gallery entry with the same name. If a person is tagged differently in the gallery, put its slug
   in their file: `gallery_id: jane-doe`. Two people with the same name need this too, because Fussel numbers the
   second one. So do names with letters that have no plain-ASCII form (Cyrillic, Chinese, `ð`): Fussel transliterates
-  those its own way, so famsite does not guess and shows no photos for them until `gallery_id` is set.
+  those its own way, so cronicl does not guess and shows no photos for them until `gallery_id` is set.
 - People hidden or replaced by privacy redaction never get a photos block.
 - It needs a Fussel that writes `people.json` (gallery option `gallery.people.enable: true`, on by default). A
   Fussel that also lists each photo's largest size (`src`) gives sharper featured photos and lightbox; an older one
@@ -471,7 +471,7 @@ gallery:
   (GitHub Pages does). Without it only the top-bar link works.
 - Everything under `gallery:` is published to every visitor, so never put a secret there.
 
-`famsite check` reports `E-GALLERY-TYPE` (missing or unknown `type`), `E-GALLERY-URL` (missing or not an
+`cronicl check` reports `E-GALLERY-TYPE` (missing or unknown `type`), `E-GALLERY-URL` (missing or not an
 `http://` or `https://` address), `W-GALLERY-KEY` (a key that does nothing), `W-GALLERY-PORTRAITS` (`portraits` is
 not `true` or `false`), `W-GALLERY-SECRET` (a key named like a secret) and `W-GALLERY-ID-UNUSED` (a `gallery_id` with no usable gallery). An invalid `gallery:` block is ignored
 when building.
@@ -480,13 +480,13 @@ Another gallery can be added later by registering a type in `galleries.py` and a
 
 ## Privacy
 
-**Redaction is off by default.** `famsite init` writes `privacy.living: full`, and a site with no
+**Redaction is off by default.** `cronicl init` writes `privacy.living: full`, and a site with no
 `privacy.living` key behaves the same: everyone is published. Turn it on by setting `placeholder` or `hidden`
 before you publish a site that contains living people.
 
 When redaction is on, people are treated as living when `living: true`, or when they have no `death` and were
 born less than `cutoff_years` ago (default 100); no dates at all also counts as living. Nothing is ever
-inferred: `edit mark-deceased` is how you tell famsite someone is dead. Living people are redacted before any
+inferred: `edit mark-deceased` is how you tell cronicl someone is dead. Living people are redacted before any
 output file is written, their ids are replaced by salted hashes, and partnership details (type, dates, notes)
 involving a living partner are dropped. Mentions of a living person's name inside someone else's biography are not detected.
 
@@ -498,5 +498,5 @@ uv run pytest
 ```
 
 The suite includes a click-through test that drives a built site in headless Chrome. It is skipped when `node`
-or a browser is missing; point `FAMSITE_CHROME` at a Chrome/Chromium/`chrome-headless-shell` binary to choose
+or a browser is missing; point `CRONICL_CHROME` at a Chrome/Chromium/`chrome-headless-shell` binary to choose
 one.

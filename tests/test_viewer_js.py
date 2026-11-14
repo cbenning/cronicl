@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from famsite.render import build_site
+from cronicl.render import build_site
 
 ROOT = Path(__file__).parent
 

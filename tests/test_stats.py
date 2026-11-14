@@ -1,7 +1,7 @@
-from famsite.model import Event
-from famsite.relations import build_relations
-from famsite.stats import site_stats
-from famsite.timeline import build_timeline
+from cronicl.model import Event
+from cronicl.relations import build_relations
+from cronicl.stats import site_stats
+from cronicl.timeline import build_timeline
 
 
 def test_site_stats(make_tree):

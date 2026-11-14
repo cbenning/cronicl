@@ -1,8 +1,8 @@
 import json
 from datetime import date
 
-from famsite.model import Event, LifeEvent
-from famsite.render import build_site, dumps, page_links, person_payload
+from cronicl.model import Event, LifeEvent
+from cronicl.render import build_site, dumps, page_links, person_payload
 
 TODAY = date(2026, 10, 10)
 
@@ -114,7 +114,7 @@ def test_living_people_never_appear_in_any_output_file(tmp_path, make_tree):
 
 
 def test_ended_partnership_details_of_a_living_person_reach_no_output_file(tmp_path, make_tree):
-    from famsite.model import Partnership
+    from cronicl.model import Partnership
 
     tree = make_tree(
         [
@@ -147,7 +147,7 @@ def test_no_privacy_setting_means_no_redaction(tmp_path, make_tree):
 
 
 def test_spouse_payload_carries_partnership_text(make_tree):
-    from famsite.model import Partnership
+    from cronicl.model import Partnership
 
     tree = make_tree(
         [
@@ -168,7 +168,7 @@ def test_spouse_payload_carries_partnership_text(make_tree):
 
 
 def test_partnership_text_wording():
-    from famsite.render import partnership_text
+    from cronicl.render import partnership_text
 
     assert partnership_text("marriage", "1975", None, None, None) == "Married 1975"
     assert partnership_text("marriage", "1975", "1990", None, None) == "Married 1975 – ended 1990"
@@ -256,11 +256,11 @@ def test_assets_are_versioned_by_content_so_a_rebuild_is_never_served_stale(tmp_
     import hashlib
     from pathlib import Path
 
-    import famsite
+    import cronicl
 
     tree = make_tree([p("a", "Al", "X")])
     build_site(tree, tmp_path, today=TODAY)
-    root = Path(famsite.__file__).parent / "viewer"
+    root = Path(cronicl.__file__).parent / "viewer"
     js = hashlib.sha256((root / "viewer.js").read_bytes()).hexdigest()[:12]
     css = hashlib.sha256((root / "style.css").read_bytes()).hexdigest()[:12]
     index = (tmp_path / "tree/index.html").read_text(encoding="utf-8")
@@ -279,13 +279,13 @@ def test_person_page_prints_dates_in_words(tmp_path, make_tree):
 def test_pages_name_the_home_person(tmp_path, make_tree):
     tree = sample(make_tree)
     build_site(tree, tmp_path, today=TODAY)
-    assert '<meta name="famsite-home" content="smith-john">' in (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert '<meta name="famsite-home" content="smith-john">' in (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
+    assert '<meta name="cronicl-home" content="smith-john">' in (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert '<meta name="cronicl-home" content="smith-john">' in (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
 
 
 def test_an_empty_site_has_no_home_person(tmp_path, make_tree):
     build_site(make_tree([]), tmp_path, today=TODAY)
-    assert '<meta name="famsite-home" content="">' in (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert '<meta name="cronicl-home" content="">' in (tmp_path / "index.html").read_text(encoding="utf-8")
 
 
 def test_home_and_viewer_are_separate_pages(tmp_path, make_tree):
@@ -353,11 +353,11 @@ def test_places_page_lists_people_under_each_place(tmp_path, make_tree):
 
 def test_every_page_names_its_root_for_the_scripts(tmp_path, make_tree):
     build_site(sample(make_tree), tmp_path, today=TODAY)
-    assert '<meta name="famsite-root" content="">' in (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert '<meta name="famsite-root" content="../">' in (tmp_path / "tree/index.html").read_text(encoding="utf-8")
-    assert '<meta name="famsite-root" content="../">' in (tmp_path / "people/index.html").read_text(encoding="utf-8")
+    assert '<meta name="cronicl-root" content="">' in (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert '<meta name="cronicl-root" content="../">' in (tmp_path / "tree/index.html").read_text(encoding="utf-8")
+    assert '<meta name="cronicl-root" content="../">' in (tmp_path / "people/index.html").read_text(encoding="utf-8")
     page = (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
-    assert '<meta name="famsite-root" content="../../">' in page
+    assert '<meta name="cronicl-root" content="../../">' in page
     assert 'data-kin-for="smith-bob"' in page and 'id="set-me"' in page
     assert page.index("kin.js") < page.index("site.js")
 
@@ -427,7 +427,7 @@ def test_person_page_is_deterministic(tmp_path, make_tree):
 def test_svgviews_is_gone():
     import importlib.util
 
-    assert importlib.util.find_spec("famsite.svgviews") is None
+    assert importlib.util.find_spec("cronicl.svgviews") is None
 
 
 def media_tree(make_tree, tmp_path):

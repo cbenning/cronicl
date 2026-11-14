@@ -29,12 +29,12 @@ def plan_new(
     if not (given or surname):
         raise EditError("give --given or --surname")
     if not (data_dir / "people").is_dir():
-        raise EditError(f"{data_dir} is not a famsite folder; run famsite init")
+        raise EditError(f"{data_dir} is not a cronicl folder; run cronicl init")
     tree, _ = load_tree(data_dir)
     listed = [*parents, *spouse, *children]
     unknown = sorted({pid for pid in listed if pid not in tree.people})
     if unknown:
-        raise EditError(f"unknown person id(s): {', '.join(unknown)}; use famsite search to find ids")
+        raise EditError(f"unknown person id(s): {', '.join(unknown)}; use cronicl search to find ids")
     for pid in listed:
         if listed.count(pid) > 1:
             raise EditError(f"{pid} is listed twice")

@@ -1,4 +1,4 @@
-// Drives a built famsite in headless Chrome over the DevTools protocol and checks real behaviour.
+// Drives a built cronicl in headless Chrome over the DevTools protocol and checks real behaviour.
 // Usage: node smoke.mjs <chrome-binary> <base-url> <screenshot-dir>
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -135,7 +135,7 @@ async function main() {
   check('the connectors carry the same roles', (await ev(`document.querySelectorAll('.edge.role-parent').length >= 1 && document.querySelectorAll('.edge.role-sibling').length >= 1`)) === true);
   check('roles are different colours', (await ev(`(() => { const c = (sel) => getComputedStyle(document.querySelector(sel)).stroke; return c('.edge.role-parent') !== c('.edge.role-sibling'); })()`)) === true);
   check('the legend names the roles on screen', (await ev(`(() => { const l = document.getElementById('legend'); return !l.hidden && /Parents/.test(l.textContent) && /Siblings/.test(l.textContent); })()`)) === true);
-  check('the chosen mode is remembered', (await ev(`localStorage.getItem('famsite.colourMode')`)) === 'family');
+  check('the chosen mode is remembered', (await ev(`localStorage.getItem('cronicl.colourMode')`)) === 'family');
   await click('#legend [data-mode="lineage"]');
   await sleep(300);
   check('switching back restores the generation ramp', (await ev(`document.querySelectorAll('.node.lin-old').length >= 1 && document.querySelectorAll('.node.role-parent').length === 0`)) === true);
@@ -269,7 +269,7 @@ async function main() {
   // ---- vertical scrolling is the browser's own
   await send('Emulation.setDeviceMetricsOverride', { width: 1400, height: 330, deviceScaleFactor: 1, mobile: false });
   await goto('#/timeline');
-  const nat = await ev(`(() => { const box = document.getElementById('timeline-rows'); const svg = document.getElementById('timeline-svg'); const fire = (init) => { const e = new WheelEvent('wheel', Object.assign({ bubbles: true, cancelable: true }, init)); box.dispatchEvent(e); return e.defaultPrevented; }; return { overflow: getComputedStyle(box).overflowY, scrollable: box.scrollHeight > box.clientHeight, svgH: svg.getBoundingClientRect().height, rows: window.famsiteViewer ? 0 : 0, plainPrevented: fire({ deltaY: 60 }), ctrlPrevented: fire({ deltaY: 60, ctrlKey: true }), shiftPrevented: fire({ deltaY: 60, shiftKey: true }) }; })()`);
+  const nat = await ev(`(() => { const box = document.getElementById('timeline-rows'); const svg = document.getElementById('timeline-svg'); const fire = (init) => { const e = new WheelEvent('wheel', Object.assign({ bubbles: true, cancelable: true }, init)); box.dispatchEvent(e); return e.defaultPrevented; }; return { overflow: getComputedStyle(box).overflowY, scrollable: box.scrollHeight > box.clientHeight, svgH: svg.getBoundingClientRect().height, rows: window.croniclViewer ? 0 : 0, plainPrevented: fire({ deltaY: 60 }), ctrlPrevented: fire({ deltaY: 60, ctrlKey: true }), shiftPrevented: fire({ deltaY: 60, shiftKey: true }) }; })()`);
   check('the rows scroll natively: a plain wheel is left to the browser, zoom and sideways are ours', nat.overflow === 'auto' && nat.scrollable && !nat.plainPrevented && nat.ctrlPrevented && nat.shiftPrevented, JSON.stringify(nat));
   await ev(`document.getElementById('timeline-rows').scrollTop = 100000`);
   await sleep(300);
@@ -301,7 +301,7 @@ async function main() {
   // ---- opening view
   await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
   await send('Page.navigate', { url: base + '/tree.html' }); await sleep(1500);
-  const home = await ev(`document.querySelector('meta[name="famsite-home"]').content`);
+  const home = await ev(`document.querySelector('meta[name="cronicl-home"]').content`);
   check('with no route and nobody chosen the viewer opens the overall tree', (await ev('location.hash')) === '', await ev('location.hash'));
   check('"Everyone" is current on the overall tree', (await ev(`document.querySelector('#modes a[aria-current="page"]').textContent`)) === 'Everyone');
   await goto('#/focus/' + home);
@@ -379,15 +379,15 @@ async function main() {
   check('filtering leaves only matching people and hides empty groups', (await ev(`(() => { const shown = [...document.querySelectorAll('[data-person]')].filter((li) => !li.hidden); return shown.length >= 1 && shown.every((li) => /bob/i.test(li.dataset.text)) && [...document.querySelectorAll('[data-group]')].every((g) => g.hidden === !g.querySelector('[data-person]:not([hidden])')); })()`)) === true);
 
   await send('Page.navigate', { url: base + '/p/smith-bob/' }); await sleep(1200);
-  const homeName = await ev(`document.querySelector('meta[name="famsite-home"]').content`);
+  const homeName = await ev(`document.querySelector('meta[name="cronicl-home"]').content`);
   check('a person page says how they relate to the home person', homeName === 'smith-bob' || /'s /.test(await ev(`document.querySelector('.kin').textContent`)), await ev(`document.querySelector('.kin').textContent`));
   await click('#set-me');
-  check('"This is me" is remembered and the line turns to "This is you"', (await ev(`localStorage.getItem('famsite.me')`)) === 'smith-bob' && (await ev(`document.querySelector('.kin').textContent`)) === 'This is you');
+  check('"This is me" is remembered and the line turns to "This is you"', (await ev(`localStorage.getItem('cronicl.me')`)) === 'smith-bob' && (await ev(`document.querySelector('.kin').textContent`)) === 'This is you');
   await send('Page.navigate', { url: base + '/tree/' }); await sleep(1500);
   check('the tree page still opens on everyone, and Home goes to me', (await ev('location.hash')) === '' && (await click('#tree-controls [data-act="home"]'), await sleep(600), await ev('location.hash')) === '#focus/smith-bob', await ev('location.hash'));
   await ev(`document.querySelector('.node:not(.focus)').dispatchEvent(new MouseEvent('click', { bubbles: true }))`); await sleep(600);
   check('the panel carries a kinship line', /^Your /.test(await ev(`(document.querySelector('#panel .kin') || {}).textContent || ''`)), await ev(`(document.querySelector('#panel .kin') || {}).textContent`));
-  await ev(`localStorage.removeItem('famsite.me')`);
+  await ev(`localStorage.removeItem('cronicl.me')`);
 
   await send('Page.navigate', { url: base + '/relate/index.html?a=smith-amy&b=smith-john' }); await sleep(1200);
   check('the relate page answers for the two people in the link', /grandfather\.$/.test(await ev(`document.getElementById('relate-answer').textContent`)), await ev(`document.getElementById('relate-answer').textContent`));

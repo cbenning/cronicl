@@ -1,8 +1,8 @@
-"""One consistent way to say where the famsite folder is, and what 'write' means."""
+"""One consistent way to say where the cronicl folder is, and what 'write' means."""
 import pytest
 
-from famsite.cli import main
-from famsite.store import load_tree
+from cronicl.cli import main
+from cronicl.store import load_tree
 
 
 def repo(tmp_path, write):
@@ -36,14 +36,14 @@ def test_environment_variable_is_the_fallback_and_the_flag_wins(tmp_path, write,
     repo(good, write)
     write(bad, "site.yml", "title: T\nschema_version: 1\n")
     write(bad, "people/x.md", "---\nid: x\nname: X\nparents: [ghost]\n---\n")
-    monkeypatch.setenv("FAMSITE_DIR", str(bad))
+    monkeypatch.setenv("CRONICL_DIR", str(bad))
     assert main(["check"]) == 1  # env points at the broken repo
     assert main(["check", "--dir", str(good)]) == 0  # flag beats env
 
 
 def test_default_is_the_current_directory(tmp_path, write, monkeypatch):
     repo(tmp_path, write)
-    monkeypatch.delenv("FAMSITE_DIR", raising=False)
+    monkeypatch.delenv("CRONICL_DIR", raising=False)
     monkeypatch.chdir(tmp_path)
     assert main(["check"]) == 0
 

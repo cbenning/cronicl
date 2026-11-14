@@ -1,7 +1,7 @@
 """Nothing an author types may make `check` or `build` raise: every input ends in issues or a site."""
 import pytest
 
-from famsite.cli import main
+from cronicl.cli import main
 
 
 def run(*argv):

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "famsite"
+name = "cronicl"  # PyPI name taken: choose a distribution name before publishing
 version = "0.1.0"
 description = "Markdown family tree to static site generator"
 readme = "README.md"
@@ -15,10 +15,10 @@ dependencies = ["PyYAML>=6.0", "Jinja2>=3.1", "markdown-it-py>=3.0"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
-famsite = "famsite.cli:main"
+cronicl = "cronicl.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/famsite"]
+packages = ["src/cronicl"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

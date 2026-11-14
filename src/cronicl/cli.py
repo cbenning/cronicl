@@ -48,11 +48,11 @@ def _summary(issues, severity: str, lead: str) -> str:
     parts = [f"{n} {code}" for code, n in ordered[:5]]
     if len(ordered) > 5:
         parts.append("...")
-    return f"{lead}{len(chosen)} {severity}{'' if len(chosen) == 1 else 's'}: {', '.join(parts)} (run famsite check for details)"
+    return f"{lead}{len(chosen)} {severity}{'' if len(chosen) == 1 else 's'}: {', '.join(parts)} (run cronicl check for details)"
 
 
 def warning_summary(issues) -> str:
-    """One line standing in for the individual warnings of a build; `famsite check` has the details."""
+    """One line standing in for the individual warnings of a build; `cronicl check` has the details."""
     return _summary(issues, "warning", "")
 
 
@@ -287,14 +287,14 @@ def cmd_schema(args) -> int:
 
 
 def _common() -> argparse.ArgumentParser:
-    """Options shared by every command that works on a famsite folder."""
+    """Options shared by every command that works on a cronicl folder."""
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
         "-C",
         "--dir",
         metavar="DIR",
         default=argparse.SUPPRESS,
-        help="the famsite folder (default: $FAMSITE_DIR, else the current directory)",
+        help="the cronicl folder (default: $CRONICL_DIR, else the current directory)",
     )
     return common
 
@@ -306,11 +306,11 @@ def _add_apply(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     common = _common()
     parser = argparse.ArgumentParser(
-        prog="famsite", description="Markdown family tree to static site", parents=[common]
+        prog="cronicl", description="Markdown family tree to static site", parents=[common]
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("init", parents=[common], help="create a new famsite folder")
+    p = sub.add_parser("init", parents=[common], help="create a new cronicl folder")
     p.set_defaults(func=cmd_init)
 
     p = sub.add_parser("check", aliases=["validate"], parents=[common], help="report problems (read-only); also named validate")
@@ -360,7 +360,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("mark-living", True, "write `living: true` for the named people"),
     ):
         q = edit_sub.add_parser(name, parents=[common], help=helptext)
-        q.add_argument("ids", nargs="+", help="person ids (find them with `famsite search`)")
+        q.add_argument("ids", nargs="+", help="person ids (find them with `cronicl search`)")
         _add_apply(q)
         q.set_defaults(func=cmd_edit_living, living=living)
 
@@ -383,7 +383,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    args.dir = getattr(args, "dir", None) or os.environ.get("FAMSITE_DIR") or "."
+    args.dir = getattr(args, "dir", None) or os.environ.get("CRONICL_DIR") or "."
     try:
         return args.func(args)
     except (GedcomError, ImportRefused, LayoutError, EditError) as exc:

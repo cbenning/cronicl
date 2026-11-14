@@ -39,7 +39,7 @@ def apply_living(
     tree, _ = load_tree(Path(data_dir))
     unknown = [pid for pid in ids if pid not in tree.people]
     if unknown:
-        raise EditError("unknown person id(s): " + ", ".join(unknown) + "; use `famsite search` to find ids")
+        raise EditError("unknown person id(s): " + ", ".join(unknown) + "; use `cronicl search` to find ids")
     results: list[tuple[Path, bool]] = []
     seen: set[str] = set()
     for pid in ids:

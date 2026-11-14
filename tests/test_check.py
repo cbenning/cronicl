@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from famsite.check import check_tree, has_errors
-from famsite.issues import Issue
-from famsite.model import Event, Partnership
-from famsite.store import load_tree
+from cronicl.check import check_tree, has_errors
+from cronicl.issues import Issue
+from cronicl.model import Event, Partnership
+from cronicl.store import load_tree
 
 
 def codes(issues):
@@ -151,7 +151,7 @@ def test_portrait_checks(tmp_path, write):
 
 
 def test_event_checks(make_tree):
-    from famsite.model import LifeEvent
+    from cronicl.model import LifeEvent
 
     tree = make_tree([{"id": "a", "given": "A", "events": [
         LifeEvent(type="", value="x"),

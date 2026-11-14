@@ -1,8 +1,8 @@
 import pytest
 
-from famsite.check import check_tree
-from famsite.cli import main
-from famsite.store import load_tree
+from cronicl.check import check_tree
+from cronicl.cli import main
+from cronicl.store import load_tree
 
 
 @pytest.fixture
@@ -61,9 +61,9 @@ def test_new_with_a_name_that_slugs_to_nothing(root):
     assert not [i for i in check_tree(tree, issues) if i.severity == "error"]
 
 
-def test_new_outside_a_famsite_folder(tmp_path, capsys):
+def test_new_outside_a_cronicl_folder(tmp_path, capsys):
     assert main(["new", "--dir", str(tmp_path), "--given", "X", "-a"]) == 2
-    assert "famsite init" in capsys.readouterr().err and not (tmp_path / "people").exists()
+    assert "cronicl init" in capsys.readouterr().err and not (tmp_path / "people").exists()
 
 
 def test_new_never_overwrites_an_existing_file(root, write):

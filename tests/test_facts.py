@@ -1,6 +1,6 @@
 import pytest
 
-from famsite.facts import fact_label, fact_text
+from cronicl.facts import fact_label, fact_text
 
 
 @pytest.mark.parametrize("kind, value, text", [

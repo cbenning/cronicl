@@ -1,8 +1,8 @@
 import pytest
 
-from famsite.cli import main
-from famsite.edit import EditError, apply_living, set_living_in_text
-from famsite.store import load_tree
+from cronicl.cli import main
+from cronicl.edit import EditError, apply_living, set_living_in_text
+from cronicl.store import load_tree
 
 
 def test_replaces_an_existing_living_line():

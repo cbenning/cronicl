@@ -4,14 +4,14 @@ from datetime import date
 
 import pytest
 
-from famsite.check import check_tree
-from famsite.cli import main
-from famsite.fix import FixPlan, apply_plan, plan_fix
-from famsite.gedcom import import_nodes, parse_nodes
-from famsite.layout import LayoutError, compute_layout
-from famsite.model import Event, Partnership
-from famsite.render import build_site
-from famsite.store import load_tree
+from cronicl.check import check_tree
+from cronicl.cli import main
+from cronicl.fix import FixPlan, apply_plan, plan_fix
+from cronicl.gedcom import import_nodes, parse_nodes
+from cronicl.layout import LayoutError, compute_layout
+from cronicl.model import Event, Partnership
+from cronicl.render import build_site
+from cronicl.store import load_tree
 
 TODAY = date(2026, 10, 10)
 

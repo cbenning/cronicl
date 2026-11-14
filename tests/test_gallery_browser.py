@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from test_browser_smoke import find_chrome
 
-from famsite.cli import main
+from cronicl.cli import main
 
 ROOT = Path(__file__).parent
 PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
@@ -113,7 +113,7 @@ def _gallery_server(state, stop):
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-@pytest.mark.skipif(find_chrome() is None, reason="no headless Chrome found (set FAMSITE_CHROME)")
+@pytest.mark.skipif(find_chrome() is None, reason="no headless Chrome found (set CRONICL_CHROME)")
 def test_gallery_in_a_real_browser(tmp_path):
     stop = threading.Event()
     gallery = _gallery_server({"mode": "ok"}, stop)

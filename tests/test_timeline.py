@@ -1,10 +1,10 @@
 import json
 from datetime import date
 
-from famsite.model import Event, LifeEvent, Partnership
-from famsite.relations import build_relations
-from famsite.render import build_site
-from famsite.timeline import build_timeline
+from cronicl.model import Event, LifeEvent, Partnership
+from cronicl.relations import build_relations
+from cronicl.render import build_site
+from cronicl.timeline import build_timeline
 
 TODAY = date(2026, 10, 10)
 
@@ -147,7 +147,7 @@ def test_later_partnerships_get_numbered_ids_and_same_year_end_sorts_before_deat
     assert ids == ["marriage:a+b", "divorce:a+b", "death:a", "marriage:a+b:1"]
 
 
-from famsite.timeline import event_text  # noqa: E402
+from cronicl.timeline import event_text  # noqa: E402
 
 NAMES = {"a": "Ann", "b": "Bo", "p": "Pat", "q": "Quinn", "s": "Sam", "x": "Xi"}
 

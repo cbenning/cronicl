@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const s = require('../../src/famsite/viewer/site.js');
+const s = require('../../src/cronicl/viewer/site.js');
 
 test('fold lowercases and strips accents', () => { assert.strictEqual(s.fold('Köhler  Ÿ'), 'kohler  y'); });
 test('matches needs every word, in any order, as plain text', () => {

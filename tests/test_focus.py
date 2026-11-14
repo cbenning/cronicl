@@ -1,11 +1,11 @@
 import json
 from datetime import date
 
-from famsite.focus import focus_people, focus_tree, hidden_counts
-from famsite.layout import compute_layout
-from famsite.model import Event
-from famsite.relations import build_relations
-from famsite.render import build_site
+from cronicl.focus import focus_people, focus_tree, hidden_counts
+from cronicl.layout import compute_layout
+from cronicl.model import Event
+from cronicl.relations import build_relations
+from cronicl.render import build_site
 
 TODAY = date(2026, 10, 10)
 
@@ -111,7 +111,7 @@ def test_rebuild_removes_stale_focus_files(tmp_path, make_tree):
 
 
 def test_focus_layout_keeps_the_ended_flag_of_the_parents(make_tree):
-    from famsite.model import Partnership
+    from cronicl.model import Partnership
 
     tree = make_tree(
         [

@@ -1,7 +1,7 @@
 import pytest
 
-from famsite.check import check_tree
-from famsite.galleries import DEFAULT_LABEL, GalleryType, gallery_config, gallery_issues
+from cronicl.check import check_tree
+from cronicl.galleries import DEFAULT_LABEL, GalleryType, gallery_config, gallery_issues
 
 
 def codes(issues):

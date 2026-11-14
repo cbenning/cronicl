@@ -26,7 +26,7 @@ def sample_ged() -> Path:
 @pytest.fixture
 def make_tree():
     """Build an in-memory Tree from Person kwargs: make_tree([{"id": "a", "parents": ["b"]}, ...])."""
-    from famsite.model import Person, Tree
+    from cronicl.model import Person, Tree
 
     def _make(people):
         tree = Tree()

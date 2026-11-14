@@ -1,9 +1,9 @@
 from datetime import date
 
-from famsite.cli import main
-from famsite.gaps import find_gaps
-from famsite.model import Event
-from famsite.relations import build_relations
+from cronicl.cli import main
+from cronicl.gaps import find_gaps
+from cronicl.model import Event
+from cronicl.relations import build_relations
 
 
 def test_gaps_lists_missing_facts_best_connected_first(make_tree):

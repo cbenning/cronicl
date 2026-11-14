@@ -1,4 +1,4 @@
-// Drives a built famsite with a gallery configured in headless Chrome and checks the photos block against a stub gallery.
+// Drives a built cronicl with a gallery configured in headless Chrome and checks the photos block against a stub gallery.
 // Usage: node gallery.mjs <chrome-binary> <site-base-url> <gallery-base-url> <screenshot-dir>
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';

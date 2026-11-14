@@ -1,6 +1,6 @@
-from famsite.lineage import ancestor_tree, count_descendants, descendant_outline
-from famsite.model import Event
-from famsite.relations import build_relations
+from cronicl.lineage import ancestor_tree, count_descendants, descendant_outline
+from cronicl.model import Event
+from cronicl.relations import build_relations
 
 
 def people():

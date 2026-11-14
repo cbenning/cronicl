@@ -1,6 +1,6 @@
 """Click-through test of a built site in headless Chrome. Skipped when node or a browser is absent.
 
-Set FAMSITE_CHROME to a Chrome/Chromium/chrome-headless-shell binary to choose one explicitly.
+Set CRONICL_CHROME to a Chrome/Chromium/chrome-headless-shell binary to choose one explicitly.
 """
 import base64
 import functools
@@ -14,13 +14,13 @@ from pathlib import Path
 
 import pytest
 
-from famsite.cli import main
+from cronicl.cli import main
 
 ROOT = Path(__file__).parent
 
 
 def find_chrome() -> str | None:
-    explicit = os.environ.get("FAMSITE_CHROME")
+    explicit = os.environ.get("CRONICL_CHROME")
     if explicit:
         return explicit
     pattern = os.path.expanduser("~/.cache/ms-playwright/chromium_headless_shell-*/*/chrome-headless-shell")
@@ -34,7 +34,7 @@ def find_chrome() -> str | None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-@pytest.mark.skipif(find_chrome() is None, reason="no headless Chrome found (set FAMSITE_CHROME)")
+@pytest.mark.skipif(find_chrome() is None, reason="no headless Chrome found (set CRONICL_CHROME)")
 def test_viewer_in_a_real_browser(tmp_path, sample_ged):
     data = tmp_path / "fam"
     out = tmp_path / "out"

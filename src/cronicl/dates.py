@@ -4,7 +4,7 @@ import calendar
 import re
 from dataclasses import dataclass
 
-_FAMSITE = re.compile(r"^(~?)(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$")
+_CRONICL = re.compile(r"^(~?)(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$")
 _GEDCOM = re.compile(r"^(?:(ABT|CAL|EST)\s+)?(?:(\d{1,2})\s+)?(?:([A-Z]{3})\s+)?(\d{3,4})$")
 _MONTHS = {
     m: i
@@ -25,7 +25,7 @@ class ParsedDate:
 def parse_date(text: str | None) -> ParsedDate | None:
     if text is None:
         return None
-    match = _FAMSITE.match(text.strip())
+    match = _CRONICL.match(text.strip())
     if not match:
         return None
     approx, year_s, month_s, day_s = match.groups()
@@ -102,7 +102,7 @@ def format_date(text: str | None) -> str:
 
 
 def from_gedcom(text: str) -> tuple[str, bool]:
-    """Convert a GEDCOM date to famsite form. Returns (value, ok); on failure value is the original text."""
+    """Convert a GEDCOM date to cronicl form. Returns (value, ok); on failure value is the original text."""
     raw = text.strip()
     match = _GEDCOM.match(raw.upper())
     if not match:

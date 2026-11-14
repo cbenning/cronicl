@@ -1,5 +1,5 @@
-from famsite.model import Event, Partnership
-from famsite.relations import CouplePartnership, build_relations, couple_id
+from cronicl.model import Event, Partnership
+from cronicl.relations import CouplePartnership, build_relations, couple_id
 
 
 def named(pid, **kw):

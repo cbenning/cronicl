@@ -1,5 +1,5 @@
-from famsite.fix import apply_plan, plan_fix
-from famsite.store import load_tree
+from cronicl.fix import apply_plan, plan_fix
+from cronicl.store import load_tree
 
 
 def names(directory):

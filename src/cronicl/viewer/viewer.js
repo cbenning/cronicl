@@ -394,13 +394,13 @@
     var search = $('search');
     var results = $('results');
     var PAGE = document.body.getAttribute('data-page') === 'timeline' ? 'timeline' : 'tree';
-    var ROOT = (document.querySelector('meta[name="famsite-root"]') || {}).content || '';
+    var ROOT = (document.querySelector('meta[name="cronicl-root"]') || {}).content || '';
     var modeLinks = Array.prototype.slice.call(document.querySelectorAll('#modes a'));
     var focusBar = $('focus-bar');
     var legendEl = $('legend');
     var controls = $('tree-controls');
-    var metaHome = (document.querySelector('meta[name="famsite-home"]') || {}).content || null;
-    var ME_KEY = 'famsite.me';
+    var metaHome = (document.querySelector('meta[name="cronicl-home"]') || {}).content || null;
+    var ME_KEY = 'cronicl.me';
     function savedMe() {
       try { return root.localStorage.getItem(ME_KEY) || null; } catch (e) { return null; }
     }
@@ -426,7 +426,7 @@
 
     function savedColourMode() {
       // the generation ramp is the default; the relationship roles are one click away
-      try { return localStorage.getItem('famsite.colourMode') === 'family' ? 'family' : 'lineage'; } catch (e) { return 'lineage'; }
+      try { return localStorage.getItem('cronicl.colourMode') === 'family' ? 'family' : 'lineage'; } catch (e) { return 'lineage'; }
     }
     var state = {
       view: 'tree', selected: null, layout: null, index: null, timeline: null,
@@ -547,7 +547,7 @@
     // The kinship line in the panel: how this person relates to the viewer ("Your grandmother").
     var kinData = null;
     function fillKin(line, id) {
-      var kin = root.famsiteKin, site = root.famsiteSite;
+      var kin = root.croniclKin, site = root.croniclSite;
       if (!kin || !site) return;
       if (!kinData) {
         kinData = fetch(ROOT + 'kin.json').then(function (r) { return r.json(); }).then(function (d) { return d.people; })
@@ -877,7 +877,7 @@
 
       function setColourMode(mode) {
         state.colourMode = mode;
-        try { localStorage.setItem('famsite.colourMode', mode); } catch (e) { /* private mode: remember for this visit only */ }
+        try { localStorage.setItem('cronicl.colourMode', mode); } catch (e) { /* private mode: remember for this visit only */ }
         rebuild();
       }
 
@@ -1694,7 +1694,7 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else if (typeof document !== 'undefined') {
-    root.famsiteViewer = api;
+    root.croniclViewer = api;
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
   }
