@@ -241,3 +241,31 @@ def test_n_payload_wins_over_a_date_child():
     owner = owner_of(FAM_HEAD + "1 DIV N\n2 DATE 1960\n0 TRLR\n")
     assert owner.partnerships == []
     assert "1 DIV N" in owner.gedcom_extra
+
+
+GED_EVENTS = """0 HEAD
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Ann /Dunn/
+1 OCCU Carpenter
+1 IMMI
+2 DATE APR 1952
+2 PLAC Halifax
+1 BURI
+2 DATE 1991
+1 RESI
+2 DATE 1960
+1 RESI
+2 DATE 1970
+1 FACT Left-handed
+0 TRLR
+"""
+
+
+def test_individual_events_are_imported():
+    result = from_text(GED_EVENTS)
+    ann = next(p for p in result.people if p.given == "Ann")
+    assert [(e.type, e.date, e.place, e.value) for e in ann.events] == [
+        ("occupation", None, None, "Carpenter"), ("immigration", "1952-04", "Halifax", None),
+        ("burial", "1991", None, None), ("residence", "1960", None, None), ("residence", "1970", None, None)]
+    assert "FACT Left-handed" in (ann.gedcom_extra or "") and "OCCU" not in (ann.gedcom_extra or "")

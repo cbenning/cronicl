@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .dates import from_gedcom
 from .issues import Issue
-from .model import Event, Partnership, Person
+from .model import Event, LifeEvent, Partnership, Person
 from .slug import natural_key, person_slug, slugify, unique_id
 from .store import load_tree, person_path, write_person
 
@@ -150,6 +150,18 @@ def _event(node: Node, label: str, owner: str, extra: list[Node], issues: list[I
     return Event(date=date, place=place)
 
 
+# Individual events and attributes that become `events:` entries; the second item says whether the line's own
+# text is the entry's value (an attribute such as an occupation) rather than a Y flag.
+_EVENT_TAGS = {
+    "BAPM": ("baptism", False), "CHR": ("christening", False), "CONF": ("confirmation", False),
+    "BURI": ("burial", False), "CREM": ("cremation", False), "IMMI": ("immigration", False),
+    "EMIG": ("emigration", False), "NATU": ("naturalization", False), "RESI": ("residence", False),
+    "OCCU": ("occupation", True), "EDUC": ("education", True), "RELI": ("religion", True),
+    "NATI": ("nationality", True), "GRAD": ("graduation", False), "RETI": ("retirement", False),
+    "CENS": ("census", False), "WILL": ("will", False), "PROB": ("probate", False),
+}
+
+
 def _asserts_event(node: Node) -> bool:
     """A family event node says the event happened only with payload Y, a DATE or a PLAC (never with N)."""
     payload = node.value.strip().upper()
@@ -223,6 +235,7 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
     given = surname = None
     sex = "U"
     birth = death = None
+    life_events: list[LifeEvent] = []
     famc: list[str] = []
     notes: list[str] = []
     seen: set[str] = set()
@@ -244,6 +257,18 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
         elif tag == "DEAT" and "DEAT" not in seen:
             seen.add("DEAT")
             death = _event(child, "death", xref, extra, issues)
+        elif tag in _EVENT_TAGS:
+            kind, takes_value = _EVENT_TAGS[tag]
+            if any(sub.tag == "DATE" and sub.value.strip() and not from_gedcom(sub.value)[1] for sub in child.children):
+                extra.append(child)  # a date famsite cannot convert stays exactly as written, in gedcom_extra
+                continue
+            happened = _event(child, kind, xref, extra, issues)
+            life_events.append(
+                LifeEvent(
+                    type=kind, date=happened.date, place=happened.place,
+                    value=(child.value.strip() or None) if takes_value else None,
+                )
+            )
         elif tag == "FAMC":
             if not famc:
                 famc.append(child.value.strip())
@@ -266,6 +291,7 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
         sex=sex,
         birth=birth,
         death=death,
+        events=life_events,
         gedcom_id=xref,
         gedcom_extra=_lines(extra),
         body="\n\n".join(notes),
