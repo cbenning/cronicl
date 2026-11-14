@@ -16,6 +16,11 @@ _FALSE = ("false", "no", "off", "0")
 _INT = re.compile(r"^\s*\+?\d+\s*$")
 
 
+def is_extension(key: str) -> bool:
+    """`x-` / `x_` keys (any case) are the owner's own: never reported as unknown."""
+    return str(key)[:2].casefold() in ("x-", "x_")
+
+
 def parse_bool(value) -> bool | None:
     if isinstance(value, bool):
         return value

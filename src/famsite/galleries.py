@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from .issues import Issue
-from .settings import parse_bool
+from .settings import is_extension, parse_bool
 
 CORE_KEYS = ("type", "label")
 DEFAULT_LABEL = "Photos"
@@ -93,7 +93,7 @@ def gallery_issues(site: dict, people: dict) -> list[Issue]:
                 issues.append(Issue("W-GALLERY-PORTRAITS", "gallery portraits must be true or false; it is treated as true", "site.yml"))
             valid = set(CORE_KEYS) | set(kind.keys)
             for key in gallery:
-                if key not in valid:
+                if key not in valid and not is_extension(key):
                     issues.append(
                         Issue("W-GALLERY-KEY", f"gallery key {str(key)!r} is not used; valid keys are {', '.join(sorted(valid))}", "site.yml")
                     )

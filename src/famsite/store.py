@@ -253,6 +253,7 @@ def _make_person(data: dict, body: str, path: Path) -> Person:
         birth=_parse_event(data.get("birth")),
         death=_parse_event(data.get("death")),
         living=_parse_bool(data.get("living")),
+        living_text=str(data["living"]).strip() if data.get("living") is not None else None,
         portrait=_opt(data.get("portrait")),
         gallery_id=_opt(data.get("gallery_id")),
         parents=_as_list(data.get("parents")),

@@ -55,6 +55,7 @@ class Person:
     birth: Event | None = None
     death: Event | None = None
     living: bool | None = None
+    living_text: str | None = None  # the `living` value as written (None when absent), for validation only
     portrait: str | None = None
     gallery_id: str | None = None
     parents: list[str] = field(default_factory=list)
