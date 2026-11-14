@@ -74,6 +74,41 @@ async function main() {
   check('no uncaught errors', errors.length === 0, errors.join('\n'));
   await shot('gallery-light');
 
+  // ---- the mosaic, the lightbox and the portrait, on a gallery that answers
+  const mosaic = await ev(`(() => { const li = [...document.querySelectorAll('#gallery .gallery-thumbs li')]; const rs = li.map((e) => e.getBoundingClientRect()); const box = document.getElementById('gallery').getBoundingClientRect(); return { featured: li[0].classList.contains('featured'), otherFeatured: li.slice(1).some((e) => e.classList.contains('featured')), w0: rs[0].width, w1: rs[1].width, inside: rs.every((r) => r.right <= box.right + 1 && r.left >= box.left - 1), srcs: li.map((e) => e.querySelector('img').src) }; })()`);
+  check('the first photo is featured and about twice as wide as a tile', mosaic.featured && !mosaic.otherFeatured && mosaic.w0 >= mosaic.w1 * 1.8, JSON.stringify(mosaic));
+  check('no tile leaves the block', mosaic.inside === true);
+  check('the featured photo uses the large size, the tiles the small one', mosaic.srcs[0].endsWith('/big1.jpg') && mosaic.srcs.slice(1).every((u, i) => u.endsWith('/p' + (i + 2) + '.jpg')), mosaic.srcs.join(' '));
+  const lightbox = () => ev(`(() => { const d = document.querySelector('dialog.gallery-lightbox'); if (!d) return { exists: false, n: 0 }; const r = d.getBoundingClientRect(); const open = d.querySelector('.gallery-open'); return { exists: true, n: document.querySelectorAll('dialog.gallery-lightbox').length, open: d.open, h: r.height, w: r.width, imgW: d.querySelector('.gallery-big').getBoundingClientRect().width, src: d.querySelector('.gallery-big').src, counter: d.querySelector('.gallery-count').textContent, href: open.href, rel: open.rel }; })()`);
+  const key = async (k, code, vk) => { for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: k, code, windowsVirtualKeyCode: vk }); await sleep(250); };
+  await ev(`document.querySelector('#gallery .gallery-thumbs li a').click()`); await sleep(400);
+  let lb = await lightbox();
+  check('clicking a photo opens the lightbox in the page, on the large photo', lb.exists && lb.open && lb.h > 0 && lb.src.endsWith('/big1.jpg') && lb.counter === '1 / 6', JSON.stringify(lb));
+  check('the lightbox links to that photo in the gallery, in a new tab', lb.href.startsWith(gallery + '/photos/#/collections/people/jane-doe/p1') && /noopener/.test(lb.rel), JSON.stringify(lb));
+  await shot('gallery-lightbox');
+  await key('ArrowRight', 'ArrowRight', 39);
+  lb = await lightbox();
+  check('the right arrow key shows the next photo', lb.counter === '2 / 6' && lb.src.endsWith('/big2.jpg'), JSON.stringify(lb));
+  await key('ArrowLeft', 'ArrowLeft', 37); await key('ArrowLeft', 'ArrowLeft', 37);
+  lb = await lightbox();
+  check('the left arrow wraps from the first photo to the last', lb.counter === '6 / 6' && lb.src.endsWith('/big6.jpg'), JSON.stringify(lb));
+  await key('Escape', 'Escape', 27);
+  lb = await lightbox();
+  check('Escape closes the lightbox', lb.exists && lb.open === false, JSON.stringify(lb));
+  check('focus returns to the photo that was opened', (await ev(`document.activeElement === document.querySelector('#gallery .gallery-thumbs li a')`)) === true);
+  await ev(`document.querySelectorAll('#gallery .gallery-thumbs li a')[2].click()`); await sleep(400);
+  lb = await lightbox();
+  check('opening again reuses one lightbox, on the clicked photo', lb.n === 1 && lb.open && lb.counter === '3 / 6' && lb.src.endsWith('/big3.jpg'), JSON.stringify(lb));
+  await key('Escape', 'Escape', 27);
+  const avatar = () => ev(`(() => { const a = document.querySelector('.hero .avatar'); const r = a.getBoundingClientRect(); return { tag: a.tagName, src: a.src || '', w: Math.round(r.width), round: getComputedStyle(a).borderRadius }; })()`);
+  let av = await avatar();
+  check('with no portrait of its own the page shows the gallery face', av.tag === 'IMG' && av.src.endsWith('/face-jane.jpg') && av.w === 112 && parseInt(av.round, 10) >= 50, JSON.stringify(av));
+  await open('ok', '/p/john-doe/');
+  av = await avatar();
+  s = await state();
+  check('a portrait the owner chose is never replaced', av.tag === 'IMG' && av.src.includes('/media/john') && s.exists && !s.hidden && s.thumbs === 3, JSON.stringify([av, s.thumbs]));
+  await open('ok', '/p/jane-doe/');
+
   // ---- the top bar carries the same link on every page, in the same place
   const bar = [];
   for (const path of ['/index.html', '/people/index.html', '/p/jane-doe/']) {
@@ -97,6 +132,17 @@ async function main() {
   check('hostile addresses are dropped, the good photo stays', s.exists && !s.hidden && s.thumbs === 1, JSON.stringify(s));
   check('nothing was requested from another host', requests.every((u) => !u.includes('evil.invalid')), requests.join(' '));
   check('hostile: no uncaught errors', errors.length === 0, errors.join('\n'));
+  check('hostile: a bad large size falls back to the small one, a bad face is ignored', s.srcs.length === 1 && s.srcs[0].endsWith('/p1.jpg') && (await ev(`document.querySelector('.hero .avatar').tagName`)) === 'DIV', JSON.stringify(s.srcs));
+
+  // ---- a gallery from an older fussel (no large size, no face)
+  await open('nosrc', '/p/jane-doe/');
+  s = await state();
+  check('nosrc: the featured photo falls back to the small size', s.exists && !s.hidden && s.srcs[0].endsWith('/p1.jpg'), JSON.stringify(s.srcs));
+  await ev(`document.querySelector('#gallery .gallery-thumbs li a').click()`); await sleep(400);
+  lb = await lightbox();
+  check('nosrc: the lightbox still works', lb.open === true && lb.src.endsWith('/p1.jpg'), JSON.stringify(lb));
+  await key('Escape', 'Escape', 27);
+  check('nosrc: the initials stay', (await ev(`document.querySelector('.hero .avatar').tagName`)) === 'DIV');
 
   // ---- a gallery that fails in every way leaves the page alone
   for (const [mode, wait] of [['notfound', 1000], ['badjson', 1000], ['badversion', 1000], ['nocors', 1000], ['hang', 6500]]) {
@@ -104,6 +150,7 @@ async function main() {
     s = await state();
     check(`${mode}: the block stays hidden and takes no space`, s.exists && s.hidden === true && s.height === 0 && s.thumbs === 0, JSON.stringify(s));
     check(`${mode}: no uncaught errors`, errors.length === 0, errors.join('\n'));
+    check(`${mode}: the initials stay`, (await ev(`document.querySelector('.hero .avatar').tagName`)) === 'DIV');
   }
 
   // ---- dark mode and phone
@@ -117,6 +164,13 @@ async function main() {
   await open('ok', '/p/jane-doe/');
   check('phone: nothing is wider than the screen', (await ev('document.documentElement.scrollWidth')) <= 390, await ev('document.documentElement.scrollWidth'));
   await shot('gallery-phone');
+  const phoneMosaic = await ev(`(() => { const f = document.querySelector('#gallery .gallery-thumbs li.featured').getBoundingClientRect(); const b = document.getElementById('gallery').getBoundingClientRect(); return { f: f.width, b: b.width }; })()`);
+  check('phone: the featured photo spans the block', phoneMosaic.f >= phoneMosaic.b * 0.95, JSON.stringify(phoneMosaic));
+  await ev(`document.querySelector('#gallery .gallery-thumbs li a').click()`); await sleep(400);
+  lb = await lightbox();
+  check('phone: the lightbox fits the screen', lb.open && lb.w <= 390 && lb.imgW <= 390 && (await ev('document.documentElement.scrollWidth')) <= 390, JSON.stringify(lb));
+  await shot('gallery-phone-lightbox');
+  await key('Escape', 'Escape', 27);
   await send('Emulation.setDeviceMetricsOverride', { width: 1400, height: 820, deviceScaleFactor: 1, mobile: false });
 
   ws.close();

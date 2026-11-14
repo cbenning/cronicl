@@ -18,14 +18,25 @@ PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4
 
 
 def _photo(n):
-    return {"name": f"p{n}.jpg", "thumb": f"static/_gallery/albums/trip/p{n}.jpg", "url": f"#/collections/people/jane-doe/p{n}"}
+    return {
+        "name": f"p{n}.jpg",
+        "thumb": f"static/_gallery/albums/trip/p{n}.jpg",
+        "src": f"static/_gallery/albums/trip/big{n}.jpg",
+        "url": f"#/collections/people/jane-doe/p{n}",
+    }
 
 
-def _manifest(photos, version=1):
+FACE = "static/_gallery/albums/trip/face-jane.jpg"
+
+
+def _manifest(photos, version=1, face=FACE):
+    john = [{**_photo(n), "url": f"#/collections/people/john-doe/p{n}"} for n in (1, 2, 3)]
     return {
         "version": version,
         "people": [
-            {"name": "Jane Doe", "slug": "jane-doe", "url": "#/collections/people/jane-doe", "count": 12, "thumb": None, "photos": photos}
+            {"name": "Jane Doe", "slug": "jane-doe", "url": "#/collections/people/jane-doe", "count": 12, "thumb": face, "photos": photos},
+            {"name": "John Doe", "slug": "john-doe", "url": "#/collections/people/john-doe", "count": 3,
+             "thumb": "static/_gallery/albums/trip/face-john.jpg", "photos": john},
         ],
     }
 
@@ -67,7 +78,9 @@ def _gallery_server(state, stop):
                 if mode == "badjson":
                     return self._send(200, b"<html>not json</html>", "text/html")
                 if mode == "hostile":
-                    body = _manifest([_photo(1)] + EVIL)
+                    body = _manifest([{**_photo(1), "src": "https://evil.invalid/big.jpg"}] + EVIL, face="https://evil.invalid/face.png")
+                elif mode == "nosrc":
+                    body = _manifest([{k: v for k, v in _photo(n).items() if k != "src"} for n in range(1, 9)], face=None)
                 elif mode == "badversion":
                     body = _manifest([_photo(1)], version=2)
                 else:
@@ -99,9 +112,12 @@ def test_gallery_in_a_real_browser(tmp_path):
         "jane-doe": "name:\n  given: Jane\n  surname: Doe\nbirth: 1950\ndeath: 2010\n",
         "lone-person": "name:\n  given: Lone\n  surname: Person\nbirth: 1940\ndeath: 2000\n",
         "living-kid": "name:\n  given: Kid\n  surname: Now\nbirth: 2020\n",
+        "john-doe": "name:\n  given: John\n  surname: Doe\nbirth: 1948\ndeath: 2015\nportrait: john.png\n",
     }
     for pid, front in people.items():
         (data / "people" / f"{pid}.md").write_text(f"---\nid: {pid}\n{front}---\n", encoding="utf-8")
+    (data / "media").mkdir(exist_ok=True)
+    (data / "media" / "john.png").write_bytes(PNG)
     assert main(["build", "--dir", str(data), "--out", str(out)]) == 0
 
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(out))

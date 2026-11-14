@@ -251,10 +251,15 @@ gallery:
   type: fussel                         # required; fussel is the only type for now
   url: https://example.com/photos/     # the address of the gallery's front page
   label: Family photos                 # optional; the block heading and the top-bar link text (default "Photos")
+  portraits: true                      # optional; use the gallery's face as a person's picture (default true)
 ```
 
-- A person page gets a block of up to six thumbnails and "See all N photos in the gallery". A "Photos" link to the
-  gallery is added to the top bar of every page. Thumbnails and links open the gallery in a new tab.
+- A person page gets a block of up to six photos, the first one featured, and "See all N photos in the gallery".
+  Clicking a photo opens it in a lightbox on the page (arrow keys, swipe and Esc work; "Open in the gallery" links
+  to that photo). A link to the gallery is added to the top bar of every page, labelled with `label`.
+- If a person has no `portrait:` of their own, the page shows their face from the gallery instead of initials.
+  A `portrait:` you set always wins, and `portraits: false` turns this off. It only applies to the person page:
+  the build never contacts the gallery, so the tree, people list and timeline keep initials.
 - Your browser fetches `people.json` from the gallery when the page opens. If the gallery is down, slow, or has no
   photos of that person, the page looks exactly as it would without a gallery.
 - People are found by their name, turned into a lowercase-latin slug (`Zoë Müller` is `zoe-muller`), or, if that
@@ -263,14 +268,16 @@ gallery:
   second one. So do names with letters that have no plain-ASCII form (Cyrillic, Chinese, `ð`): Fussel transliterates
   those its own way, so famsite does not guess and shows no photos for them until `gallery_id` is set.
 - People hidden or replaced by privacy redaction never get a photos block.
-- It needs a Fussel that writes `people.json` (gallery option `gallery.people.enable: true`, on by default).
+- It needs a Fussel that writes `people.json` (gallery option `gallery.people.enable: true`, on by default). A
+  Fussel that also lists each photo's largest size (`src`) gives sharper featured photos and lightbox; an older one
+  still works with the small size.
 - A gallery on a different domain can only be read if its host sends an `Access-Control-Allow-Origin` header
   (GitHub Pages does). Without it only the top-bar link works.
 - Everything under `gallery:` is published to every visitor, so never put a secret there.
 
 `famsite check` reports `E-GALLERY-TYPE` (missing or unknown `type`), `E-GALLERY-URL` (missing or not an
-`http://` or `https://` address), `W-GALLERY-KEY` (a key that does nothing), `W-GALLERY-SECRET` (a key named like
-a secret) and `W-GALLERY-ID-UNUSED` (a `gallery_id` with no usable gallery). An invalid `gallery:` block is ignored
+`http://` or `https://` address), `W-GALLERY-KEY` (a key that does nothing), `W-GALLERY-PORTRAITS` (`portraits` is
+not `true` or `false`), `W-GALLERY-SECRET` (a key named like a secret) and `W-GALLERY-ID-UNUSED` (a `gallery_id` with no usable gallery). An invalid `gallery:` block is ignored
 when building.
 
 Another gallery can be added later by registering a type in `galleries.py` and an adapter in `gallery.js`.
