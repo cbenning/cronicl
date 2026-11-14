@@ -151,7 +151,7 @@ def life_summary(payload: dict) -> str:
         if not event or not (event.get("when") or event.get("place")):
             return ""
         text = word
-        if event.get("when"):
+        if event.get("when") and event.get("date") != "unknown":
             text += f" {event['when']}"
         if event.get("place"):
             text += f" in {event['place']}"
@@ -218,6 +218,7 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
         "death": _event(person.death),
         "bodyHtml": _markdown.render(person.body) if person.body.strip() else "",
         "initials": person.initials,
+        "aka": [n for n in [person.nickname, *person.also] if n],
         "image": None,
         "age_at_death": age,
         "age_at_death_approx": bool(age is not None and (born.approx or died.approx)),
@@ -293,8 +294,7 @@ def _portraits(visible: Tree, out_dir: Path, media_dir: Path | None) -> dict[str
     return images
 
 
-def _home_context(visible: Tree, site: dict, payloads: dict, timeline: dict, relations: Relations, home: str,
-                  recent: list[dict] | None) -> dict:
+def _home_context(visible: Tree, site: dict, payloads: dict, timeline: dict, relations: Relations, home: str) -> dict:
     """Everything the home page prints, derived from the redacted tree."""
     names = {pid: person.display_name for pid, person in visible.people.items()}
     intro = site_text(site, "intro")
@@ -311,16 +311,10 @@ def _home_context(visible: Tree, site: dict, payloads: dict, timeline: dict, rel
         ),
         key=lambda item: (item["md"], item["year"], item["id"]),
     )
-    changed = [
-        {**_ref(visible, item["id"]), "when": format_date(item["date"])}
-        for item in (recent or [])
-        if item["id"] in visible.people
-    ]
     return {
         "intro_html": _markdown.render(intro) if intro else "",
         "home_ref": _ref(visible, home) if home else None,
         "stats": site_stats(visible, relations, timeline),
-        "recent": changed,
         "on_this_day": on_this_day,
     }
 
@@ -342,7 +336,7 @@ def _people_groups(visible: Tree, index: list[dict]) -> list[dict]:
 
 
 def build_site(
-    tree: Tree, out_dir: Path, *, today: date, recent: list[dict] | None = None, media_dir: Path | None = None
+    tree: Tree, out_dir: Path, *, today: date, media_dir: Path | None = None
 ) -> BuildSummary:
     out_dir = Path(out_dir)
     _clear_generated(out_dir)
@@ -391,7 +385,7 @@ def build_site(
     versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css"), "site": _asset_version("site.js"), "kin": _asset_version("kin.js")}
     if gallery:
         versions["gallery"] = _asset_version("gallery.js")
-    home_context = _home_context(visible, tree.site, payloads, timeline, relations, home, recent)
+    home_context = _home_context(visible, tree.site, payloads, timeline, relations, home)
     put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root="", active="home", **home_context))
     put(
         "people/index.html",
@@ -442,7 +436,11 @@ def build_site(
             person_template.render(
                 title=title, person=payload, ancestors=ancestor_tree(visible, relations, pid),
                 descendants=outline, descendant_count=count_descendants(outline),
-                links=page_links(tree.site, pid, payload["name"]) if pid in tree.people else [],
+                links=(
+                    page_links(tree.site, pid, payload["name"], tree.people[pid].source, tree.people[pid].line)
+                    if pid in tree.people
+                    else []
+                ),
                 gallery_person=_gallery_person(tree, pid, payload["name"], gallery, bool(payload["image"])),
                 v=versions, home=home, root="../../"
             ),

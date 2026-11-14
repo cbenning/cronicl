@@ -77,6 +77,8 @@ def test_the_migrated_site_matches_the_golden_build(tmp_path, mode):
             continue
         old = json.loads((golden / name).read_text(encoding="utf-8"))
         new = json.loads((out / name).read_text(encoding="utf-8"))
+        if isinstance(new, dict) and new.get("aka") == []:
+            del new["aka"]  # a new payload field: "also known as", empty for everyone in the fixture
         folder, _, leaf = name.rpartition("/")
         allowed = INTENDED.get((folder, leaf[:-5]), set())
         for line in diff_json(old, new):

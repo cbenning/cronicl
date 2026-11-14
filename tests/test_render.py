@@ -304,10 +304,7 @@ def test_home_page_content(tmp_path, make_tree):
     tree = sample(make_tree)
     tree.people["smith-bob"].birth = Event(date="1950-03-12")
     tree.site["intro"] = "Welcome to **our** family. <script>alert(1)</script>"
-    build_site(
-        tree, tmp_path, today=TODAY,
-        recent=[{"id": "smith-bob", "date": "2026-02-02"}, {"id": "ghost", "date": "2026-01-01"}],
-    )
+    build_site(tree, tmp_path, today=TODAY)
     home = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "<h1>Test Family</h1>" in home
     assert "<strong>our</strong>" in home and "<script>alert(1)</script>" not in home
@@ -315,7 +312,7 @@ def test_home_page_content(tmp_path, make_tree):
     assert 'href="people/index.html#s-smith"' in home
     assert 'href="p/smith-john/"' in home  # the home person card
     assert '<li data-md="03-12" hidden>' in home and "Bob Smith born" in home
-    assert "2 February 2026" in home and "ghost" not in home
+    assert "recently updated" not in home.lower() and "ghost" not in home
 
 
 def test_home_page_of_an_empty_site(tmp_path, make_tree):

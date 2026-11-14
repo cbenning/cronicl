@@ -34,6 +34,7 @@
     <div class="hero-text">
       <h1>{{ person.name }}</h1>
       {% if person.years %}<p class="years">{{ person.years }}</p>{% endif %}
+      {% if person.aka %}<p class="aka">Also known as {{ person.aka | join(", ") }}</p>{% endif %}
       <p class="kin" data-kin-for="{{ person.id }}" hidden></p>
       {% if person.summary %}<p class="summary">{{ person.summary }}</p>{% endif %}
       {% if person.facts %}

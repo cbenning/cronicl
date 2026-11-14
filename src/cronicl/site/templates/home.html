@@ -54,15 +54,6 @@
     </ul>
   </section>
   {% endif %}
-  {% if recent %}
-  <section class="recent">
-    <h2>Recently updated</h2>
-    <ul>
-      {% for r in recent %}<li><a href="p/{{ r.id }}/">{{ r.name }}</a>{% if r.years %} <span class="years">{{ r.years }}</span>{% endif %} <span class="when">{{ r.when }}</span></li>
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
 </main>
 </body>
 </html>

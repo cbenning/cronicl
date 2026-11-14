@@ -63,7 +63,7 @@ def site_check(site: dict, people: dict) -> list[Issue]:
             out.append(
                 Issue(
                     "W-BAD-LINK",
-                    f"{key} {str(value)!r} is not an allowed link (edit_url needs https://... and {{id}}; contact is mailto:, http:// or https://)",
+                    f"{key} {str(value)!r} is not an allowed link (edit_url needs https://... and {{id}} or {{line}}; contact is mailto:, http:// or https://)",
                     "site.yml",
                 )
             )

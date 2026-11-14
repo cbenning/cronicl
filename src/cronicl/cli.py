@@ -19,7 +19,6 @@ from .core.migrate import MigrateRefused, apply_migration, plan_migration
 from .core.fix import apply_plan, plan_fix
 from .core.gaps import find_gaps
 from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import, write_import_family
-from .site.history import recent_changes
 from .core.generations import LayoutError
 from .core.family import has_family
 from .core.new import append_text, plan_new, plan_new_family
@@ -213,7 +212,7 @@ def cmd_build(args) -> int:
         if (out / folder).resolve() == data or out.resolve() == data or data in out.resolve().parents:
             print(f"error: --out {out} would overwrite the data folder {root / folder}; choose another folder", file=sys.stderr)
             return 2
-    summary = build_site(tree, out, today=today, recent=recent_changes(root), media_dir=root / "media")
+    summary = build_site(tree, out, today=today, media_dir=root / "media")
     print(f"built {summary.people} people, {summary.files} files into {out}")
     return 0
 

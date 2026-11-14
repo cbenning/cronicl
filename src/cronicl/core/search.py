@@ -86,7 +86,7 @@ def _fields(person: Person) -> list[tuple[float, list[str]]]:
             places += tokenize(entry.place)
         if entry.value:
             values += tokenize(entry.value)
-    names = tokenize(" ".join(part for part in (person.given, person.surname) if part))
+    names = tokenize(" ".join(part for part in (person.given, person.surname, person.nickname, *person.also) if part))
     return [
         (_W_NAME, names),
         (_W_ID, tokenize(person.id)),
