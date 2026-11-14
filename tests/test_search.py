@@ -2,7 +2,7 @@ import json
 from datetime import date
 
 from famsite.cli import main
-from famsite.model import Event
+from famsite.model import Event, LifeEvent
 from famsite.search import search_people
 
 TODAY = date(2026, 10, 10)
@@ -116,3 +116,13 @@ def test_partnership_years_and_places_are_searchable(make_tree):
     for query in ("1971", "Reno"):
         found = [h.id for h in search_people(tree, query, today=date(2026, 10, 13))]
         assert "a" in found, query
+
+
+def test_search_finds_event_values_and_places(make_tree):
+    tree = make_tree([
+        {"id": "a", "given": "Ann", "events": [LifeEvent(type="occupation", value="Carpenter"),
+                                               LifeEvent(type="immigration", date="1952", place="Halifax")]},
+        {"id": "b", "given": "Bob"},
+    ])
+    assert [h.id for h in search_people(tree, "carpenter", today=date(2026, 1, 1))] == ["a"]
+    assert [h.id for h in search_people(tree, "halifax", today=date(2026, 1, 1))] == ["a"]

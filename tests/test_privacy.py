@@ -2,9 +2,10 @@ from datetime import date
 
 import pytest
 
-from famsite.model import Event, Partnership, Person
+from famsite.model import Event, LifeEvent, Partnership, Person
 from famsite.privacy import is_living, redact
 from famsite.relations import build_relations
+from famsite.render import build_site
 
 TODAY = date(2026, 10, 10)
 
@@ -123,3 +124,17 @@ def test_ended_partnership_with_a_living_partner_loses_type_dates_and_note(make_
     entry = out.people["old-x"].partnerships[0]
     assert entry.with_id.startswith("living-")
     assert (entry.type, entry.start, entry.end, entry.end_reason, entry.note) == (None, None, None, None, None)
+
+
+def test_a_living_persons_events_never_reach_the_output(tmp_path, make_tree):
+    tree = make_tree([
+        {"id": "old", "given": "Old", "birth": Event(date="1800"), "events": [LifeEvent(type="occupation", value="Blacksmith")]},
+        {"id": "kid", "given": "Kid", "birth": Event(date="2000"), "parents": ["old"],
+         "events": [LifeEvent(type="occupation", value="Zookeeper", date="2020", note="Secretnote", cite=["Secretsource"])]},
+    ])
+    tree.site = {"privacy": {"living": "placeholder", "id_salt": "s"}}
+    build_site(tree, tmp_path, today=date(2026, 10, 10))
+    everything = b"".join(f.read_bytes() for f in tmp_path.rglob("*") if f.is_file())
+    assert b"Blacksmith" in everything
+    for secret in (b"Zookeeper", b"Secretnote", b"Secretsource"):
+        assert secret not in everything
