@@ -12,7 +12,7 @@ from .slug import FALLBACK_SLUG, slugify
 _FRONTMATTER = re.compile(r"\A---[ \t]*\n(?:(.*?)\n)?---[ \t]*(?:\n|\Z)(.*)\Z", re.S)
 _DATE_LIKE = re.compile(r"^~?\d{4}(-\d{2}(-\d{2})?)?$")
 PERSON_KEYS = (
-    "id", "name", "sex", "birth", "death", "living", "portrait",
+    "id", "name", "sex", "birth", "death", "living", "portrait", "gallery_id",
     "parents", "spouse", "children", "marriages", "partnerships", "events",
     "gedcom_id", "gedcom_extra",
 )
@@ -180,7 +180,7 @@ def _require_mapping_of_text(value, label: str, keys: tuple[str, ...]) -> None:
 
 def _validate_shapes(data: dict) -> None:
     """Reject well-formed YAML whose values have the wrong shape (a list where text is expected, ...)."""
-    for key in ("id", "sex", "living", "portrait", "gedcom_id", "gedcom_extra"):
+    for key in ("id", "sex", "living", "portrait", "gallery_id", "gedcom_id", "gedcom_extra"):
         _require_text(data.get(key), key)
     _require_mapping_of_text(data.get("name"), "name", ("given", "surname"))
     _require_mapping_of_text(data.get("birth"), "birth", ("date", "place"))
@@ -223,6 +223,7 @@ def _make_person(data: dict, body: str, path: Path) -> Person:
         death=_parse_event(data.get("death")),
         living=_parse_bool(data.get("living")),
         portrait=_opt(data.get("portrait")),
+        gallery_id=_opt(data.get("gallery_id")),
         parents=_as_list(data.get("parents")),
         spouse=_as_list(data.get("spouse")),
         children=_as_list(data.get("children")),
@@ -397,6 +398,8 @@ def dump_person(person: Person) -> str:
         lines.append(f"living: {'true' if person.living else 'false'}")
     if person.portrait:
         lines.append(f"portrait: {_scalar(person.portrait)}")
+    if person.gallery_id:
+        lines.append(f"gallery_id: {_scalar(person.gallery_id)}")
     lines += _list_lines("parents", person.parents)
     lines += _list_lines("spouse", person.spouse)
     lines += _list_lines("children", person.children)

@@ -56,6 +56,7 @@ class Person:
     death: Event | None = None
     living: bool | None = None
     portrait: str | None = None
+    gallery_id: str | None = None
     parents: list[str] = field(default_factory=list)
     spouse: list[str] = field(default_factory=list)
     children: list[str] = field(default_factory=list)

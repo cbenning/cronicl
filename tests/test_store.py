@@ -268,3 +268,24 @@ def test_events_as_one_mapping_and_bad_shapes(tmp_path, write):
     tree, issues = load_tree(tmp_path)
     assert [(e.type, e.date) for e in tree.people["a"].events] == [("burial", "1991")]
     assert [(i.code, i.path) for i in issues if i.severity == "error"] == [("E-BAD-FRONTMATTER", "people/b.md")]
+
+
+def test_gallery_id_round_trips(tmp_path, write):
+    write(tmp_path, "people/a.md", "---\nid: a\nname:\n  given: Ann\nliving: false\ngallery_id: jane-doe\nparents: []\n---\nBio.\n")
+    tree, _ = load_tree(tmp_path)
+    person = tree.people["a"]
+    assert person.gallery_id == "jane-doe" and "gallery_id" not in person.extra
+    text = dump_person(person)
+    assert "living: false\ngallery_id: jane-doe\n---\n" in text
+
+
+def test_gallery_id_must_be_text(tmp_path, write):
+    write(tmp_path, "people/a.md", "---\nname: A\ngallery_id: [a, b]\n---\n")
+    _, issues = load_tree(tmp_path)
+    assert [i.code for i in issues if i.severity == "error"] == ["E-BAD-FRONTMATTER"]
+
+
+def test_gallery_id_is_in_the_schema():
+    from famsite.schema import PERSON_SCHEMA
+
+    assert PERSON_SCHEMA["properties"]["gallery_id"]["type"] == "string"

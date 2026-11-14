@@ -28,6 +28,7 @@ PERSON_SCHEMA = {
         "death": _EVENT,
         "living": {"type": "boolean"},
         "portrait": {"type": "string", "description": "file under media/ shown as this person's picture"},
+        "gallery_id": {"type": "string", "description": "this person's id in the photo gallery (a Fussel slug); overrides matching by name"},
         "parents": {
             "type": "array",
             "items": {"type": "string"},
