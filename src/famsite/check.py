@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .dates import parse_date
+from .galleries import gallery_issues
 from .issues import Issue
 from .layout import generation_conflict
 from .links import valid_contact, valid_edit_url
@@ -84,6 +85,8 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
                     "site.yml",
                 )
             )
+
+    issues += gallery_issues(tree.site or {}, tree.people)
 
     home = (tree.site or {}).get("home")
     if home and str(home) not in tree.people:
