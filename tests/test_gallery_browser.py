@@ -4,8 +4,10 @@ import functools
 import http.server
 import json
 import shutil
+import struct
 import subprocess
 import threading
+import zlib
 from pathlib import Path
 
 import pytest
@@ -15,6 +17,19 @@ from famsite.cli import main
 
 ROOT = Path(__file__).parent
 PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+
+
+def _png(width, height, rgb=(180, 90, 140)):
+    raw = b"".join(b"\x00" + bytes(rgb) * width for _ in range(height))
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
+
+
+TALL = _png(30, 40)  # a portrait photo: real aspect ratios are what break layouts
 
 
 def _photo(n):
@@ -79,6 +94,8 @@ def _gallery_server(state, stop):
                     return self._send(200, b"<html>not json</html>", "text/html")
                 if mode == "hostile":
                     body = _manifest([{**_photo(1), "src": "https://evil.invalid/big.jpg"}] + EVIL, face="https://evil.invalid/face.png")
+                elif mode == "badsrc":
+                    body = _manifest([{**_photo(n), "src": f"static/_gallery/albums/trip/missing{n}.jpg"} for n in range(1, 9)])
                 elif mode == "nosrc":
                     body = _manifest([{k: v for k, v in _photo(n).items() if k != "src"} for n in range(1, 9)], face=None)
                 elif mode == "badversion":
@@ -86,8 +103,10 @@ def _gallery_server(state, stop):
                 else:
                     body = _manifest([_photo(n) for n in range(1, 9)])
                 return self._send(200, json.dumps(body).encode(), "application/json", cors=mode != "nocors")
+            if "missing" in path:
+                return self._send(404, b"", "text/plain", cors=False)
             if path.endswith((".png", ".jpg")):
-                return self._send(200, PNG, "image/png", cors=False)
+                return self._send(200, TALL, "image/png", cors=False)
             self._send(404, b"", "text/plain")
 
     return http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)

@@ -203,6 +203,7 @@
       img.setAttribute('src', photos[current].thumbSrc);
     });
     dialog.addEventListener('pointerdown', function (event) { startX = event.clientX; });
+    dialog.addEventListener('pointercancel', function () { startX = null; });
     dialog.addEventListener('pointerup', function (event) {
       if (startX === null) return;
       var dx = event.clientX - startX;
@@ -251,6 +252,12 @@
       var img = doc.createElement('img');
       img.setAttribute('src', featured && index === 0 ? photo.viewSrc : photo.thumbSrc);
       img.setAttribute('alt', photo.name);
+      var fell = false;
+      img.addEventListener('error', function () {  // the large size may be listed but missing: fall back once
+        if (fell) return;
+        fell = true;
+        img.setAttribute('src', photo.thumbSrc);
+      });
       img.setAttribute('loading', 'lazy');
       link.appendChild(img);
       item.appendChild(link);

@@ -75,9 +75,10 @@ async function main() {
   await shot('gallery-light');
 
   // ---- the mosaic, the lightbox and the portrait, on a gallery that answers
-  const mosaic = await ev(`(() => { const li = [...document.querySelectorAll('#gallery .gallery-thumbs li')]; const rs = li.map((e) => e.getBoundingClientRect()); const box = document.getElementById('gallery').getBoundingClientRect(); return { featured: li[0].classList.contains('featured'), otherFeatured: li.slice(1).some((e) => e.classList.contains('featured')), w0: rs[0].width, w1: rs[1].width, inside: rs.every((r) => r.right <= box.right + 1 && r.left >= box.left - 1), srcs: li.map((e) => e.querySelector('img').src) }; })()`);
+  const mosaic = await ev(`(() => { const li = [...document.querySelectorAll('#gallery .gallery-thumbs li')]; const rs = li.map((e) => e.getBoundingClientRect()); const box = document.getElementById('gallery').getBoundingClientRect(); return { featured: li[0].classList.contains('featured'), otherFeatured: li.slice(1).some((e) => e.classList.contains('featured')), w0: rs[0].width, h0: rs[0].height, w1: rs[1].width, h1: rs[1].height, gap: rs[2].top - rs[1].bottom, inside: rs.every((r) => r.right <= box.right + 1 && r.left >= box.left - 1), srcs: li.map((e) => e.querySelector('img').src) }; })()`);
   check('the first photo is featured and about twice as wide as a tile', mosaic.featured && !mosaic.otherFeatured && mosaic.w0 >= mosaic.w1 * 1.8, JSON.stringify(mosaic));
   check('no tile leaves the block', mosaic.inside === true);
+  check('even with portrait photos the featured tile is square and the tiles sit flush against it', Math.abs(mosaic.h0 - mosaic.w0) < 3 && Math.abs(mosaic.h0 - (2 * mosaic.h1 + mosaic.gap)) < 2 && mosaic.gap < 20, JSON.stringify(mosaic));
   check('the featured photo uses the large size, the tiles the small one', mosaic.srcs[0].endsWith('/big1.jpg') && mosaic.srcs.slice(1).every((u, i) => u.endsWith('/p' + (i + 2) + '.jpg')), mosaic.srcs.join(' '));
   const lightbox = () => ev(`(() => { const d = document.querySelector('dialog.gallery-lightbox'); if (!d) return { exists: false, n: 0 }; const r = d.getBoundingClientRect(); const open = d.querySelector('.gallery-open'); return { exists: true, n: document.querySelectorAll('dialog.gallery-lightbox').length, open: d.open, h: r.height, w: r.width, imgW: d.querySelector('.gallery-big').getBoundingClientRect().width, src: d.querySelector('.gallery-big').src, counter: d.querySelector('.gallery-count').textContent, href: open.href, rel: open.rel }; })()`);
   const key = async (k, code, vk) => { for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: k, code, windowsVirtualKeyCode: vk }); await sleep(250); };
@@ -99,7 +100,15 @@ async function main() {
   await ev(`document.querySelectorAll('#gallery .gallery-thumbs li a')[2].click()`); await sleep(400);
   lb = await lightbox();
   check('opening again reuses one lightbox, on the clicked photo', lb.n === 1 && lb.open && lb.counter === '3 / 6' && lb.src.endsWith('/big3.jpg'), JSON.stringify(lb));
-  await key('Escape', 'Escape', 27);
+  await ev(`document.querySelector('dialog.gallery-lightbox .gallery-next').click()`); await sleep(250);
+  lb = await lightbox();
+  check('the next button shows the next photo', lb.counter === '4 / 6' && lb.src.endsWith('/big4.jpg'), JSON.stringify(lb));
+  const around = await ev(`(() => { const r = document.querySelector('dialog.gallery-lightbox').getBoundingClientRect(); return { left: r.left, right: r.right }; })()`);
+  check('the lightbox hugs the photo, so there is no dead zone beside it', around.left > 300 && around.right < 1100, JSON.stringify(around));
+  for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: 150, y: 400, button: 'left', clickCount: 1 });
+  await sleep(250);
+  lb = await lightbox();
+  check('clicking the dark area beside the photo closes the lightbox', lb.open === false, JSON.stringify(lb));
   const avatar = () => ev(`(() => { const a = document.querySelector('.hero .avatar'); const r = a.getBoundingClientRect(); return { tag: a.tagName, src: a.src || '', w: Math.round(r.width), round: getComputedStyle(a).borderRadius }; })()`);
   let av = await avatar();
   check('with no portrait of its own the page shows the gallery face', av.tag === 'IMG' && av.src.endsWith('/face-jane.jpg') && av.w === 112 && parseInt(av.round, 10) >= 50, JSON.stringify(av));
@@ -133,6 +142,12 @@ async function main() {
   check('nothing was requested from another host', requests.every((u) => !u.includes('evil.invalid')), requests.join(' '));
   check('hostile: no uncaught errors', errors.length === 0, errors.join('\n'));
   check('hostile: a bad large size falls back to the small one, a bad face is ignored', s.srcs.length === 1 && s.srcs[0].endsWith('/p1.jpg') && (await ev(`document.querySelector('.hero .avatar').tagName`)) === 'DIV', JSON.stringify(s.srcs));
+
+  // ---- a large size that is listed but will not load
+  await open('badsrc', '/p/jane-doe/', 1500);
+  s = await state();
+  const featuredImg = await ev(`(() => { const i = document.querySelector('#gallery .gallery-thumbs li.featured img'); return { w: i.naturalWidth, src: i.src }; })()`);
+  check('badsrc: the featured photo falls back to its small size', s.exists && !s.hidden && featuredImg.w > 0 && featuredImg.src.endsWith('/p1.jpg'), JSON.stringify(featuredImg));
 
   // ---- a gallery from an older fussel (no large size, no face)
   await open('nosrc', '/p/jane-doe/');
@@ -170,6 +185,15 @@ async function main() {
   lb = await lightbox();
   check('phone: the lightbox fits the screen', lb.open && lb.w <= 390 && lb.imgW <= 390 && (await ev('document.documentElement.scrollWidth')) <= 390, JSON.stringify(lb));
   await shot('gallery-phone-lightbox');
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  const centre = await ev(`(() => { const r = document.querySelector('dialog.gallery-lightbox .gallery-big').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`);
+  const touch = (type, x, y) => send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  await touch('touchStart', centre.x + 120, centre.y); await sleep(50);
+  for (const dx of [80, 40, 0, -40, -80, -120]) { await touch('touchMove', centre.x + dx + 0, centre.y); await sleep(20); }
+  await touch('touchEnd', 0, 0); await sleep(300);
+  lb = await lightbox();
+  check('phone: swiping left shows the next photo', lb.counter === '2 / 6', JSON.stringify(lb));
+  await send('Emulation.setTouchEmulationEnabled', { enabled: false });
   await key('Escape', 'Escape', 27);
   await send('Emulation.setDeviceMetricsOverride', { width: 1400, height: 820, deviceScaleFactor: 1, mobile: false });
 

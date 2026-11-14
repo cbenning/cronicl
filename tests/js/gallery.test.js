@@ -305,3 +305,38 @@ test('init swaps the portrait only when the page asked for it', async () => {
   assert.strictEqual(await run('1'), 1);
   assert.strictEqual(await run('0'), 0);
 });
+
+test('a swipe steps the lightbox, and a cancelled touch does not', () => {
+  const doc = fakeDoc(true);
+  const section = fakeSection();
+  g.render(section, six(), doc);
+  section._thumbs.children[0].children[0].handlers.click({ preventDefault() {} });
+  const dlg = doc.created.find((e) => e.tag === 'dialog');
+  const counter = dlg.find((e) => e.attrs.class === 'gallery-count');
+  dlg.handlers.pointerdown({ clientX: 300 });
+  dlg.handlers.pointerup({ clientX: 100 });
+  assert.strictEqual(counter.textContent, '2 / 6');
+  dlg.handlers.pointerdown({ clientX: 100 });
+  dlg.handlers.pointerup({ clientX: 220 });
+  assert.strictEqual(counter.textContent, '1 / 6');
+  dlg.handlers.pointerdown({ clientX: 300 });
+  dlg.handlers.pointercancel({});
+  dlg.handlers.pointerup({ clientX: 100 });
+  assert.strictEqual(counter.textContent, '1 / 6');
+  dlg.handlers.pointerdown({ clientX: 300 });
+  dlg.handlers.pointerup({ clientX: 290 });
+  assert.strictEqual(counter.textContent, '1 / 6');
+});
+
+test('a featured photo whose large size will not load falls back to its small size, once', () => {
+  const section = fakeSection();
+  g.render(section, six(), fakeDoc());
+  const img = (i) => section._thumbs.children[i].children[0].children[0];
+  assert.strictEqual(img(0).attrs.src, BASE + 'v1.jpg');
+  img(0).handlers.error();
+  assert.strictEqual(img(0).attrs.src, BASE + 't1.jpg');
+  img(0).handlers.error();
+  assert.strictEqual(img(0).attrs.src, BASE + 't1.jpg');
+  img(1).handlers.error();
+  assert.strictEqual(img(1).attrs.src, BASE + 't2.jpg');
+});
