@@ -244,3 +244,46 @@ def test_mode_words_and_text_numbers_in_site_yml_work(tmp_path, write):
     data = _site_with_a_living_person(tmp_path, write, "schema_version: 2\nprivacy:\n  living: Placeholder\n  cutoff_years: '25'\n  id_salt: s\n")
     assert run("build", "--dir", data, "--out", tmp_path / "out") == 0
     assert "Secretname" not in _everything(tmp_path / "out")
+
+
+def test_warning_summary_formats():
+    from famsite.cli import warning_summary
+    from famsite.issues import Issue
+
+    assert warning_summary([]) == ""
+    assert warning_summary([Issue("W-A", "x")]) == "1 warning: 1 W-A (run famsite check for details)"
+    many = [Issue("W-UNKNOWN-KEY", "x")] * 3 + [Issue("W-BAD-LIVING", "x")] + [Issue(f"W-C{n}", "x") for n in range(5)]
+    text = warning_summary(many)
+    assert text.startswith("9 warnings: 3 W-UNKNOWN-KEY, 1 W-BAD-LIVING, 1 W-C0, 1 W-C1, 1 W-C2, ... (run famsite check for details)")
+
+
+def test_build_prints_one_summary_line_for_warnings(tmp_path, write, capsys):
+    data = tmp_path / "data"
+    run("init", "--dir", data)
+    write(data, "people/a.md", "---\nid: a\nname: Ann Lee\nbirht: 1950\nlivng: no\nliving: maybe\n---\n")
+    capsys.readouterr()
+    assert run("build", "--dir", data, "--out", tmp_path / "out") == 0
+    out = capsys.readouterr().out
+    assert "3 warnings: 2 W-UNKNOWN-KEY, 1 W-BAD-LIVING (run famsite check for details)" in out
+    assert "did you mean" not in out and "unknown key" not in out
+
+
+def test_build_prints_errors_in_full_and_stops(tmp_path, write, capsys):
+    data = tmp_path / "data"
+    run("init", "--dir", data)
+    write(data, "people/a.md", "---\nid: a\nname: Ann Lee\nparents: [ghost]\n---\n")
+    capsys.readouterr()
+    assert run("build", "--dir", data, "--out", tmp_path / "out") == 1
+    assert "E-DANGLING-REF" in capsys.readouterr().out
+
+
+def test_validate_is_an_alias_for_check(tmp_path, write, capsys):
+    data = tmp_path / "data"
+    run("init", "--dir", data)
+    write(data, "people/a.md", "---\nid: a\nname: Ann Lee\nbirht: 1950\n---\n")
+    capsys.readouterr()
+    code_check = run("check", "--dir", data, "--format", "json")
+    first = capsys.readouterr().out
+    code_validate = run("validate", "--dir", data, "--format", "json")
+    assert capsys.readouterr().out == first and code_check == code_validate == 0
+    assert run("validate", "--dir", data, "--strict") == 1
