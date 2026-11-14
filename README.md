@@ -180,6 +180,46 @@ there are no couple files. A partner's death never sets `end`, and nothing is in
 divorce, annulment or a split. Old `marriages:` entries (with `date:`) still load, and `famsite fix --apply`
 rewrites them as `partnerships:` entries (and bumps `schema_version` to 2).
 
+## Adding people
+
+The loop that works best once the first import is done:
+
+1. `famsite gaps` lists who is missing a name, a date, a place or parents, best-connected people first.
+2. `famsite search WORD` finds the ids you need for parents, spouses and children.
+3. `famsite new --given Bob --surname Smith --birth 1950-03-12 --parents smith-john brown-mary` previews a new
+   file; add `-a` to write it. Or edit a file in `people/` by hand.
+4. `famsite check` reports anything that does not hold together.
+5. `famsite serve` shows the result.
+
+The table above, "Declare relationships on whichever file you are editing", is the reference for which file to
+touch when you add a relative.
+
+## Publishing
+
+Before you publish a site that contains living people, set `privacy.living` to `placeholder` or `hidden` in
+`site.yml`. While it is `full`, `build` prints `W-PRIVACY-OFF` with the number of people the privacy rules treat
+as living: that is a reminder that they are all published.
+
+`famsite build --out public` writes a folder of plain files that any static host can serve. The site makes no
+external requests: no web fonts, scripts or analytics are loaded from anywhere.
+
+`site.yml` keys that shape the published site:
+
+```yaml
+title: Hollings family
+intro: |                       # Markdown, shown on the home page
+  Our family, from Silesia to British Columbia.
+home: hollings-nora-doreen     # the person the tree opens on (an id)
+edit_url: https://github.com/example/family/edit/main/people/{id}.md   # adds "Edit this page"
+contact: mailto:family@example.org    # adds "Suggest a correction" (a mailto: or https:// link)
+privacy:
+  living: placeholder
+  cutoff_years: 100
+```
+
+`edit_url` must be an `https://` address containing `{id}`; `contact` must be `mailto:`, `http://` or `https://`.
+`check` warns about anything else. People hidden or replaced by privacy redaction get neither link.
+
 ## Privacy
 
 **Redaction is off by default.** `famsite init` writes `privacy.living: full`, and a site with no
