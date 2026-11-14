@@ -13,6 +13,8 @@ from pathlib import Path
 
 from .checks import check_all
 from .core.edit import EditError, apply_living
+from .core.familyedit import plan_mark, plan_rename
+from .core.inplace import InplaceError
 from .core.fix import apply_plan, plan_fix
 from .core.gaps import find_gaps
 from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
@@ -241,7 +243,43 @@ def cmd_serve(args) -> int:
     return 0
 
 
+def _cmd_edit_family(args) -> int:
+    root = Path(args.dir)
+    results = plan_mark(root, args.ids, args.living)
+    final: dict[Path, str] = {}
+    for _, path, _, text in results:
+        final[path] = text
+    word = "set" if args.apply else "would set"
+    what = "living: true" if args.living else "death: unknown"
+    for pid, path, changed, _ in results:
+        print(f"{pid} ({path.relative_to(root).as_posix()}): " + (f"{word} {what}" if changed else "unchanged"))
+    if args.apply:
+        for path, text in final.items():
+            path.write_bytes(text.encode("utf-8"))
+    elif any(changed for _, _, changed, _ in results):
+        print("dry run; re-run with --apply (-a) to write these changes")
+    return 0
+
+
+def cmd_rename(args) -> int:
+    root = Path(args.dir)
+    changes = plan_rename(root, args.old, args.new)
+    for change in changes:
+        print(f"{change.path.relative_to(root).as_posix()}: {change.count} replacement{'' if change.count == 1 else 's'}")
+    if not changes:
+        print(f"{args.old} appears nowhere else; only its record key needs changing")
+    if not args.apply:
+        print("dry run; re-run with --apply (-a) to write these changes")
+        return 0
+    for change in changes:
+        change.path.write_bytes(change.text.encode("utf-8"))
+    print(f"renamed {args.old} to {args.new}")
+    return 0
+
+
 def cmd_edit_living(args) -> int:
+    if has_family(Path(args.dir)):
+        return _cmd_edit_family(args)
     changes = apply_living(Path(args.dir), args.ids, args.living, dry_run=not args.apply)
     word = "set" if args.apply else "would set"
     for path, changed in changes:
@@ -373,6 +411,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--strict", action="store_true", help="exit 1 on warnings too")
     p.set_defaults(func=cmd_check)
 
+    p = sub.add_parser("rename", parents=[common], help="change a person's id everywhere it is used (preview unless --apply)")
+    p.add_argument("old", help="the current id")
+    p.add_argument("new", help="the new id")
+    _add_apply(p)
+    p.set_defaults(func=cmd_rename)
+
     p = sub.add_parser("show", parents=[common], help="print one person as the site sees them (read-only)")
     p.add_argument("id", help="a person id (find ids with `cronicl search`)")
     p.set_defaults(func=cmd_show)
@@ -418,7 +462,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("edit", parents=[common], help="state-changing helpers (edit person files)")
     edit_sub = p.add_subparsers(dest="edit_command", required=True)
     for name, living, helptext in (
-        ("mark-deceased", False, "write `living: false` for the named people"),
+        ("mark-deceased", False, "mark the named people deceased (`death: unknown` in family.yml)"),
         ("mark-living", True, "write `living: true` for the named people"),
     ):
         q = edit_sub.add_parser(name, parents=[common], help=helptext)
@@ -448,7 +492,7 @@ def main(argv: list[str] | None = None) -> int:
     args.dir = getattr(args, "dir", None) or os.environ.get("CRONICL_DIR") or "."
     try:
         return args.func(args)
-    except (GedcomError, ImportRefused, LayoutError, EditError) as exc:
+    except (GedcomError, ImportRefused, LayoutError, EditError, InplaceError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
