@@ -101,3 +101,85 @@ PERSON_SCHEMA = {
     },
     "additionalProperties": True,
 }
+
+
+# ---- the schema of family.yml (draft 2020-12). Values are text however they are typed, so every scalar is allowed.
+_TEXT = {"type": ["string", "number", "boolean", "null"]}
+_X = {"^[xX][-_]": {}}  # the owner's own keys, allowed everywhere
+
+
+def _object(properties: dict, required: list | None = None) -> dict:
+    out = {"type": "object", "properties": properties, "patternProperties": _X, "additionalProperties": False}
+    if required:
+        out["required"] = required
+    return out
+
+
+_FACT = {
+    "oneOf": [
+        _TEXT,
+        _object({"date": _TEXT, "place": _TEXT, "note": _TEXT, "cite": {"oneOf": [_TEXT, {"type": "array", "items": _TEXT}]}}),
+    ],
+    "description": "a date, or a mapping with date, place, note and cite",
+}
+_EVENT = _object(
+    {
+        "type": {"type": "string", "description": "a slug such as occupation, residence, burial; couples: marriage, divorce, ..."},
+        "date": {**_TEXT, "description": "YYYY[-MM[-DD]], ABT/BEF/AFT/BET .. AND .., FROM .. TO .., or unknown"},
+        "place": _TEXT,
+        "value": _TEXT,
+        "note": _TEXT,
+        "cite": {"oneOf": [_TEXT, {"type": "array", "items": _TEXT}]},
+    },
+    required=["type"],
+)
+
+FAMILY_SCHEMA = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "cronicl family.yml",
+    "description": "Every top-level key is a person id, or two person ids joined by + (a couple).",
+    "type": "object",
+    "patternProperties": {
+        "^[a-z0-9]+(-[a-z0-9]+)*$": {"$ref": "#/$defs/person"},
+        r"^\s*[a-z0-9]+(-[a-z0-9]+)*\s*\+\s*[a-z0-9]+(-[a-z0-9]+)*\s*$": {"$ref": "#/$defs/couple"},
+    },
+    "additionalProperties": False,
+    "$defs": {
+        "person": {
+            "oneOf": [
+                {"type": "null"},
+                {"type": "string", "maxLength": 0},
+                _object(
+                    {
+                        "name": _object(
+                            {
+                                "given": _TEXT,
+                                "surname": _TEXT,
+                                "prefix": _TEXT,
+                                "suffix": _TEXT,
+                                "nickname": _TEXT,
+                                "also": {"type": "array", "items": _TEXT},
+                            }
+                        ),
+                        "sex": {"oneOf": [{"enum": ["male", "female", "unknown", "other"]}, {"type": "null"}]},
+                        "birth": _FACT,
+                        "death": _FACT,
+                        "parents": {"oneOf": [{"type": "null"}, {"type": "array", "items": _TEXT, "maxItems": 2}]},
+                        "events": {"oneOf": [{"type": "null"}, {"type": "array", "items": _EVENT}]},
+                        "portrait": _TEXT,
+                        "living": _TEXT,
+                        "refs": _object({"gedcom": _TEXT, "gallery": _TEXT}),
+                        "bio": _TEXT,
+                    }
+                ),
+            ]
+        },
+        "couple": {
+            "oneOf": [
+                {"type": "null"},
+                {"type": "string", "maxLength": 0},
+                _object({"events": {"oneOf": [{"type": "null"}, {"type": "array", "items": _EVENT}]}, "note": _TEXT}),
+            ]
+        },
+    },
+}

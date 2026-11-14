@@ -1,0 +1,8 @@
+# expect: W-DATE-UNPARSED@8
+a:
+  name: {given: A}
+b:
+  name: {given: B}
+a + b:
+  events:
+    - {type: marriage, date: nonsense}

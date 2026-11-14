@@ -1,0 +1,4 @@
+# expect: W-LIVING-FALSE@4
+a:
+  name: {given: A}
+  living: false

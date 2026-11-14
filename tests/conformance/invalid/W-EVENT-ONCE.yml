@@ -1,0 +1,6 @@
+# expect: W-EVENT-ONCE@6
+a:
+  name: {given: A}
+  events:
+    - {type: burial, date: 1900}
+    - {type: burial, date: 1901}

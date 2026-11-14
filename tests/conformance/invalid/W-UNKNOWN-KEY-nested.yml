@@ -1,0 +1,7 @@
+# expect: W-UNKNOWN-KEY@7
+# schema: rejects
+a:
+  name: {given: A}
+  birth:
+    date: 1850
+    palce: X

@@ -1,0 +1,5 @@
+# expect: W-END-BEFORE-START@5
+a:
+  name: {given: A}
+  events:
+    - {type: residence, date: FROM 1950 TO 1900}

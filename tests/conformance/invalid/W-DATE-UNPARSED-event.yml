@@ -1,0 +1,5 @@
+# expect: W-DATE-UNPARSED@5
+a:
+  name: {given: A}
+  events:
+    - {type: job, date: whenever}

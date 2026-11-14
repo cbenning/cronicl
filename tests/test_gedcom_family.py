@@ -147,7 +147,7 @@ def test_import_keeps_the_init_comments_and_refuses_a_second_import(tmp_path):
     run("init", "--dir", tmp_path)
     nodes, _ = parse_nodes(SAMPLE)
     write_import_family(import_nodes(nodes), tmp_path, SAMPLE.encode(), "t.ged")
-    assert (tmp_path / "family.yml").read_text(encoding="utf-8").startswith("# family.yml: the whole family")
+    assert "# family.yml: the whole family" in (tmp_path / "family.yml").read_text(encoding="utf-8").split("\n\n")[0]
     with pytest.raises(ImportRefused):
         write_import_family(import_nodes(nodes), tmp_path, SAMPLE.encode(), "t.ged")
 

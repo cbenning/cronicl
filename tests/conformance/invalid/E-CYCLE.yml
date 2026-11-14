@@ -1,0 +1,7 @@
+# expect: E-CYCLE@2
+a:
+  name: {given: A}
+  parents: [b]
+b:
+  name: {given: B}
+  parents: [a]

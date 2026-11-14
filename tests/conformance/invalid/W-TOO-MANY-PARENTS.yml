@@ -1,0 +1,10 @@
+# expect: W-TOO-MANY-PARENTS@4
+a:
+  name: {given: A}
+  parents: [b, c, d]
+b:
+  name: {given: B}
+c:
+  name: {given: C}
+d:
+  name: {given: D}

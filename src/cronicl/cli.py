@@ -27,7 +27,7 @@ from .core.living import is_living
 from .site.settings import privacy_settings
 from .core.relations import build_relations
 from .site.render import build_site, dumps
-from .core.schema import PERSON_SCHEMA
+from .core.schema import FAMILY_SCHEMA
 from .core.search import search_people
 from .core.store import dump_person, load_tree, write_person
 
@@ -88,6 +88,7 @@ def _git_dirty(path: Path) -> bool | None:
 
 
 FAMILY_YML = """\
+# yaml-language-server: $schema=family.schema.json
 # family.yml: the whole family, in one file.
 #
 # A person is a record keyed by an id (surname first is a good habit); a couple is a record keyed by two ids
@@ -122,6 +123,7 @@ def cmd_init(args) -> int:
     site.write_text(site_text if legacy else site_text.replace("schema_version: 2", "schema_version: 3"), encoding="utf-8")
     if not legacy:
         (root / "family.yml").write_text(FAMILY_YML, encoding="utf-8")
+        (root / "family.schema.json").write_text(dumps(FAMILY_SCHEMA), encoding="utf-8")
     gitignore = root / ".gitignore"
     if not gitignore.exists():
         gitignore.write_text("out/\n", encoding="utf-8")
@@ -398,7 +400,7 @@ def cmd_search(args) -> int:
 
 
 def cmd_schema(args) -> int:
-    print(dumps({"person": PERSON_SCHEMA}), end="")
+    print(dumps(FAMILY_SCHEMA), end="")
     return 0
 
 

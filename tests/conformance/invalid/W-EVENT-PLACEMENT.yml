@@ -1,0 +1,5 @@
+# expect: W-EVENT-PLACEMENT@5
+a:
+  name: {given: A}
+  events:
+    - {type: marriage, date: 1900}

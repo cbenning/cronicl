@@ -1,0 +1,8 @@
+a:
+  name: {given: A}
+b:
+  name: {given: B}
+c:
+  name: {given: C}
+a + b: {}
+b + c:

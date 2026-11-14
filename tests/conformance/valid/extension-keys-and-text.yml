@@ -1,0 +1,10 @@
+a:
+  name: {given: NO, surname: "1066", x-pet: cat}
+  x-note: "anything: goes"
+  birth: {date: 1850, x-source: gran}
+  events:
+    - {type: job, value: "a, b", x-boss: z}
+  refs: {x-other: 1}
+  bio: |
+    # Not a heading in YAML
+    key: value

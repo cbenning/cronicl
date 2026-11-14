@@ -5,6 +5,7 @@ them (`build_relations`), so the migrated site shows the same relationships.
 """
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -101,7 +102,10 @@ def plan_migration(data_dir: Path) -> MigrationPlan:
                 )
         if events or not relations.kids.get(couple.id):
             couples.append((a, b, {"events": events}))
-    header = "# family.yml: migrated from people/*.md by `cronicl migrate`. The old files are in archive/people-md/."
+    header = (
+        "# yaml-language-server: $schema=family.schema.json\n"
+        "# family.yml: migrated from people/*.md by `cronicl migrate`. The old files are in archive/people-md/."
+    )
     family_text = emit.family(specs, couples, header=header)
     gedcom_text = None
     if extras:
@@ -123,6 +127,9 @@ def plan_migration(data_dir: Path) -> MigrationPlan:
 def apply_migration(data_dir: Path, plan: MigrationPlan) -> None:
     data_dir = Path(data_dir)
     (data_dir / "family.yml").write_text(plan.family_text, encoding="utf-8")
+    from .schema import FAMILY_SCHEMA
+
+    (data_dir / "family.schema.json").write_text(json.dumps(FAMILY_SCHEMA, sort_keys=True, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     archive = data_dir / "archive"
     archive.mkdir(exist_ok=True)
     if plan.gedcom_extra_text:

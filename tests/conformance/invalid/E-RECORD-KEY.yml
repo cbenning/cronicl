@@ -1,0 +1,4 @@
+# expect: E-RECORD-KEY@3
+# schema: rejects
+Not A Key:
+  name: {given: X}

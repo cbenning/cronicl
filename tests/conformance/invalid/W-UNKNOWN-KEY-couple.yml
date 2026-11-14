@@ -1,0 +1,8 @@
+# expect: W-UNKNOWN-KEY@8
+# schema: rejects
+a:
+  name: {given: A}
+b:
+  name: {given: B}
+a + b:
+  colour: red

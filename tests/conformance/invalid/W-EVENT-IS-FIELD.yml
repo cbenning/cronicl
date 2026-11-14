@@ -1,0 +1,5 @@
+# expect: W-EVENT-IS-FIELD@5
+a:
+  name: {given: A}
+  events:
+    - {type: birth, date: 1850}

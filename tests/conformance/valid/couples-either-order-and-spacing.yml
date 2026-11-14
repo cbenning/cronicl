@@ -1,0 +1,9 @@
+a:
+  name: {given: A}
+b:
+  name: {given: B}
+c:
+  name: {given: C}
+b+a: {}
+c  +  b:
+  note: Together.

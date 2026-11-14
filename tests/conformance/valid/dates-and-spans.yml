@@ -1,0 +1,14 @@
+a:
+  name: {given: A}
+  birth: ABT 1850
+  death: BEF 1920-03
+  events:
+    - {type: residence, date: FROM 1900 TO 1910}
+    - {type: residence, date: FROM 1920}
+    - {type: job, date: TO 1930}
+    - {type: baptism, date: BET 1850-01 AND 1850-03-15}
+    - {type: census, date: unknown}
+    - {type: note, date: aft 1800}
+b:
+  name: {given: B}
+  death: unknown

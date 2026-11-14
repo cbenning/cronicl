@@ -1,0 +1,8 @@
+# expect: W-DATE-SPAN@8
+a:
+  name: {given: A}
+b:
+  name: {given: B}
+a + b:
+  events:
+    - {type: divorce, date: FROM 1900 TO 1910}

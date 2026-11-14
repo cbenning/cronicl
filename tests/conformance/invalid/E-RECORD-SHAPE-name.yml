@@ -1,0 +1,4 @@
+# expect: E-RECORD-SHAPE@4, W-NO-NAME@3
+# schema: rejects
+a:
+  name: Plain Text

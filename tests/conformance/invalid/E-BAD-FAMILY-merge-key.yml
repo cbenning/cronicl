@@ -1,0 +1,5 @@
+# expect: E-BAD-FAMILY@5
+base: &b
+  name: {given: X}
+a:
+  <<: *b

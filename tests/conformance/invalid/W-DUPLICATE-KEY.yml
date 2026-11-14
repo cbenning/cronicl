@@ -1,0 +1,5 @@
+# expect: W-DUPLICATE-KEY@5
+a:
+  name: {given: A}
+  birth: 1850
+  birth: 1860

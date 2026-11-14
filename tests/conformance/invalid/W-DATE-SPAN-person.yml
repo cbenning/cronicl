@@ -1,0 +1,4 @@
+# expect: W-DATE-SPAN@4
+a:
+  name: {given: A}
+  birth: {date: FROM 1900 TO 1910}

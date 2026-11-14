@@ -1,0 +1,4 @@
+# expect: W-DATE-UNPARSED@4
+a:
+  name: {given: A}
+  birth: 19x0

@@ -1,0 +1,4 @@
+# expect: E-DANGLING-REF@4
+a:
+  name: {given: A}
+  parents: [ghost]

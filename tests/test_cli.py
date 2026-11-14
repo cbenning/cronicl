@@ -123,9 +123,10 @@ def test_build_refuses_when_check_has_errors(tmp_path, write):
 def test_schema_prints_valid_json(capsys):
     assert run("schema") == 0
     schema = json.loads(capsys.readouterr().out)
-    assert set(schema) == {"person"}
-    props = schema["person"]["properties"]
-    assert {"parents", "spouse", "children", "partnerships"} <= set(props)
+    assert schema["title"] == "cronicl family.yml"
+    person = schema["$defs"]["person"]["oneOf"][-1]["properties"]
+    assert {"name", "birth", "death", "parents", "events", "refs", "bio"} <= set(person)
+    assert "spouse" not in person and "children" not in person and "partnerships" not in person
 
 
 def test_build_does_not_redact_unless_asked(tmp_path, sample_ged):

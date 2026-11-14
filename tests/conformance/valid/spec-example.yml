@@ -1,0 +1,43 @@
+# ---- Byron line ----
+
+byron-george:
+  name: {given: George, surname: Byron}
+  birth: {date: 1788-01-22, place: "London, England"}
+  death: {date: 1824-04-19, place: "Missolonghi, Greece"}
+
+milbanke-annabella:
+  name: {given: Annabella, surname: Milbanke}
+  birth: 1792-05-17
+
+byron-george + milbanke-annabella:
+  events:
+    - {type: marriage, date: 1815-01-02, place: "Seaham, England"}
+    - {type: separation, date: 1816}
+
+lovelace-ada:
+  name: {given: Augusta Ada, surname: Lovelace, nickname: Ada, also: [Countess of Lovelace]}
+  sex: female
+  birth:
+    date: 1815-12-10
+    place: London, England
+    note: Born at Piccadilly Terrace.
+    cite: Parish register, St George Hanover Square
+  death: {date: 1852-11-27, place: "London, England"}
+  parents: [byron-george, milbanke-annabella]
+  events:
+    - {type: occupation, value: Mathematician, cite: Letters to Charles Babbage}
+    - {type: residence, date: FROM 1835 TO 1852, place: "Ockham Park, Surrey"}
+    - {type: burial, date: 1852-12-03, place: "Hucknall, Nottinghamshire"}
+  refs: {gedcom: "@I123@", gallery: ada-lovelace}
+  x-nickname: Enchantress of Number
+  bio: |
+    Mathematician and writer.
+
+    She is often described as the first computer programmer.
+
+king-william:
+  name: {given: William, surname: King}
+
+king-william + lovelace-ada:
+  events:
+    - {type: marriage, date: 1835-07-08, place: "Ockham, Surrey"}

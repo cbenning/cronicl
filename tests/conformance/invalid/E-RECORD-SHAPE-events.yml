@@ -1,0 +1,5 @@
+# expect: E-RECORD-SHAPE@5
+# schema: rejects
+a:
+  name: {given: A}
+  events: hello

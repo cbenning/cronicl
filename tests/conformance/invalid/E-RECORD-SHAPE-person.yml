@@ -1,0 +1,3 @@
+# expect: E-RECORD-SHAPE@3
+# schema: rejects
+a: just text

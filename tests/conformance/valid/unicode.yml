@@ -1,0 +1,4 @@
+sato-taro:
+  name: {given: 太郎, surname: 佐藤}
+  birth: {date: 1950, place: "Zürich, Schweiz"}
+  bio: 🌳 tree

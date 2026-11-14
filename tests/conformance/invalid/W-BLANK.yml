@@ -1,0 +1,4 @@
+# expect: W-BLANK@4
+a:
+  name: {given: A}
+  death:
