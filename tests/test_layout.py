@@ -397,12 +397,25 @@ def test_each_island_is_labelled_with_its_commonest_surname(make_tree):
     ])
     layout = compute_layout(tree)
     assert sorted((l["kind"], l["text"]) for l in layout["labels"]) == [
-        ("island", "Abel family · 2"),  # a tie goes to the alphabetically first surname
+        ("island", "Abel & Lee families · 2"),  # a tie goes to the alphabetically first surname
         ("island", "Family · 2"),  # nobody in the island has a surname
-        ("island", "Smith family · 3"),
+        ("island", "Smith & Jones families · 3"),
         ("loners", "Not connected to anyone"),
     ]
     by_id = {n["id"]: n for n in layout["nodes"]}
     smith = next(l for l in layout["labels"] if l["text"].startswith("Smith"))
+    assert next(l for l in layout["labels"] if l["text"].startswith("Abel"))
     xs = [by_id[i]["x"] for i in "abc"]
     assert min(xs) <= smith["x"] <= max(xs) + 160
+
+
+def test_a_mixed_island_names_its_three_commonest_surnames(make_tree):
+    tree = make_tree([
+        {"id": "a", "given": "A", "surname": "Dunn"}, {"id": "b", "given": "B", "surname": "Dunn", "parents": ["a"]},
+        {"id": "c", "given": "C", "surname": "Dunn", "parents": ["a"]}, {"id": "d", "given": "D", "surname": "Roe", "parents": ["a"]},
+        {"id": "e", "given": "E", "surname": "Roe", "parents": ["a"]}, {"id": "f", "given": "F", "surname": "Kay", "parents": ["a"]},
+        {"id": "g", "given": "G", "surname": "Zed", "parents": ["a"]},
+        {"id": "z", "given": "Z", "surname": "Solo"},
+    ])
+    texts = [l["text"] for l in compute_layout(tree)["labels"] if l["kind"] == "island"]
+    assert texts == ["Dunn, Roe & Kay families · 7"]

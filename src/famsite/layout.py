@@ -419,14 +419,19 @@ def _shifted(layout: dict, dx: float) -> dict:
 
 
 def _island_label(tree: Tree, group: list[str], nodes: list[dict]) -> dict:
-    """The label for one island: its commonest surname (ties: alphabetical) and size, at the centre of its boxes."""
+    """The label for one island: its three commonest surnames (ties: alphabetical) and size, at the centre of its boxes."""
     counts: dict[str, int] = {}
     for pid in group:
         surname = (tree.people[pid].surname or "").strip()
         if surname:
             counts[surname] = counts.get(surname, 0) + 1
-    best = min(counts, key=lambda name: (-counts[name], name)) if counts else None
-    text = f"{best} family · {len(group)}" if best else f"Family · {len(group)}"
+    top = sorted(counts, key=lambda name: (-counts[name], name))[:3]  # the three commonest, ties alphabetical
+    if not top:
+        text = f"Family · {len(group)}"
+    elif len(top) == 1:
+        text = f"{top[0]} family · {len(group)}"
+    else:
+        text = f"{', '.join(top[:-1])} & {top[-1]} families · {len(group)}"
     left = min(n["x"] for n in nodes)
     right = max(n["x"] + n["w"] for n in nodes)
     top = min(n["y"] for n in nodes)

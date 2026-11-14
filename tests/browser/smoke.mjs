@@ -398,6 +398,13 @@ async function main() {
   const direct = await ev(`document.querySelector('#tree > g').getAttribute('transform')`);
   check('the tree opens the same after the timeline as when opened directly', afterTimeline === direct, afterTimeline + ' vs ' + direct);
 
+  // ---- site pages lay out as one column
+  for (const path of ['/index.html', '/people/index.html', '/places/index.html', '/relate/index.html']) {
+    await send('Page.navigate', { url: base + path }); await sleep(700);
+    const col = await ev(`(() => { const m = document.querySelector('main'); const kids = [...m.children].filter((c) => !c.hidden && c.getBoundingClientRect().height > 0); const tops = kids.map((c) => c.getBoundingClientRect().top); const input = document.querySelector('main input[type="search"]'); return { stacked: tops.every((t, i) => i === 0 || t >= tops[i - 1]) && new Set(kids.map((c) => Math.round(c.getBoundingClientRect().left))).size === 1, inputH: input ? input.getBoundingClientRect().height : 0 }; })()`);
+    check('the ' + path + ' page is one stacked column with a normal search box', col.stacked && col.inputH < 60, JSON.stringify(col));
+  }
+
   // ---- phone
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: base + '/tree.html#/tree/ellsworth-maude' });

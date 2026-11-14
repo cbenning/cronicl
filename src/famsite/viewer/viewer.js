@@ -1329,6 +1329,16 @@
         updateControls();
       }
 
+      // Wheel, drag and key events can arrive faster than the screen redraws: draw once per frame.
+      var frame = 0;
+      function renderSoon() {
+        if (frame) return;
+        frame = requestAnimationFrame(function () {
+          frame = 0;
+          render();
+        });
+      }
+
       function panBy(dx) {
         tx += dx;
         render();
@@ -1509,7 +1519,7 @@
         if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
         tx = drag.tx + dx;
         ty = drag.ty + dy;
-        render();
+        renderSoon();
       });
       function endDrag() {
         drag = null;
@@ -1529,7 +1539,7 @@
           panBy(-(e.deltaX || e.deltaY)); // sideways swipe / Shift+wheel
         } else {
           ty -= e.deltaY; // a plain wheel scrolls the rows
-          render();
+          renderSoon();
         }
       }, { passive: false });
 
