@@ -121,7 +121,7 @@ def test_gallery_in_a_real_browser(tmp_path):
     gallery_base = f"http://127.0.0.1:{gallery.server_address[1]}"
 
     data, out = tmp_path / "fam", tmp_path / "out"
-    assert main(["init", "--dir", str(data)]) == 0
+    assert main(["init", "--legacy-layout", "--dir", str(data)]) == 0
     (data / "site.yml").write_text(
         "title: T\nschema_version: 2\nprivacy:\n  living: placeholder\n  cutoff_years: 100\n"
         f"gallery:\n  type: fussel\n  label: Family photos\n  url: {gallery_base}/photos\n",

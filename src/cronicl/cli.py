@@ -18,7 +18,9 @@ from .core.gaps import find_gaps
 from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import
 from .site.history import recent_changes
 from .core.generations import LayoutError
-from .core.new import plan_new
+from .core.family import has_family
+from .core.new import append_text, plan_new, plan_new_family
+from .core.show import describe
 from .core.living import is_living
 from .site.settings import privacy_settings
 from .core.relations import build_relations
@@ -83,6 +85,26 @@ def _git_dirty(path: Path) -> bool | None:
     return bool(status.stdout.strip())
 
 
+FAMILY_YML = """\
+# family.yml: the whole family, in one file.
+#
+# A person is a record keyed by an id (surname first is a good habit); a couple is a record keyed by two ids
+# joined by a plus sign. A child names its parents, so nothing is written twice.
+#
+# lovelace-ada:
+#   name: {given: Augusta Ada, surname: Lovelace}
+#   birth: {date: 1815-12-10, place: "London, England"}
+#   death: 1852-11-27
+#   parents: [byron-george, milbanke-annabella]
+#
+# king-william + lovelace-ada:
+#   events:
+#     - {type: marriage, date: 1835-07-08, place: "Ockham, Surrey"}
+#
+# Add people with `cronicl new`, check the file with `cronicl check`, see the result with `cronicl serve`.
+"""
+
+
 def cmd_init(args) -> int:
     root = Path(args.dir)
     root.mkdir(parents=True, exist_ok=True)
@@ -90,10 +112,14 @@ def cmd_init(args) -> int:
     if site.exists():
         print(f"error: {site} already exists", file=sys.stderr)
         return 2
-    for folder in ("people", "archive", "media"):
+    legacy = getattr(args, "legacy_layout", False)  # temporary: removed together with the old per-person layout
+    for folder in (("people", "archive", "media") if legacy else ("archive", "media")):
         (root / folder).mkdir(parents=True, exist_ok=True)
         (root / folder / ".gitkeep").touch()
-    site.write_text(SITE_YML.format(salt=secrets.token_hex(8)), encoding="utf-8")
+    site_text = SITE_YML.format(salt=secrets.token_hex(8))
+    site.write_text(site_text if legacy else site_text.replace("schema_version: 2", "schema_version: 3"), encoding="utf-8")
+    if not legacy:
+        (root / "family.yml").write_text(FAMILY_YML, encoding="utf-8")
     gitignore = root / ".gitignore"
     if not gitignore.exists():
         gitignore.write_text("out/\n", encoding="utf-8")
@@ -239,7 +265,34 @@ def cmd_gaps(args) -> int:
     return 0
 
 
+def cmd_show(args) -> int:
+    tree, _ = load_tree(Path(args.dir))
+    if args.id not in tree.people:
+        raise EditError(f"no person {args.id!r}; use cronicl search to find ids")
+    print(describe(tree, build_relations(tree), args.id), end="")
+    return 0
+
+
+def _cmd_new_family(args) -> int:
+    pid, target, text = plan_new_family(
+        Path(args.dir), given=args.given, surname=args.surname, sex=args.sex, birth=args.birth,
+        birth_place=args.birth_place, death=args.death, death_place=args.death_place, parents=args.parents or [],
+        partners=args.partner or [], new_id=args.id, file=args.file,
+    )
+    rel = target.relative_to(Path(args.dir)).as_posix()
+    if not args.apply:
+        print(f"append to {rel}:")
+        print(text, end="")
+        print("dry run; re-run with --apply (-a) to write this")
+        return 0
+    append_text(target, text)
+    print(f"added {pid} to {rel}")
+    return 0
+
+
 def cmd_new(args) -> int:
+    if has_family(Path(args.dir)):
+        return _cmd_new_family(args)
     person = plan_new(
         Path(args.dir), given=args.given, surname=args.surname, sex=args.sex,
         birth=args.birth, birth_place=args.birth_place, death=args.death, death_place=args.death_place,
@@ -312,12 +365,17 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("init", parents=[common], help="create a new cronicl folder")
+    p.add_argument("--legacy-layout", action="store_true", help=argparse.SUPPRESS)
     p.set_defaults(func=cmd_init)
 
     p = sub.add_parser("check", aliases=["validate"], parents=[common], help="report problems (read-only); also named validate")
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.add_argument("--strict", action="store_true", help="exit 1 on warnings too")
     p.set_defaults(func=cmd_check)
+
+    p = sub.add_parser("show", parents=[common], help="print one person as the site sees them (read-only)")
+    p.add_argument("id", help="a person id (find ids with `cronicl search`)")
+    p.set_defaults(func=cmd_show)
 
     p = sub.add_parser("search", parents=[common], help="fuzzy-find people and print their ids (read-only)")
     p.add_argument("query", nargs="+", help="words to look for in names, ids, years and places")
@@ -333,7 +391,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("new", parents=[common], help="create one person file (preview unless --apply)")
     p.add_argument("--given")
     p.add_argument("--surname")
-    p.add_argument("--sex", choices=["M", "F", "U"], default="U")
+    p.add_argument("--sex", choices=["M", "F", "U", "male", "female", "unknown", "other"], default="U")
+    p.add_argument("--id", help="the new person's id (default: surname-given)")
+    p.add_argument("--partner", nargs="+", metavar="ID", help="also add an empty couple record with each of these people")
+    p.add_argument("--file", help="for a family/ folder: the file to add to")
     p.add_argument("--birth", metavar="DATE")
     p.add_argument("--birth-place", metavar="PLACE")
     p.add_argument("--death", metavar="DATE")

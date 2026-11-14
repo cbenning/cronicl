@@ -79,7 +79,7 @@ PEOPLE = {
 
 def make(tmp_path, write, site=None, person=GOOD_PERSON):
     data = tmp_path / "data"
-    assert run("init", "--dir", data) == 0
+    assert run("init", "--legacy-layout", "--dir", data) == 0
     if site is not None:
         write(data, "site.yml", site)
     write(data, "people/a.md", person)

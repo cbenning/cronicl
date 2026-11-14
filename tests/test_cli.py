@@ -14,18 +14,18 @@ def tree_files(root: Path):
 
 
 def test_init_creates_a_data_repo_and_refuses_to_overwrite(tmp_path):
-    assert run("init", "--dir", tmp_path) == 0
+    assert run("init", "--legacy-layout", "--dir", tmp_path) == 0
     site = (tmp_path / "site.yml").read_text(encoding="utf-8")
     assert "schema_version: 2" in site
     assert re.search(r"id_salt: [0-9a-f]{16}", site)
     assert "living: full" in site  # redaction is opt-in
     assert (tmp_path / "people").is_dir() and (tmp_path / "archive").is_dir()
     assert not (tmp_path / "unions").exists()
-    assert run("init", "--dir", tmp_path) == 2
+    assert run("init", "--legacy-layout", "--dir", tmp_path) == 2
 
 
 def test_check_exit_codes_and_json(tmp_path, write, capsys):
-    run("init", "--dir", tmp_path)
+    run("init", "--legacy-layout", "--dir", tmp_path)
     write(tmp_path, "people/bob.md", "---\nid: smith-bob\nname: Bob Smith\nparents: [ghost]\n---\n")
     capsys.readouterr()
     assert run("check", "--dir", tmp_path, "--format", "json") == 1
@@ -35,14 +35,14 @@ def test_check_exit_codes_and_json(tmp_path, write, capsys):
 
 
 def test_check_warnings_only_pass_unless_strict(tmp_path, write):
-    run("init", "--dir", tmp_path)
+    run("init", "--legacy-layout", "--dir", tmp_path)
     write(tmp_path, "people/bob.md", "---\nid: smith-bob\nname: Bob Smith\n---\n")
     assert run("check", "--dir", tmp_path) == 0
     assert run("check", "--dir", tmp_path, "--strict") == 1
 
 
 def test_fix_dry_run_then_apply(tmp_path, write):
-    run("init", "--dir", tmp_path)
+    run("init", "--legacy-layout", "--dir", tmp_path)
     write(tmp_path, "people/bob.md", "---\nid: smith-bob\nname: Bob Smith\n---\n")
     assert run("fix", "--dir", tmp_path) == 0
     assert (tmp_path / "people" / "bob.md").exists()
@@ -52,7 +52,7 @@ def test_fix_dry_run_then_apply(tmp_path, write):
 
 
 def test_import_dry_run_writes_nothing(tmp_path, sample_ged, capsys):
-    run("init", "--dir", tmp_path)
+    run("init", "--legacy-layout", "--dir", tmp_path)
     before = tree_files(tmp_path)
     capsys.readouterr()
     assert run("import-gedcom", sample_ged, "--dir", tmp_path) == 0
@@ -62,7 +62,7 @@ def test_import_dry_run_writes_nothing(tmp_path, sample_ged, capsys):
 
 
 def test_import_rejects_ansel_with_exit_2(tmp_path):
-    run("init", "--dir", tmp_path)
+    run("init", "--legacy-layout", "--dir", tmp_path)
     bad = tmp_path / "bad.ged"
     bad.write_bytes(b"0 HEAD\n1 CHAR ANSEL\n")
     assert run("import-gedcom", bad, "--dir", tmp_path, "--apply") == 2
@@ -71,7 +71,7 @@ def test_import_rejects_ansel_with_exit_2(tmp_path):
 def test_end_to_end_import_check_build(tmp_path, sample_ged):
     data = tmp_path / "data"
     out = tmp_path / "out"
-    run("init", "--dir", data)
+    run("init", "--legacy-layout", "--dir", data)
     site = data / "site.yml"
     site.write_text(site.read_text(encoding="utf-8").replace("living: full", "living: placeholder"), encoding="utf-8")
     assert run("import-gedcom", sample_ged, "--dir", data, "--apply") == 0
@@ -89,7 +89,7 @@ def test_end_to_end_import_check_build(tmp_path, sample_ged):
 
 def test_build_is_deterministic_end_to_end(tmp_path, sample_ged):
     data = tmp_path / "data"
-    run("init", "--dir", data)
+    run("init", "--legacy-layout", "--dir", data)
     run("import-gedcom", sample_ged, "--dir", data, "--apply")
     run("build", "--dir", data, "--out", tmp_path / "a")
     run("build", "--dir", data, "--out", tmp_path / "b")
@@ -98,7 +98,7 @@ def test_build_is_deterministic_end_to_end(tmp_path, sample_ged):
 
 def test_a_person_added_by_one_new_file_appears_in_the_build(tmp_path, sample_ged, write):
     data = tmp_path / "data"
-    run("init", "--dir", data)
+    run("init", "--legacy-layout", "--dir", data)
     run("import-gedcom", sample_ged, "--dir", data, "--apply")
     # One new file: a new ancestor declared only by a down-reference to an existing person.
     write(
@@ -114,7 +114,7 @@ def test_a_person_added_by_one_new_file_appears_in_the_build(tmp_path, sample_ge
 
 def test_build_refuses_when_check_has_errors(tmp_path, write):
     # Review focus 5: a cycle must block the build, not hang it.
-    run("init", "--dir", tmp_path)
+    run("init", "--legacy-layout", "--dir", tmp_path)
     write(tmp_path, "people/a.md", "---\nid: a\nname: A\nparents:\n  - a\n---\n")
     assert run("build", "--dir", tmp_path, "--out", tmp_path / "out") == 1
     assert not (tmp_path / "out" / "index.html").exists()
@@ -130,7 +130,7 @@ def test_schema_prints_valid_json(capsys):
 
 def test_build_does_not_redact_unless_asked(tmp_path, sample_ged):
     data = tmp_path / "data"
-    run("init", "--dir", data)  # init writes privacy.living: full
+    run("init", "--legacy-layout", "--dir", data)  # init writes privacy.living: full
     run("import-gedcom", sample_ged, "--dir", data, "--apply")
     run("build", "--dir", data, "--out", tmp_path / "out")
     index = (tmp_path / "out" / "index.json").read_text(encoding="utf-8")
@@ -168,7 +168,7 @@ def test_serve_sends_no_cache_headers_so_a_rebuilt_viewer_is_never_stale(tmp_pat
 
 def test_build_warns_when_living_people_are_published(tmp_path, write, capsys):
     root = tmp_path / "fam"
-    assert main(["init", "--dir", str(root)]) == 0
+    assert main(["init", "--legacy-layout", "--dir", str(root)]) == 0
     write(root, "people/kid.md", "---\nname:\n  given: Kid\nbirth: 1990\n---\n")
     write(root, "people/old.md", "---\nname:\n  given: Old\nbirth: 1800\n---\n")
     assert main(["build", "--dir", str(root)]) == 0
@@ -178,7 +178,7 @@ def test_build_warns_when_living_people_are_published(tmp_path, write, capsys):
 
 def test_build_is_quiet_when_redaction_is_on(tmp_path, write, capsys):
     root = tmp_path / "fam"
-    assert main(["init", "--dir", str(root)]) == 0
+    assert main(["init", "--legacy-layout", "--dir", str(root)]) == 0
     site = root / "site.yml"
     site.write_text(site.read_text().replace("living: full", "living: placeholder"))
     write(root, "people/kid.md", "---\nname:\n  given: Kid\nbirth: 1990\n---\n")
@@ -187,13 +187,13 @@ def test_build_is_quiet_when_redaction_is_on(tmp_path, write, capsys):
 
 
 def test_init_creates_media_folder(tmp_path):
-    assert main(["init", "--dir", str(tmp_path / "fam")]) == 0
+    assert main(["init", "--legacy-layout", "--dir", str(tmp_path / "fam")]) == 0
     assert (tmp_path / "fam" / "media" / ".gitkeep").exists()
 
 
 def test_build_refuses_to_write_over_the_data_folder(tmp_path, write):
     root = tmp_path / "fam"
-    assert main(["init", "--dir", str(root)]) == 0
+    assert main(["init", "--legacy-layout", "--dir", str(root)]) == 0
     write(root, "people/a.md", "---\nname: A\n---\n")
     (root / "media").mkdir(exist_ok=True)
     (root / "media" / "keep.jpg").write_bytes(b"x")
@@ -205,7 +205,7 @@ def test_build_refuses_to_write_over_the_data_folder(tmp_path, write):
 
 def _site_with_a_living_person(tmp_path, write, site_yml):
     data = tmp_path / "data"
-    run("init", "--dir", data)
+    run("init", "--legacy-layout", "--dir", data)
     write(data, "site.yml", site_yml)
     write(data, "people/kid.md", "---\nid: kid\nname:\n  given: Secretname\n  surname: Livingperson\nbirth: 2020\n---\n")
     return data
@@ -260,7 +260,7 @@ def test_warning_summary_formats():
 
 def test_build_prints_one_summary_line_for_warnings(tmp_path, write, capsys):
     data = tmp_path / "data"
-    run("init", "--dir", data)
+    run("init", "--legacy-layout", "--dir", data)
     write(data, "people/a.md", "---\nid: a\nname: Ann Lee\nbirht: 1950\nlivng: no\nliving: maybe\n---\n")
     capsys.readouterr()
     assert run("build", "--dir", data, "--out", tmp_path / "out") == 0
@@ -271,7 +271,7 @@ def test_build_prints_one_summary_line_for_warnings(tmp_path, write, capsys):
 
 def test_build_prints_errors_in_full_and_stops(tmp_path, write, capsys):
     data = tmp_path / "data"
-    run("init", "--dir", data)
+    run("init", "--legacy-layout", "--dir", data)
     write(data, "people/a.md", "---\nid: a\nname: Ann Lee\nparents: [ghost]\n---\n")
     capsys.readouterr()
     assert run("build", "--dir", data, "--out", tmp_path / "out") == 1
@@ -280,7 +280,7 @@ def test_build_prints_errors_in_full_and_stops(tmp_path, write, capsys):
 
 def test_validate_is_an_alias_for_check(tmp_path, write, capsys):
     data = tmp_path / "data"
-    run("init", "--dir", data)
+    run("init", "--legacy-layout", "--dir", data)
     write(data, "people/a.md", "---\nid: a\nname: Ann Lee\nbirht: 1950\n---\n")
     capsys.readouterr()
     code_check = run("check", "--dir", data, "--format", "json")
@@ -311,7 +311,7 @@ def test_a_list_used_as_a_key_is_an_error_not_a_crash(tmp_path, write, capsys, s
 
 def test_a_list_used_as_a_key_in_a_person_file_is_an_error(tmp_path, write, capsys):
     data = tmp_path / "data"
-    run("init", "--dir", data)
+    run("init", "--legacy-layout", "--dir", data)
     write(data, "people/a.md", "---\nname: A\n[note]: hello\n---\n")
     capsys.readouterr()
     assert run("check", "--dir", data) == 1
@@ -334,7 +334,7 @@ def test_a_text_cutoff_really_applies(tmp_path, write):
     person = f"---\nid: mid\nname:\n  given: Midlife\n  surname: Person\nbirth: {born}\n---\n"
     for cutoff, shown in (("25", True), ("100", False)):
         data = tmp_path / f"data{cutoff}"
-        run("init", "--dir", data)
+        run("init", "--legacy-layout", "--dir", data)
         write(data, "site.yml", f"schema_version: 2\nprivacy:\n  living: placeholder\n  cutoff_years: '{cutoff}'\n  id_salt: s\n")
         write(data, "people/mid.md", person)
         assert run("build", "--dir", data, "--out", tmp_path / f"out{cutoff}") == 0

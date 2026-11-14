@@ -8,7 +8,7 @@ from cronicl.core.store import load_tree
 @pytest.fixture
 def root(tmp_path, write):
     root = tmp_path / "fam"
-    assert main(["init", "--dir", str(root)]) == 0
+    assert main(["init", "--legacy-layout", "--dir", str(root)]) == 0
     write(root, "people/smith-john.md", "---\nid: smith-john\nname:\n  given: John\n  surname: Smith\n---\n")
     write(root, "people/brown-mary.md", "---\nid: brown-mary\nname:\n  given: Mary\n  surname: Brown\n---\n")
     write(root, "people/smith-amy.md", "---\nid: smith-amy\nname:\n  given: Amy\n  surname: Smith\n---\n")

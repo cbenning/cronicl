@@ -38,7 +38,7 @@ def find_chrome() -> str | None:
 def test_viewer_in_a_real_browser(tmp_path, sample_ged):
     data = tmp_path / "fam"
     out = tmp_path / "out"
-    assert main(["init", "--dir", str(data)]) == 0
+    assert main(["init", "--legacy-layout", "--dir", str(data)]) == 0
     assert main(["import-gedcom", str(sample_ged), "--dir", str(data), "-a"]) == 0
     (data / "people" / "ellsworth-maude.md").write_text(
         "---\nid: ellsworth-maude\nname:\n  given: Maude Sylvie Marnie\n  surname: Ellsworth\n"
