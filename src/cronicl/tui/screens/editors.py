@@ -114,9 +114,9 @@ class ChoiceEditor(_Base):
 
     BINDINGS = [Binding("escape", "cancel", "Cancel"), Binding("down", "move(1)", show=False), Binding("up", "move(-1)", show=False)]
 
-    def __init__(self, title: str, options: list[tuple[str, str]], value: str = "", free: bool = False) -> None:
+    def __init__(self, title: str, options: list[tuple[str, str]], value: str = "", free: bool = False, blank: str | None = None) -> None:
         super().__init__(title, value)
-        self.options, self.free = options, free  # [(value, description)]
+        self.options, self.free, self.blank = options, free, blank  # [(value, description)]; `blank` labels a "none" row
         self._values: list[str] = []
 
     def compose(self) -> ComposeResult:
@@ -137,6 +137,9 @@ class ChoiceEditor(_Base):
         choices.clear_options()
         self._values = []
         rows: list[Option] = []
+        if self.blank and not typed.strip():
+            self._values.append("")
+            rows.append(Option(f"[dim]{self.blank}[/dim]", id="blank"))
         if self.free and typed.strip():
             self._values.append(typed.strip())
             rows.append(Option(f'Use "{typed.strip()}"', id="use"))
@@ -271,9 +274,9 @@ def editor_for(app, record_key: str, path: tuple, value: str):
     if kind == "longtext":
         return LongTextEditor(title, value)
     if kind == "place":
-        return ChoiceEditor(title, [(p, "") for p in family.places()], value, free=True)
+        return ChoiceEditor(title, [(p, "") for p in family.places()], value, free=True, blank="(none: leave it out)")
     if kind == "file":
-        return ChoiceEditor(title, [(f, "") for f in family.media_files()], value, free=True)
+        return ChoiceEditor(title, [(f, "") for f in family.media_files()], value, free=True, blank="(none: leave it out)")
     if kind == "people":
         own = record_key
         others = {p for p in family.tree.people[own].parents if p != value} if own in family.tree.people else set()

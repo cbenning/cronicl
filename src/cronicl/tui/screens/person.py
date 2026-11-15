@@ -8,9 +8,13 @@ from textual.screen import Screen
 from textual.widgets import Footer, OptionList, Static
 from textual.widgets.option_list import Option
 
-from ...core.recordedit import EditRefused, remove, set_value
+from ...core.catalog import FIELDS
+from ...core.recordedit import EditRefused, add_couple_event, add_couple_record, couple_key, list_add, record_data, remove, set_value
 from ..recordview import Row, build
-from .editors import PeoplePicker, editor_for
+from .editors import PeoplePicker, TextEditor, catalog_key, editor_for
+from .modals import Confirm, Prompt
+from .palette import VALUE_EVENT_TYPES, PaletteScreen, build_entries
+from .raw import RawScreen
 
 
 def row_text(row: Row, indent_extra: int = 0) -> Text:
@@ -39,6 +43,9 @@ def row_text(row: Row, indent_extra: int = 0) -> Text:
 class PersonScreen(Screen):
     BINDINGS = [
         Binding("escape", "back", "Back"),
+        Binding("a", "palette", "Add field"),
+        Binding("d", "delete", "Delete line"),
+        Binding("ctrl+e", "raw", "Raw YAML"),
         Binding("o", "open_partner", "Open partner"),
         Binding("ctrl+q", "app.quit", "Quit"),
     ]
@@ -253,3 +260,149 @@ class PersonScreen(Screen):
 
     def action_back(self) -> None:
         self.app.pop_screen()
+
+    # ---- which record the cursor is in -------------------------------------------------------------------------------
+    def _record_context(self):
+        """("person", key, source) or ("couple", partner, key, source) for the highlighted line."""
+        target = self._target()
+        person = self.family.tree.people[self.pid]
+        if target and target[0] in ("partner", "couple_row"):
+            partner = target[1]
+            found = self.family.couple_key_text(self.pid, partner)
+            if found:
+                return ("couple", partner, found[0], found[1])
+            return ("couple", partner, couple_key(self.pid, partner), person.source)
+        return ("person", None, self.pid, person.source)
+
+    def _stage(self, source: str, build, keep_path: tuple | None = None) -> bool:
+        try:
+            new = build(self.app.session.staged[source])
+        except EditRefused as exc:
+            self.app.notify(str(exc), severity="error")
+            return False
+        self.keep_path = keep_path
+        self.app.session.stage(source, new)
+        return True
+
+    # ---- the field palette -------------------------------------------------------------------------------------------
+    def action_palette(self) -> None:
+        kind, partner, key, source = self._record_context()
+        present: set[tuple] = set()
+        parent_count = 0
+        text = self.app.session.staged[source]
+        try:
+            data = record_data(text, key)
+        except EditRefused:
+            data = {}
+        for name, value in data.items():
+            present.add((name,))
+            if isinstance(value, dict):
+                present.update((name, sub) for sub in value)
+        parent_count = len(data.get("parents") or [])
+        entries = build_entries(kind, present, parent_count)
+        title = f"Add to {self.family.name_of(self.pid)}" if kind == "person" else f"Add to the couple {self.family.name_of(self.pid)} + {self.family.name_of(partner)}"
+        self.app.push_screen(PaletteScreen(title, entries), lambda action: self._palette_chosen(action, (kind, partner, key, source)))
+
+    def _palette_chosen(self, action, context) -> None:
+        if action is None:
+            return
+        kind, partner, key, source = context
+        name = action[0]
+        if name == "field":
+            self._add_field(action[1], key, source)
+        elif name == "event":
+            self._add_event(action[1], context)
+        elif name == "custom":
+            self.app.push_screen(Prompt("Name of your field (it starts with x-)", placeholder="x-nickname"), lambda k: self._custom_key(k, key, source))
+        else:
+            self.app.notify("Partners and children are added in the next step", severity="warning")
+
+    def _add_field(self, field, key: str, source: str) -> None:
+        steps = tuple(field.path.split("."))
+        if field.path in ("birth", "death"):
+            steps = (field.path, "date")
+        elif field.path == "parents":
+            steps = ("parents", 0)
+        path = (key, *steps)
+        screen = editor_for(self.app, key, path, "")
+        if screen is None:
+            return
+
+        def done(value, path=path, field=field) -> None:
+            if not value:
+                return
+            if field.path == "parents":
+                if value == PeoplePicker.NEW:
+                    self.app.notify("New people are added in the next step", severity="warning")
+                    return
+                self._stage(source, lambda t: list_add(t, (key, "parents"), value), (key, "parents", 0))
+            elif field.path == "name.also":
+                self._stage(source, lambda t: list_add(t, (key, "name", "also"), value))
+            else:
+                self._stage(source, lambda t: set_value(t, path, value), path)
+
+        self.app.push_screen(screen, done)
+
+    def _add_event(self, slug: str, context) -> None:
+        kind, partner, key, source = context
+        event = {"type": slug}
+        if kind == "couple":
+            a, b = (self.pid, partner)
+            found = self.family.couple_key_text(a, b)
+            if found is None:
+                build = lambda t: add_couple_event(t, a, b, event)  # noqa: E731
+                key = couple_key(a, b)
+            else:
+                build = lambda t: list_add(t, (key, "events"), event)  # noqa: E731
+        else:
+            build = lambda t: list_add(t, (key, "events"), event)  # noqa: E731
+        if not self._stage(source, build):
+            return
+        events = record_data(self.app.session.staged[source], key).get("events") or []
+        index = len(events) - 1
+        order = (["value"] if slug in VALUE_EVENT_TYPES else []) + ["date", "place"]
+        self._ask_event_fields(key, source, index, order)
+
+    def _ask_event_fields(self, key: str, source: str, index: int, remaining: list[str]) -> None:
+        if not remaining:
+            return
+        field, rest = remaining[0], remaining[1:]
+        path = (key, "events", index, field)
+        screen = editor_for(self.app, key, path, "")
+
+        def done(value) -> None:
+            if value is None:
+                return
+            if value:
+                self._stage(source, lambda t: set_value(t, path, value), path)
+            self._ask_event_fields(key, source, index, rest)
+
+        self.app.push_screen(screen, done)
+
+    def _custom_key(self, name: str | None, key: str, source: str) -> None:
+        if not name:
+            return
+        if not name.lower().startswith(("x-", "x_")):
+            self.app.notify("Your own fields start with x- so they are never reported", severity="warning")
+            return
+        path = (key, name)
+        self.app.push_screen(
+            TextEditor(name, ""), lambda value: value and self._stage(source, lambda t: set_value(t, path, value), path)
+        )
+
+    # ---- delete and raw ----------------------------------------------------------------------------------------------
+    def action_delete(self) -> None:
+        target = self._target()
+        if not target or target[0] not in ("row", "couple_row"):
+            return
+        row = target[-1]
+        if row.comment_only or not row.path or len(row.path) < 2:
+            return
+        source = self._source_of(target)
+        label = f"{row.label} {row.value}".strip() if row.kind != "group" else row.label
+        what = f"“{label}” and everything under it" if row.kind in ("group", "item") else f"“{label}”"
+        self.app.push_screen(Confirm(f"Remove {what}?", "Remove"), lambda yes, row=row, source=source: yes and self._stage(source, lambda t: remove(t, row.path)))
+
+    def action_raw(self) -> None:
+        kind, partner, key, source = self._record_context()
+        self.app.push_screen(RawScreen(self.app.session, key, source))
