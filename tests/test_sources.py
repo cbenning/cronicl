@@ -84,3 +84,9 @@ def test_output_is_deterministic(tmp_path, write_family):
     a = build(tmp_path / "1", write_family)
     b = build(tmp_path / "2", write_family)
     assert (a / "sources" / "index.html").read_bytes() == (b / "sources" / "index.html").read_bytes()
+
+
+def test_the_same_source_twice_on_one_fact_is_one_footnote(tmp_path, write_family):
+    out = build(tmp_path, write_family, family='a:\n  name: {given: A}\n  birth: {date: 1900, cite: ["x", "x "]}\n  death: 1950\n')
+    page = (out / "p" / "a" / "index.html").read_text(encoding="utf-8")
+    assert page.count('class="cite-ref"') == 1

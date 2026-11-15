@@ -5,6 +5,7 @@ written as a placeholder (`NAME Living`, links only) or left out, exactly as the
 """
 from __future__ import annotations
 
+import hashlib
 import re
 from datetime import date
 
@@ -24,6 +25,7 @@ _TAG_FOR_TYPE = {
     "nationality": ("NATI", True), "graduation": ("GRAD", False), "retirement": ("RETI", False),
     "census": ("CENS", False), "will": ("WILL", False), "probate": ("PROB", False),
 }
+_MAPPED_TAGS = {"BIRT", "DEAT", "NAME", "NOTE", *(tag for tag, _ in _TAG_FOR_TYPE.values())}
 _XREF_OK = re.compile(r"^[A-Za-z0-9_]{1,20}$")
 _EXTRA_LINE = re.compile(r"^\s*(\d+) (?:(@[^@\s]+@) )?(\S+)(?: (.*))?$")
 _POINTER_VALUE = re.compile(r"^@[^@\s]+@$")
@@ -84,6 +86,7 @@ class _Export:
         self.issues: list[Issue] = []
         redacting = mode in ("placeholder", "hidden") and not include_living
         self.living = {pid for pid, p in tree.people.items() if redacting and is_living(p, today, cutoff)}
+        self.places = {" ".join(str(k).split()).casefold(): v for k, v in places.items()}
         self.hidden = self.living if mode == "hidden" else set()
         self.today = today
         self.cites: dict[str, str] = {}
@@ -93,15 +96,21 @@ class _Export:
 
     # ---- cross references -------------------------------------------------------------------------------------
     def assign_xrefs(self) -> None:
-        taken: set[str] = set()
+        """Person references: `refs.gedcom` when usable and unique, else the next free `I<n>`. A redacted person never
+        keeps the original reference, and their numbers follow a hash of the id, not the sorted ids (which spell names)."""
+        taken: set[str] = {"SUBM"}
         want: dict[str, str] = {}
         for pid in sorted(self.tree.people):
             ref = (self.tree.people[pid].gedcom_id or "").strip("@")
-            if _XREF_OK.match(ref) and ref not in taken:
+            if pid not in self.living and pid not in self.hidden and _XREF_OK.match(ref) and ref not in taken:
                 taken.add(ref)
                 want[pid] = ref
+        shown = [pid for pid in sorted(self.tree.people) if pid not in self.hidden]
+        order = [p for p in shown if p not in self.living] + sorted(
+            (p for p in shown if p in self.living), key=lambda p: hashlib.sha256(p.encode()).hexdigest()
+        )
         counter = 0
-        for pid in sorted(self.tree.people):
+        for pid in order:
             if pid in want:
                 self.person_xref[pid] = f"@{want[pid]}@"
                 continue
@@ -113,6 +122,14 @@ class _Export:
                     self.person_xref[pid] = f"@{candidate}@"
                     break
         self.taken = taken
+        self.order = order
+
+    def fresh(self, prefix: str, number: int) -> str:
+        """`@<prefix><n>@`, moved on past any reference a person already uses."""
+        while f"{prefix}{number}" in self.taken:
+            number += 1
+        self.taken.add(f"{prefix}{number}")
+        return f"@{prefix}{number}@"
 
     def source_xref(self, text: str) -> str:
         return self.sources[text]
@@ -124,7 +141,7 @@ class _Export:
             w.line(level, "DATE", date_text)
         if place:
             w.line(level, "PLAC", place)
-            coords = self.places.get(place.strip().casefold())
+            coords = self.places.get(" ".join(place.split()).casefold())
             if coords:
                 w.line(level + 1, "MAP")
                 w.line(level + 2, "LATI", _coordinate(coords[0], "N", "S"))
@@ -169,7 +186,7 @@ class _Export:
         for entry in fam_entries:
             found.update(entry.cite)
         for number, text in enumerate(sorted(found), start=1):
-            self.sources[text] = f"@S{number}@"
+            self.sources[text] = self.fresh("S", number)
 
     def run(self) -> str:
         tree, w = self.tree, self.out
@@ -197,11 +214,12 @@ class _Export:
                 famc.setdefault(child, fam["xref"])
             for pid in fam["partners"]:
                 fams_of.setdefault(pid, []).append(fam["xref"])
-        for person in people:
-            self.individual(person, famc.get(person.id), fams_of.get(person.id, []))
+        by_id = {p.id: p for p in people}
+        for pid in sorted(by_id, key=lambda i: (i in self.living, "" if i not in self.living else hashlib.sha256(i.encode()).hexdigest(), i)):
+            self.individual(by_id[pid], famc.get(pid), fams_of.get(pid, []))
         for fam in fams:
             self.family(fam)
-        for text, xref in sorted(self.sources.items(), key=lambda item: int(item[1][2:-1])):
+        for text, xref in sorted(self.sources.items(), key=lambda item: item[0]):
             w.line(0, "SOUR", "", xref)
             w.line(1, "TITL", text)
         w.raw("0 TRLR")
@@ -243,9 +261,11 @@ class _Export:
 
         Their text is escaped again (the importer read `@@` as `@`). A line that points at another record (`@S9@`) or
         belongs to a family block is dropped with its sub-lines: the records it named are not in this file, and our
-        numbering differs from the original's, so a kept pointer could link to the wrong record.
+        numbering differs from the original's, so a kept pointer could link to the wrong record. What was set aside
+        under a tag the importer maps (`1 BURI` with an `AGE` line) is written under `_BURI`: written as BURI it would
+        be a second burial, and re-importing it would invent an event each time round.
         """
-        out: list[str] = []
+        blocks: list[list[str]] = []  # one entry per level-1 line: [head, its sub-lines...]
         skipping_from: int | None = None
         dropped_family = dropped_pointer = False
         for raw in self.extra[pid].split("\n"):
@@ -262,12 +282,18 @@ class _Export:
             if xref or _POINTER_VALUE.match(value.strip()):
                 skipping_from, dropped_pointer = level, True
                 continue
-            out.append(f"{level} {tag}" + (f" {value.replace('@', '@@')}" if value else ""))
+            if level == 1:
+                tag = "_" + tag if tag in _MAPPED_TAGS else tag
+                blocks.append([])
+            if not blocks:
+                continue
+            blocks[-1].append(f"{level} {tag}" + (f" {value.replace('@', '@@')}" if value else ""))
         if dropped_family:
             self.issues.append(Issue("W-GEDCOM-EXTRA-FAM", f"{pid}: lines about a family in archive/gedcom-extra.yml are not exported"))
         if dropped_pointer:
             self.issues.append(Issue("W-GEDCOM-EXTRA-POINTER", f"{pid}: lines in archive/gedcom-extra.yml that point at other records are not exported"))
-        return "\n".join(out)
+        kept = [b for b in blocks if len(b) > 1 or " " in b[0].split(" ", 1)[1].strip()]  # a bare parent says nothing
+        return "\n".join(line for block in kept for line in block)
 
     # ---- families ----------------------------------------------------------------------------------------------
     def plan_families(self) -> list[dict]:
@@ -299,18 +325,22 @@ class _Export:
             for index, entry in enumerate(groups):
                 number += 1
                 fams.append({
-                    "xref": f"@F{number}@", "partners": partners, "key": key, "entries": [] if redacted or entry is None else [entry],
+                    "xref": self.fresh("F", number), "partners": partners, "key": key, "entries": [] if redacted or entry is None else [entry],
                     "children": children if index == 0 else [],
                 })
         return fams
 
     def roles(self, partners: list[str]) -> list[tuple[str, str]]:
         people = self.tree.people
+
+        def sex(pid: str) -> str:
+            return "U" if pid in self.living else people[pid].sex  # a placeholder says nothing about sex
+
         if len(partners) == 1:
             only = partners[0]
-            return [("WIFE" if people[only].sex == "F" else "HUSB", only)]
+            return [("WIFE" if sex(only) == "F" else "HUSB", only)]
         a, b = partners
-        if (people[a].sex == "F" and people[b].sex != "F") or (people[b].sex == "M" and people[a].sex != "M"):
+        if (sex(a) == "F" and sex(b) != "F") or (sex(b) == "M" and sex(a) != "M"):
             a, b = b, a
         return [("HUSB", a), ("WIFE", b)]
 

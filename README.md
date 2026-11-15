@@ -43,7 +43,7 @@ lines and the order of records stay as you left them.
 | `edit mark-deceased ID... [-a]` | Write `death: unknown` for the named people (no date needed). All ids are validated first. |
 | `edit mark-living ID... [-a]` | Write `living: true` for the named people. |
 | `import-gedcom FILE [-a]` | One-time GEDCOM import into `family.yml`; archives the original file. |
-| `export-gedcom [--out FILE] [--include-living] [--no-extra]` | Write the family as a GEDCOM 5.5.1 file ([details](#gedcom-export)). Never changes your data. |
+| `export-gedcom [--out FILE] [--include-living] [--no-extra] [--ignore-errors]` | Write the family as a GEDCOM 5.5.1 file ([details](#gedcom-export)). Never changes your data; like `build`, it stops (exit 1) if `check` finds errors, unless `--ignore-errors`. |
 | `migrate [-a] [--allow-dirty]` | Convert an old `people/*.md` folder to `family.yml`. |
 | `build [--out OUT] [--ignore-errors]` | Run `check`, then generate the static site (default `OUT` is `<dir>/out`). |
 | `serve [--out OUT] [--port N] [--ignore-errors]` | Build and serve locally. |
@@ -615,9 +615,13 @@ an existing file.
 - **Symmetry with import:** what the importer maps survives `import-gedcom` then `export-gedcom` then
   `import-gedcom` unchanged, and a family written in `family.yml` using the things above survives export then
   import. Lines the importer could not map (kept in `archive/gedcom-extra.yml`) are written back under their
-  person; `--no-extra` leaves them out. Families, remarriages and sources keep their shape; couple events that
-  GEDCOM 5.5.1 has no tag for (`civil-union`, `separation` and the like) come back as unmapped `EVEN` lines, not as
-  couple events.
+  person, under `_`-prefixed tags where the importer maps the tag itself (an `AGE` line set aside under `BURI` comes
+  back as `_BURI`, so it never becomes a second burial); lines that point at other records or belong to a family
+  block are not written, and a warning counts them. `--no-extra` leaves them all out. Families, remarriages and
+  sources keep their shape. What GEDCOM 5.5.1 has no tag for does not come back as itself: couple events such as
+  `civil-union` and `separation`, and your own event types such as `pilgrimage`, are written as `EVEN` lines with
+  a `TYPE`, and a re-import sets those aside in `archive/gedcom-extra.yml`. A `SOUR` with a `PAGE` becomes `cite`
+  and the `PAGE` is kept with it in the same way.
 
 ## Map
 

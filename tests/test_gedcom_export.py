@@ -198,7 +198,7 @@ def test_set_aside_lines_that_point_at_other_records_are_not_written(tmp_path, w
     text, issues = export_gedcom(tree, today=TODAY, extra=extra)
     assert problems(text) == []
     assert "@S9@" not in text and "@F2@" not in text and "PEDI" not in text and "PAGE 12" not in text
-    assert "1 _TAG kept" in text and "1 NOTE mail me@@example.org" in text
+    assert "1 _TAG kept" in text and "1 _NOTE mail me@@example.org" in text  # a set-aside NOTE must not become a second note
     assert [i.code for i in issues] == ["W-GEDCOM-EXTRA-POINTER"]
 
 
@@ -227,3 +227,63 @@ def test_cli_prints_one_line_per_kind_of_warning(tmp_path, write_family, capsys)
     assert main(["export-gedcom", "--dir", str(tmp_path), "--out", str(tmp_path / "o.ged")]) == 0
     err = capsys.readouterr().err
     assert err.count("W-GEDCOM-EXTRA-FAM") == 1 and "2 times" in err
+
+
+def _redacted_family(tmp_path, write_family):
+    write_family(
+        tmp_path,
+        "mum:\n  name: {given: Zelda, surname: Secret}\n  sex: female\n  birth: 2000\n  refs: {gedcom: ZeldaSecret}\n"
+        "dad:\n  name: {given: Dan, surname: Secret}\n  sex: male\n  birth: 1999\n"
+        "kid:\n  name: {given: Kit, surname: Secret}\n  birth: 2020\n  parents: [dad, mum]\n"
+        "mum + dad:\n  events:\n    - {type: marriage, date: 2018}\n",
+    )
+    tree, _ = load_tree(tmp_path)
+    return tree
+
+
+def test_a_placeholder_reveals_neither_sex_nor_the_original_reference(tmp_path, write_family):
+    text = export(_redacted_family(tmp_path, write_family), mode="placeholder")
+    assert problems(text) == []
+    assert "ZeldaSecret" not in text and "1 SEX" not in text
+    # roles come from position, not from the real sexes
+    assert "1 HUSB" in text and "1 WIFE" in text
+
+
+def test_placeholder_numbers_do_not_follow_the_id_order(tmp_path, write_family):
+    from cronicl.core.gedcom_export import _Export
+
+    write_family(tmp_path, "".join(f"p{c}:\n  name: {{given: N{c}}}\n  birth: 2020\n" for c in "abcdefgh"))
+    tree, _ = load_tree(tmp_path)
+    run = _Export(tree, "placeholder", 100, TODAY, {}, {}, False)
+    run.assign_xrefs()
+    numbers = [int(run.person_xref[pid][2:-1]) for pid in sorted(tree.people)]
+    assert sorted(numbers) == list(range(1, 9)) and numbers != sorted(numbers)  # numbered, but not in id order
+    assert export(tree, mode="placeholder").count("1 NAME Living") == 8
+
+
+def test_family_source_and_submitter_references_never_collide_with_people(tmp_path, write_family):
+    write_family(
+        tmp_path,
+        "a:\n  name: {given: A}\n  refs: {gedcom: F1}\n  birth: {date: 1900, cite: X}\nb:\n  name: {given: B}\n  refs: {gedcom: S1}\n"
+        "c:\n  name: {given: C}\n  refs: {gedcom: SUBM}\n  parents: [a, b]\n",
+    )
+    tree, _ = load_tree(tmp_path)
+    assert problems(export(tree)) == []
+
+
+def test_legacy_approximate_dates_and_free_text_are_valid_gedcom(tmp_path, write_family):
+    write_family(tmp_path, "a:\n  name: {given: A}\n  birth: ~1850\n  death: spring 1900\n")
+    tree, _ = load_tree(tmp_path)
+    text = export(tree)
+    assert "2 DATE ABT 1850" in text and "2 DATE (spring 1900)" in text
+
+
+def test_a_place_with_inner_spaces_still_gets_its_coordinates(tmp_path, write_family):
+    write_family(tmp_path, "a:\n  name: {given: A}\n  birth: {date: 1900, place: \"Hamburg,  Germany\"}\n")
+    tree, _ = load_tree(tmp_path)
+    assert "3 MAP" in export(tree, places={"hamburg, germany": (53.5, 9.9)})
+
+
+def test_cli_reports_a_missing_output_folder(tmp_path, write_family, capsys):
+    write_family(tmp_path, "a:\n  name: {given: A}\n")
+    assert main(["export-gedcom", "--dir", str(tmp_path), "--out", str(tmp_path / "no" / "such" / "x.ged")]) == 2

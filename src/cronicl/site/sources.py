@@ -21,7 +21,9 @@ def annotate(payload: dict) -> tuple[dict, list[dict]]:
     """
     view = deepcopy(payload)
     items = [*view.get("facts", []), *view.get("events", [])]
-    numbers, sources = number_cites(item.get("cite") or [] for item in items)
+    for item in items:  # one footnote per source per fact, however it is spaced
+        item["cite"] = list(dict.fromkeys(t.strip() for t in item.get("cite") or [] if t.strip()))
+    numbers, sources = number_cites(item["cite"] for item in items)
     seen: set[int] = set()
     for item in items:
         marked = []

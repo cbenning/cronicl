@@ -293,7 +293,11 @@ def cmd_export_gedcom(args) -> int:
     if out is None:
         sys.stdout.write(text)
     else:
-        out.write_text(text, encoding="utf-8", newline="\n")
+        try:
+            out.write_text(text, encoding="utf-8", newline="\n")
+        except OSError as exc:
+            print(f"error: cannot write {out}: {exc.strerror or exc}", file=sys.stderr)
+            return 2
         print(f"wrote {out}: {text.count(chr(10))} lines", file=sys.stderr)
     return 0
 

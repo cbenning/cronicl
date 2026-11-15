@@ -26,7 +26,7 @@
   }
 
   function validTemplate(t) {
-    return typeof t === 'string' && /^https?:\/\//.test(t) && !/[\s"'<>`\\]/.test(t) &&
+    return typeof t === 'string' && /^https?:\/\//i.test(t) && !/[\s"'<>`\\]/.test(t) &&
       t.indexOf('{z}') > -1 && t.indexOf('{x}') > -1 && t.indexOf('{y}') > -1 && (t.match(/\{[^{}]*\}/g) || []).length === 3;
   }
 

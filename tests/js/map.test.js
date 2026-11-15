@@ -68,3 +68,7 @@ test('fit shows every point, centres them, and a single point is a city-level zo
   assert.strictEqual(m.fit([{ lat: 1, lon: 2 }], 800, 500, 40).z, 10);
   assert.deepStrictEqual(m.fit([], 800, 500, 40).z, m.MIN_Z);
 });
+
+test('the scheme of a tile template is not case sensitive, as in the build check', () => {
+  assert.ok(m.validTemplate('HTTPS://t.example/{z}/{x}/{y}.png'));
+});

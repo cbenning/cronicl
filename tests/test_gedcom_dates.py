@@ -30,6 +30,11 @@ def test_nothing_or_unknown_writes_no_date(text):
     assert to_gedcom(text) is None
 
 
-@pytest.mark.parametrize("text", ["around the turn of the century", "19x0", "~1850"])
-def test_unreadable_dates_are_returned_as_written(text):
-    assert to_gedcom(text) == text
+@pytest.mark.parametrize("text", ["around the turn of the century", "19x0"])
+def test_unreadable_dates_become_a_date_phrase(text):
+    assert to_gedcom(text) == f"({text})"
+    assert from_gedcom(f"({text})") == (text, False)  # and read back as the same text
+
+
+def test_the_legacy_approximate_form_is_about():
+    assert to_gedcom("~1850") == "ABT 1850"

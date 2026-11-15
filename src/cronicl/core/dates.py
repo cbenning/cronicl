@@ -221,6 +221,8 @@ def _gedcom_plain(text: str) -> str | None:
 def from_gedcom(text: str) -> tuple[str, bool]:
     """Convert a GEDCOM date phrase to cronicl form. Returns (value, ok); on failure value is the original text."""
     raw = text.strip()
+    if raw.startswith("(") and raw.endswith(")") and len(raw) > 2:
+        return raw[1:-1].strip(), False  # a date phrase: free text, as written
     up = " ".join(raw.upper().split())
     keyword = re.match(r"^(ABT|CAL|EST|BEF|AFT)\s+(.+)$", up)
     if keyword:
@@ -263,9 +265,10 @@ def to_gedcom(text: str | None) -> str | None:
     """
     if text is None or not text.strip() or is_unknown(text):
         return None
+    text = to_modern(text.strip())
     up = " ".join(text.upper().split())
     if parse_date(up) is None and parse_span(up) is None:
-        return text
+        return f"({text})"  # GEDCOM's way of writing a date as free text
 
     def plain(match: re.Match) -> str:
         year, month, day = match.groups()

@@ -68,7 +68,7 @@ def parse_nodes(text: str) -> tuple[list[Node], list[Issue]]:
         while stack and stack[-1].level >= level:
             stack.pop()
         if level == 0:
-            node = Node(0, tag.upper(), value.replace("@@", "@"), xref)
+            node = Node(0, tag.upper(), value, xref)
             roots.append(node)
             stack = [node]
             continue
@@ -84,9 +84,17 @@ def parse_nodes(text: str) -> tuple[list[Node], list[Issue]]:
         if upper == "CONC":
             parent.value += value
             continue
-        node = Node(level, upper, value.replace("@@", "@"), xref)
+        node = Node(level, upper, value, xref)
         parent.children.append(node)
         stack.append(node)
+
+    def unescape(node: Node) -> None:  # GEDCOM writes a literal @ as @@; only after CONT / CONC lines are joined
+        node.value = node.value.replace("@@", "@")
+        for child in node.children:
+            unescape(child)
+
+    for root in roots:
+        unescape(root)
     return roots, issues
 
 
@@ -166,10 +174,12 @@ def _event(node: Node, label: str, owner: str, extra: list[Node], issues: list[I
     notes: list[str] = []
     leftovers: list[Node] = []
     for child in node.children:
-        if child.tag == "SOUR" and sources is not None and not child.children:
+        if child.tag == "SOUR" and sources is not None:
             text = sources.cite(child)
             if text:
                 cites.append(text)
+                if child.children:  # a PAGE, QUAY or the like: kept, tied to the source's text
+                    leftovers.append(Node(child.level, "SOUR", text, None, child.children))
                 continue
         if child.tag == "NOTE" and child.value.strip() and not _is_pointer(child.value.strip()) and not child.children:
             notes.append(child.value.strip())

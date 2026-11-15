@@ -136,3 +136,59 @@ def test_the_lines_the_importer_set_aside_survive_a_round_trip(tmp_path):
     _cli("init", "--dir", second)
     _cli("import-gedcom", out, "--dir", second, "-a")
     assert (second / "archive" / "gedcom-extra.yml").read_text(encoding="utf-8") == (first / "archive" / "gedcom-extra.yml").read_text(encoding="utf-8")
+
+
+# Final-review fixes ---------------------------------------------------------------------------------------------
+
+
+def _cycle(tmp_path, ged_text, name="x"):
+    """import -> export -> import -> export, returning the two exports and the second family.yml."""
+    first = tmp_path / f"{name}1"
+    ged = tmp_path / f"{name}.ged"
+    ged.write_text(ged_text, encoding="utf-8")
+    _cli("init", "--dir", first)
+    _cli("import-gedcom", ged, "--dir", first, "-a")
+    out1 = tmp_path / f"{name}-1.ged"
+    _cli("export-gedcom", "--dir", first, "--out", out1)
+    second = tmp_path / f"{name}2"
+    _cli("init", "--dir", second)
+    _cli("import-gedcom", out1, "--dir", second, "-a")
+    out2 = tmp_path / f"{name}-2.ged"
+    _cli("export-gedcom", "--dir", second, "--out", out2)
+    return first, second, out1.read_text(encoding="utf-8"), out2.read_text(encoding="utf-8")
+
+
+def test_unmapped_sub_lines_under_mapped_tags_do_not_invent_events_on_each_cycle(tmp_path):
+    first, second, out1, out2 = _cycle(
+        tmp_path,
+        "0 HEAD\n1 CHAR UTF-8\n0 @S1@ SOUR\n1 TITL Parish book\n0 @I1@ INDI\n1 NAME A /B/\n"
+        "1 BURI\n2 DATE 1900\n2 AGE 50\n1 RESI\n2 DATE 1890\n2 ADDR 1 High St\n"
+        "1 DEAT\n2 DATE 1900\n2 CAUS fever\n1 OCCU Farmer\n2 SOUR @S1@\n3 PAGE 13\n0 TRLR\n",
+    )
+    assert (second / "family.yml").read_text(encoding="utf-8") == (first / "family.yml").read_text(encoding="utf-8")
+    assert out1 == out2
+    assert out1.count("1 BURI") == 1 and out1.count("1 RESI") == 1 and out1.count("1 DEAT") == 1 and out1.count("1 OCCU") == 1
+    assert "2 AGE 50" in out1 and "2 CAUS fever" in out1 and "3 PAGE 13" in out1  # nothing is lost either
+
+
+def test_at_signs_after_the_first_physical_line_survive(tmp_path):
+    long_tail = "x" * 195 + " a@b.org and " + "y" * 20
+    first, second, out1, _ = _cycle(
+        tmp_path,
+        f"0 HEAD\n1 CHAR UTF-8\n0 @I1@ INDI\n1 NAME A /B/\n1 NOTE line one\n2 CONT mail me@@x.org\n2 CONC @@ end\n"
+        f"1 OCCU Baker\n2 NOTE {long_tail.replace('@', '@@')}\n0 TRLR\n",
+    )
+    text = (first / "family.yml").read_text(encoding="utf-8")
+    assert "mail me@x.org" in text and "@@" not in text and "a@b.org" in text
+    assert (second / "family.yml").read_text(encoding="utf-8") == text
+    assert "mail me@@x.org" in out1
+
+
+def test_a_source_with_a_page_becomes_the_cite_and_keeps_the_page(tmp_path):
+    first, second, out1, out2 = _cycle(
+        tmp_path,
+        "0 HEAD\n1 CHAR UTF-8\n0 @S1@ SOUR\n1 TITL Parish book\n0 @I1@ INDI\n1 NAME A /B/\n1 BIRT\n2 DATE 1900\n2 SOUR @S1@\n3 PAGE 12\n0 TRLR\n",
+    )
+    text = (first / "family.yml").read_text(encoding="utf-8")
+    assert "cite: Parish book" in text
+    assert "3 PAGE 12" in out1 and (second / "family.yml").read_text(encoding="utf-8") == text and out1 == out2
