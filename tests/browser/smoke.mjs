@@ -7,7 +7,9 @@ import http from 'node:http';
 const [chrome, base, shots] = process.argv.slice(2);
 mkdirSync(shots, { recursive: true });
 const port = 9300 + Math.floor(Math.random() * 400);
-const proc = spawn(chrome, ['--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--window-size=1400,820',
+// A full Chrome needs --headless; chrome-headless-shell is always headless.
+const headless = /headless[-_]shell/.test(chrome) ? [] : ['--headless=new'];
+const proc = spawn(chrome, [...headless, '--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--window-size=1400,820',
   `--remote-debugging-port=${port}`, 'about:blank'], { stdio: 'ignore' });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const getJSON = (url) => new Promise((resolve, reject) => {
@@ -25,6 +27,7 @@ async function main() {
   for (let i = 0; i < 50; i++) {
     try { targets = await getJSON(`http://127.0.0.1:${port}/json`); break; } catch { await sleep(100); }
   }
+  if (!targets) throw new Error('Chrome did not start: ' + chrome);
   const page = targets.find((t) => t.type === 'page');
   const ws = new WebSocket(page.webSocketDebuggerUrl);
   let id = 0;
