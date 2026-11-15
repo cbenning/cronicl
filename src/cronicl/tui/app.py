@@ -44,7 +44,10 @@ class CroniclApp(App):
 
     # ---- navigation the screens call; later tasks give them bodies --------------------------------------------------
     def open_person(self, pid: str) -> None:
-        self.opened = pid
+        from .screens.person import PersonScreen
+
+        if self.family and pid in self.family.tree.people:
+            self.push_screen(PersonScreen(pid))
 
     def new_person(self) -> None:
         self.notify("New person comes with the editing screens")

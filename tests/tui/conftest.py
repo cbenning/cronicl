@@ -88,3 +88,23 @@ def legacy_folder(tmp_path):
     target = tmp_path / "old"
     shutil.copytree(Path(__file__).resolve().parents[1] / "fixtures" / "legacy", target)
     return target
+
+
+def option_texts(app, selector="#record"):
+    from textual.widgets import OptionList
+
+    widget = app.screen.query_one(selector, OptionList)
+    return [str(widget.get_option_at_index(i).prompt) for i in range(widget.option_count)]
+
+
+async def highlight(pilot, app, text, selector="#record"):
+    """Move the highlight to the first row whose text contains `text`."""
+    from textual.widgets import OptionList
+
+    widget = app.screen.query_one(selector, OptionList)
+    for i in range(widget.option_count):
+        if text in str(widget.get_option_at_index(i).prompt) and not widget.get_option_at_index(i).disabled:
+            widget.highlighted = i
+            await pilot.pause()
+            return i
+    raise AssertionError(f"no row with {text!r} in {option_texts(app, selector)}")

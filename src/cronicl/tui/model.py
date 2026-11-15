@@ -12,6 +12,8 @@ from ..core.family import family_files
 from ..core.issues import Issue
 from ..core.living import is_living
 from ..core.model import Tree
+from ..core.relations import Relations, build_relations
+from ..core.recordedit import _find_couple
 from ..core.search import search_people
 from ..core.textvalues import parse_int
 
@@ -45,6 +47,55 @@ class Family:
         privacy = (self.tree.site or {}).get("privacy")
         self.cutoff = (parse_int(privacy.get("cutoff_years")) if isinstance(privacy, dict) else None) or 100
         self._owners = self._owners_by_line()
+        self._relations: Relations | None = None
+
+    @property
+    def relations(self) -> Relations:
+        if self._relations is None:
+            self._relations = build_relations(self.tree)
+        return self._relations
+
+    def name_of(self, pid: str) -> str:
+        person = self.tree.people.get(pid)
+        return person.display_name if person else ""
+
+    def years_of(self, pid: str) -> str:
+        person = self.tree.people.get(pid)
+        if person is None:
+            return ""
+        return format_years(person.birth.date if person.birth else None, person.death.date if person.death else None)
+
+    def couple_key_text(self, a: str, b: str) -> tuple[str, str] | None:
+        """(the couple's key as written in the file, the file) or None when the two have no couple record."""
+        for pid in (a, b):
+            for other, _, source, _line in self.tree.people[pid].couple_records:
+                if other in (a, b) and other != pid:
+                    text = self.files.get(source, "")
+                    written = _find_couple(text, a, b)
+                    if written:
+                        return written, source
+        return None
+
+    def couple_summary(self, a: str, b: str) -> str:
+        """`m. 1815-01-02 Seaham, England; divorced 1830` for the couple, or an empty string."""
+        couple = self.relations.couples.get(tuple(sorted((a, b)))) if hasattr(self.relations, "couples") else None
+        for cid, c in self.relations.couples.items():
+            if set(c.partners) == {a, b}:
+                couple = c
+        if couple is None:
+            return ""
+        words = {"marriage": "m.", "civil-union": "civil union", "engagement": "engaged", "partnership": "partners"}
+        parts = []
+        for p in couple.partnerships:
+            bit = words.get(p.type or "", "together")
+            if p.start:
+                bit += f" {p.start}"
+            if p.place:
+                bit += f" {p.place}"
+            if p.end:
+                bit += f"; {p.end_reason or 'ended'}" + (f" {p.end}" if p.end != "unknown" else "")
+            parts.append(bit)
+        return "; ".join(parts)
 
     @classmethod
     def load(cls, data_dir: Path, today: date | None = None) -> "Family":
