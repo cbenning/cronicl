@@ -250,3 +250,30 @@ def to_modern(text: str | None) -> str | None:
     if text and text.startswith("~"):
         return "ABT " + text[1:].strip()
     return text
+
+
+_MONTH_NAMES = {number: name for name, number in _MONTHS.items() if len(name) == 3}
+_PLAIN_DATE = re.compile(r"\b(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?\b")
+
+
+def to_gedcom(text: str | None) -> str | None:
+    """A cronicl date as a GEDCOM date phrase (`1850-03-15` is `15 MAR 1850`, keywords kept).
+
+    Nothing or `unknown` gives None (write no DATE line); text that is not a readable date is returned as written.
+    """
+    if text is None or not text.strip() or is_unknown(text):
+        return None
+    up = " ".join(text.upper().split())
+    if parse_date(up) is None and parse_span(up) is None:
+        return text
+
+    def plain(match: re.Match) -> str:
+        year, month, day = match.groups()
+        out = str(int(year))
+        if month:
+            out = f"{_MONTH_NAMES[int(month)]} {out}"
+        if day:
+            out = f"{int(day)} {out}"
+        return out
+
+    return _PLAIN_DATE.sub(plain, up)

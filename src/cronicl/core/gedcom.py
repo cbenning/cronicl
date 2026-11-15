@@ -68,7 +68,7 @@ def parse_nodes(text: str) -> tuple[list[Node], list[Issue]]:
         while stack and stack[-1].level >= level:
             stack.pop()
         if level == 0:
-            node = Node(0, tag.upper(), value, xref)
+            node = Node(0, tag.upper(), value.replace("@@", "@"), xref)
             roots.append(node)
             stack = [node]
             continue
@@ -84,7 +84,7 @@ def parse_nodes(text: str) -> tuple[list[Node], list[Issue]]:
         if upper == "CONC":
             parent.value += value
             continue
-        node = Node(level, upper, value, xref)
+        node = Node(level, upper, value.replace("@@", "@"), xref)
         parent.children.append(node)
         stack.append(node)
     return roots, issues
@@ -127,11 +127,53 @@ def _lines(nodes: list[Node]) -> str | None:
     return "\n".join(out) or None
 
 
-def _event(node: Node, label: str, owner: str, extra: list[Node], issues: list[Issue]) -> Event:
+class Sources:
+    """The level-0 SOUR records of a file, by xref, and which of them a fact has used."""
+
+    def __init__(self, texts: dict[str, str] | None = None) -> None:
+        self.texts = texts or {}
+        self.used: set[str] = set()
+
+    @classmethod
+    def from_nodes(cls, nodes: list[Node]) -> "Sources":
+        texts: dict[str, str] = {}
+        for node in nodes:
+            if node.tag != "SOUR" or not node.xref:
+                continue
+            for tag in ("TITL", "ABBR", "TEXT"):
+                found = next((c.value.strip() for c in node.children if c.tag == tag and c.value.strip()), None)
+                if found:
+                    texts[node.xref.strip("@")] = found
+                    break
+        return cls(texts)
+
+    def cite(self, node: Node) -> str | None:
+        """The citation text of a `SOUR` line: a pointer resolves to its record's title; inline text is itself."""
+        value = node.value.strip()
+        if _is_pointer(value):
+            key = value.strip("@")
+            if key in self.texts:
+                self.used.add(key)
+                return self.texts[key]
+            return None
+        return value or None
+
+
+def _event(node: Node, label: str, owner: str, extra: list[Node], issues: list[Issue], sources: "Sources | None" = None) -> Event:
     """Map a BIRT/DEAT/MARR node; unmapped sub-lines are appended to `extra`."""
     date = place = None
+    cites: list[str] = []
+    notes: list[str] = []
     leftovers: list[Node] = []
     for child in node.children:
+        if child.tag == "SOUR" and sources is not None and not child.children:
+            text = sources.cite(child)
+            if text:
+                cites.append(text)
+                continue
+        if child.tag == "NOTE" and child.value.strip() and not _is_pointer(child.value.strip()) and not child.children:
+            notes.append(child.value.strip())
+            continue
         if child.tag == "DATE" and date is None:
             value, ok = from_gedcom(child.value)
             date = value or None
@@ -147,7 +189,12 @@ def _event(node: Node, label: str, owner: str, extra: list[Node], issues: list[I
             leftovers.append(child)
     if leftovers:
         extra.append(Node(node.level, node.tag, "", None, leftovers))
-    return Event(date=date, place=place)
+    facts: dict = {}
+    if notes:
+        facts["note"] = "\n".join(notes)
+    if cites:
+        facts["cite"] = cites
+    return Event(date=date, place=place, extra=facts)
 
 
 # Individual events and attributes that become `events:` entries; the second item says whether the line's own
@@ -195,6 +242,8 @@ def _fam_partnership(rel: dict, other: str) -> Partnership | None:
     if "marr" in rel or "div" in rel or "anul" in rel:
         start = rel.get("marr")
         entry = Partnership(other, "marriage", start.date if start else None, place=start.place if start else None)
+        if start:
+            entry.note, entry.cite = start.extra.get("note"), list(start.extra.get("cite", []))
         if "div" in rel:
             entry.end, entry.end_reason = rel["div"], "divorce"
         elif "anul" in rel:
@@ -202,37 +251,59 @@ def _fam_partnership(rel: dict, other: str) -> Partnership | None:
         return entry
     if "enga" in rel:
         engaged = rel["enga"]
-        return Partnership(other, "engagement", engaged.date, place=engaged.place)
+        return Partnership(other, "engagement", engaged.date, place=engaged.place, note=engaged.extra.get("note"), cite=list(engaged.extra.get("cite", [])))
     return None
 
 
-def _parse_name(node: Node, extra: list[Node]) -> tuple[str | None, str | None]:
+def _parse_name(node: Node, extra: list[Node]) -> tuple[str | None, str | None, dict]:
     match = _NAME.match(node.value)
     given_part, surname, suffix = (match.group(1) or "").strip(), match.group(2), match.group(3)
     given = " ".join(part for part in (given_part, suffix) if part) or None
     surname = surname.strip() if surname and surname.strip() else None
+    parts: dict = {}
     leftovers = []
     for child in node.children:
-        if child.tag == "GIVN" and child.value.strip():
-            given = child.value.strip()
-        elif child.tag == "SURN" and child.value.strip():
-            surname = child.value.strip()
+        value = child.value.strip()
+        if child.tag == "GIVN" and value:
+            given = value
+        elif child.tag == "SURN" and value:
+            surname = value
+        elif child.tag in _NAME_PARTS and value and not child.children:
+            parts[_NAME_PARTS[child.tag]] = value
+            if child.tag == "NSFX" and suffix and given == " ".join(p for p in (given_part, suffix) if p):
+                given = given_part or None  # the trailing text of the NAME line was this suffix
         else:
             leftovers.append(child)
     if leftovers:
         extra.append(Node(node.level, node.tag, "", None, leftovers))
-    return given, surname
+    return given, surname, parts
+
+
+_NAME_PARTS = {"NPFX": "prefix", "NSFX": "suffix", "NICK": "nickname"}
+
+
+def _other_name(node: Node, extra: list[Node]) -> str | None:
+    """A second NAME record (a married or other name) as display text; None when it carries more than we map."""
+    plain = all(c.tag in ("TYPE", "GIVN", "SURN") and not c.children for c in node.children)
+    given, surname, _ = _parse_name(node, [])
+    text = " ".join(part for part in (given, surname) if part)
+    if not text or not plain:
+        extra.append(node)
+        return None
+    return text
 
 
 def _is_pointer(value: str) -> bool:
     return value.startswith("@") and value.endswith("@")
 
 
-def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
+def _person_from(node: Node, issues: list[Issue], sources: Sources | None = None) -> tuple[Person, str | None]:
     """Return (person with a placeholder id, first FAMC xref)."""
     xref = node.xref.strip("@")
     extra: list[Node] = []
     given = surname = None
+    name_parts: dict = {}
+    also: list[str] = []
     sex = "U"
     birth = death = None
     life_events: list[LifeEvent] = []
@@ -243,7 +314,11 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
         tag = child.tag
         if tag == "NAME" and "NAME" not in seen:
             seen.add("NAME")
-            given, surname = _parse_name(child, extra)
+            given, surname, name_parts = _parse_name(child, extra)
+        elif tag == "NAME":
+            other = _other_name(child, extra)
+            if other:
+                also.append(other)
         elif tag == "SEX" and "SEX" not in seen:
             seen.add("SEX")
             value = child.value.strip().upper()
@@ -253,22 +328,25 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
                 extra.append(child)  # keep unrecognised values (e.g. X) verbatim
         elif tag == "BIRT" and "BIRT" not in seen:
             seen.add("BIRT")
-            birth = _event(child, "birth", xref, extra, issues)
+            birth = _event(child, "birth", xref, extra, issues, sources)
         elif tag == "DEAT" and "DEAT" not in seen:
             seen.add("DEAT")
-            death = _event(child, "death", xref, extra, issues)
+            death = _event(child, "death", xref, extra, issues, sources)
         elif tag in _EVENT_TAGS:
             kind, takes_value = _EVENT_TAGS[tag]
             if any(sub.tag == "DATE" and sub.value.strip() and not from_gedcom(sub.value)[1] for sub in child.children):
                 extra.append(child)  # a date cronicl cannot convert stays exactly as written, in gedcom_extra
                 continue
-            happened = _event(child, kind, xref, extra, issues)
+            happened = _event(child, kind, xref, extra, issues, sources)
             text = child.value.strip()
             life_events.append(
                 LifeEvent(
                     type=kind, date=happened.date, place=happened.place,
                     value=(text or None) if takes_value else None,
-                    note=text if text and not takes_value and text.upper() not in ("Y", "N") else None,
+                    note="\n".join(
+                        n for n in (text if text and not takes_value and text.upper() not in ("Y", "N") else None, happened.extra.get("note")) if n
+                    ) or None,
+                    cite=list(happened.extra.get("cite", [])),
                 )
             )
         elif tag == "FAMC":
@@ -295,6 +373,10 @@ def _person_from(node: Node, issues: list[Issue]) -> tuple[Person, str | None]:
         death=death,
         events=life_events,
         gedcom_id=xref,
+        prefix=name_parts.get("prefix"),
+        suffix=name_parts.get("suffix"),
+        nickname=name_parts.get("nickname"),
+        also=also,
         gedcom_extra=_lines(extra),
         body="\n\n".join(notes),
     )
@@ -311,15 +393,18 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
             indi_nodes.append(node)
         elif node.tag == "FAM" and node.xref:
             fam_nodes.append(node)
+        elif node.tag == "SOUR" and node.xref:
+            continue  # counted below, once we know which ones a fact used
         else:
             skipped[node.tag] = skipped.get(node.tag, 0) + 1
+    sources = Sources.from_nodes(nodes)
     indi_nodes.sort(key=lambda n: natural_key(n.xref.strip("@")))
     fam_nodes.sort(key=lambda n: natural_key(n.xref.strip("@")))
 
     people: list[Person] = []
     first_famc: dict[str, str | None] = {}
     for node in indi_nodes:
-        person, famc = _person_from(node, issues)
+        person, famc = _person_from(node, issues, sources)
         people.append(person)
         first_famc[person.gedcom_id] = famc
 
@@ -382,7 +467,7 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
                 if index > 0:
                     extra.append(found)  # repeats
                 elif tag == "MARR":
-                    rel["marr"] = _event(found, "marriage", xref, extra, issues)
+                    rel["marr"] = _event(found, "marriage", xref, extra, issues, sources)
                 elif tag == "DIV":
                     rel["div"] = _end_date(found, "divorce", xref, extra, issues)
                 elif tag == "ANUL":
@@ -393,7 +478,7 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
                 elif "marr" in rel or "div" in rel or "anul" in rel:  # ENGA: only when it becomes the result
                     extra.append(found)
                 else:
-                    rel["enga"] = _event(found, "engagement", xref, extra, issues)
+                    rel["enga"] = _event(found, "engagement", xref, extra, issues, sources)
         fam_order.append(xref)
         fam_partners[xref] = partners
         fam_children[xref] = chil
@@ -454,6 +539,9 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
             else:
                 target.gedcom_extra = "\n".join(filter(None, [target.gedcom_extra, block]))
 
+    for node in nodes:  # source records no fact used are set aside, as before
+        if node.tag == "SOUR" and node.xref and node.xref.strip("@") not in sources.used:
+            skipped["SOUR"] = skipped.get("SOUR", 0) + 1
     return ImportResult(people=people, families=len(fam_nodes), issues=issues, skipped=skipped)
 
 

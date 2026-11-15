@@ -275,3 +275,62 @@ def test_text_on_an_event_line_is_kept_as_a_note():
     result = from_text("0 HEAD\n0 @I1@ INDI\n1 NAME Ann /Dunn/\n1 RESI Marital status: married\n2 DATE 1960\n1 IMMI Y\n1 CENS\n0 TRLR\n")
     ann = next(p for p in result.people if p.given == "Ann")
     assert [(e.type, e.note) for e in ann.events] == [("residence", "Marital status: married"), ("immigration", None), ("census", None)]
+
+
+# Sources, notes under facts, and the name parts the exporter writes -------------------------------------------
+
+
+def _import(text):
+    from cronicl.core.gedcom import import_nodes, parse_nodes
+
+    nodes, _ = parse_nodes(text)
+    return import_nodes(nodes)
+
+
+def test_a_source_pointer_under_a_fact_becomes_its_cite_from_the_title():
+    result = _import(
+        "0 @S1@ SOUR\n1 TITL Parish register, St Mary\n0 @I1@ INDI\n1 NAME A /B/\n"
+        "1 BIRT\n2 DATE 1900\n2 SOUR @S1@\n2 NOTE born at dawn\n"
+        "1 OCCU Baker\n2 SOUR @S1@\n2 SOUR Census 1911\n0 TRLR\n"
+    )
+    person = result.people[0]
+    assert person.birth.extra["cite"] == ["Parish register, St Mary"] and person.birth.extra["note"] == "born at dawn"
+    assert person.events[0].cite == ["Parish register, St Mary", "Census 1911"]
+    assert "SOUR" not in (person.gedcom_extra or "") and result.skipped.get("SOUR", 0) == 0
+
+
+def test_a_pointer_to_a_missing_source_stays_in_the_leftovers():
+    person = _import("0 @I1@ INDI\n1 NAME A /B/\n1 BIRT\n2 DATE 1900\n2 SOUR @S9@\n0 TRLR\n").people[0]
+    assert "2 SOUR @S9@" in person.gedcom_extra and "cite" not in (person.birth.extra or {})
+
+
+def test_a_source_falls_back_to_abbr_then_text():
+    person = _import(
+        "0 @S1@ SOUR\n1 ABBR Short\n0 @S2@ SOUR\n1 TEXT Full text\n0 @I1@ INDI\n1 NAME A /B/\n"
+        "1 BIRT\n2 SOUR @S1@\n2 SOUR @S2@\n0 TRLR\n"
+    ).people[0]
+    assert person.birth.extra["cite"] == ["Short", "Full text"]
+
+
+def test_a_family_event_keeps_its_source_and_note():
+    result = _import(
+        "0 @S1@ SOUR\n1 TITL Marriage bond\n0 @I1@ INDI\n1 NAME A /X/\n0 @I2@ INDI\n1 NAME B /Y/\n"
+        "0 @F1@ FAM\n1 HUSB @I1@\n1 WIFE @I2@\n1 MARR\n2 DATE 1930\n2 SOUR @S1@\n2 NOTE in the rain\n0 TRLR\n"
+    )
+    owner = next(p for p in result.people if p.partnerships)
+    assert owner.partnerships[0].cite == ["Marriage bond"] and owner.partnerships[0].note == "in the rain"
+
+
+def test_name_parts_and_other_names_are_read():
+    person = _import(
+        "0 @I1@ INDI\n1 NAME Augusta Ada /Byron/\n2 GIVN Augusta Ada\n2 SURN Byron\n2 NPFX Lady\n2 NSFX Jr\n2 NICK Ada\n"
+        "1 NAME Ada /Lovelace/\n2 TYPE aka\n1 NAME Countess /Lovelace/\n2 TYPE married\n0 TRLR\n"
+    ).people[0]
+    assert (person.prefix, person.suffix, person.nickname) == ("Lady", "Jr", "Ada")
+    assert person.also == ["Ada Lovelace", "Countess Lovelace"]
+    assert person.given == "Augusta Ada" and person.surname == "Byron"
+
+
+def test_doubled_at_signs_in_text_are_one_at_sign():
+    person = _import("0 @I1@ INDI\n1 NAME A /B/\n1 NOTE mail me@@example.org\n0 TRLR\n").people[0]
+    assert person.body == "mail me@example.org"
