@@ -9,17 +9,23 @@ from textual.screen import Screen
 from textual.widgets import Footer, Input, Label, OptionList
 from textual.widgets.option_list import Option
 
+from ..widgets import fit, room
 
-def row_text(row) -> Text:
-    text = Text(no_wrap=True, overflow="ellipsis")
+
+def row_text(row, width: int = 80) -> Text:
+    """One person as a list row. Columns appear as the terminal allows: name and years always, then place, then id."""
+    text = Text(no_wrap=True)
     text.append("● " if row.living else "  ", style="bold yellow")
-    text.append(f"{row.name:<26.26} ", style="bold")
-    text.append(f"{row.years:<12.12} ", style="dim")
-    text.append(f"{row.place:<20.20} ", style="dim")
-    text.append(f"{row.id}", style="dim italic")
+    name_w = 24 if width < 70 else 28
+    text.append(f"{row.name:<{name_w}.{name_w}} ", style="bold")
+    text.append(f"{row.years:<11.11} ", style="dim")
+    if width >= 84:
+        text.append(f"{row.place:<20.20} ", style="dim")
+    if width >= 100:
+        text.append(f"{row.id}", style="dim italic")
     if row.warnings:
-        text.append(f"  ⚠{row.warnings}", style="bold red")
-    return text
+        text.append(f" ⚠{row.warnings}", style="bold red")
+    return fit(text, width)
 
 
 class FinderScreen(Screen):
@@ -57,7 +63,8 @@ class FinderScreen(Screen):
         rows = family.rows(query)
         results = self.query_one("#results", OptionList)
         results.clear_options()
-        results.add_options([Option(row_text(r), id=r.id) for r in rows])
+        width = room(self.app)
+        results.add_options([Option(row_text(r, width), id=r.id) for r in rows])
         if rows:
             results.highlighted = 0
         people = len(family.tree.people)
@@ -67,6 +74,7 @@ class FinderScreen(Screen):
             f"{people} {'person' if people == 1 else 'people'} · {warnings} {'warning' if warnings == 1 else 'warnings'} · {living} living"
         )
         empty = self.query_one("#finder-empty", Label)
+        empty.display = not rows
         if not people:
             empty.update("No people yet. Ctrl+N adds the first one.")
         elif not rows:
@@ -76,6 +84,10 @@ class FinderScreen(Screen):
 
     def on_input_changed(self, event: Input.Changed) -> None:
         self.refresh_rows()
+
+    def on_resize(self, event) -> None:
+        if self.is_mounted:
+            self.refresh_rows()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self._open_highlighted()

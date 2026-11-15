@@ -1,6 +1,7 @@
 """Editors for one field, chosen by the field's kind: plain text, long text, dates, choices, places, people."""
 from __future__ import annotations
 
+from rich.text import Text
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
@@ -11,6 +12,7 @@ from textual.widgets.option_list import Option
 from ...core.catalog import COUPLE_EVENT_TYPES, EVENT_TYPES, FIELDS, Field
 from ...core.dates import format_date, is_unknown, parse_date, parse_span
 from ...core.search import tokenize
+from ..widgets import dialog_room, fit
 
 
 def catalog_key(path: tuple) -> str | None:
@@ -148,8 +150,11 @@ class ChoiceEditor(_Base):
             hay = " ".join(tokenize(f"{value} {note}"))
             if all(w in hay for w in words):
                 self._values.append(value)
-                label = value if not note else f"{value}  [dim]{note}[/dim]"
-                rows.append(Option(label, id=f"v{len(self._values) - 1}"))
+                label = Text(no_wrap=True)
+                label.append(value)
+                if note:
+                    label.append(f"  {note}", style="dim")
+                rows.append(Option(fit(label, dialog_room(self.app)), id=f"v{len(self._values) - 1}"))
                 matches += 1
         choices.add_options(rows)
         if rows:
@@ -210,7 +215,7 @@ class PeoplePicker(_Base):
         people = self.query_one("#people", OptionList)
         people.clear_options()
         rows = [r for r in self.family.rows(query, limit=200) if r.id not in self.exclude]
-        options = [Option(row_text(r), id=r.id) for r in rows]
+        options = [Option(row_text(r, dialog_room(self.app)), id=r.id) for r in rows]
         if self.allow_new:
             options.append(Option("＋ New person…", id=self.NEW))
         people.add_options(options)

@@ -11,14 +11,15 @@ from textual.widgets.option_list import Option
 from ...core.catalog import FIELDS
 from ...core.recordedit import EditRefused, add_couple_event, add_couple_record, couple_key, list_add, record_data, remove, set_value
 from ..recordview import Row, build
+from ..widgets import fit, room
 from .editors import ChoiceEditor, PeoplePicker, TextEditor, ancestors, catalog_key, descendants, editor_for
 from .modals import Confirm, Prompt
 from .palette import VALUE_EVENT_TYPES, PaletteScreen, build_entries
 from .raw import RawScreen
 
 
-def row_text(row: Row, indent_extra: int = 0) -> Text:
-    text = Text(no_wrap=True, overflow="ellipsis")
+def row_text(row: Row, indent_extra: int = 0, width: int = 80) -> Text:
+    text = Text(no_wrap=True)
     pad = "  " * (row.depth + indent_extra)
     if row.comment_only:
         text.append(f"{pad}# {row.value}", style="dim italic")
@@ -37,7 +38,7 @@ def row_text(row: Row, indent_extra: int = 0) -> Text:
             text.append(f"  {row.extra}", style="dim")
     if row.comment:
         text.append(f"  # {row.comment}", style="dim italic")
-    return text
+    return fit(text, width)
 
 
 class PersonScreen(Screen):
@@ -47,6 +48,7 @@ class PersonScreen(Screen):
         Binding("d", "delete", "Delete line"),
         Binding("ctrl+e", "raw", "Raw YAML"),
         Binding("w", "warnings", "Warnings"),
+        Binding("question_mark", "app.help", "Help", show=False),
         Binding("o", "open_partner", "Open partner"),
         Binding("ctrl+q", "app.quit", "Quit"),
     ]
@@ -70,6 +72,10 @@ class PersonScreen(Screen):
         self.query_one("#record", OptionList).focus()
         if self.jump is not None:
             self._jump_to(self.jump)
+
+    def on_resize(self, event) -> None:
+        if self.is_mounted:
+            self.refresh_content()
 
     def refresh_content(self) -> None:
         widget = self.query_one("#record", OptionList)
@@ -111,7 +117,7 @@ class PersonScreen(Screen):
         view = build(self._file_text(person.source), self.pid, issues, family.name_of)
         self.view = view
         for row in view.rows:
-            add(row_text(row), ("row", row), disabled=row.comment_only)
+            add(row_text(row, 0, room(self.app)), ("row", row), disabled=row.comment_only)
         if not view.rows:
             add(Text("(nothing recorded yet: press a to add a field)", style="dim italic"), None, True)
 
@@ -131,17 +137,17 @@ class PersonScreen(Screen):
                 add(Text("Partners", style="bold"), None, True)
             mark = "▾" if partner in self.expanded else "▸"
             summary = family.couple_summary(self.pid, partner)
-            line = Text(no_wrap=True, overflow="ellipsis")
+            line = Text(no_wrap=True)
             line.append(f"  {mark} {family.name_of(partner)}", style="bold")
             line.append(f"  {summary}" if summary else "", style="dim")
-            add(line, ("partner", partner))
+            add(fit(line, room(self.app)), ("partner", partner))
             if partner in self.expanded:
                 found = family.couple_key_text(self.pid, partner)
                 if found:
                     key, source = found
                     couple_view = build(self._file_text(source), key, issues, family.name_of)
                     for row in couple_view.rows:
-                        add(row_text(row, indent_extra=2), ("couple_row", partner, row), disabled=row.comment_only)
+                        add(row_text(row, 2, room(self.app)), ("couple_row", partner, row), disabled=row.comment_only)
                 else:
                     add(Text("      (no couple record yet)", style="dim italic"), None, True)
             kids = relations.kids.get(cid, [])
@@ -159,12 +165,12 @@ class PersonScreen(Screen):
         if mine:
             add(Text("Warnings", style="bold underline"), None, True)
             for issue in mine:
-                line = Text(no_wrap=True, overflow="ellipsis")
+                line = Text(no_wrap=True)
                 line.append("⚠ ", style="bold red" if issue.severity == "error" else "bold yellow")
                 line.append(f"{issue.code}", style="bold")
                 line.append(f"  line {issue.line}  " if issue.line else "  ", style="dim")
                 line.append(issue.message)
-                add(line, ("warning", issue))
+                add(fit(line, room(self.app)), ("warning", issue))
 
         widget = self.query_one("#record", OptionList)
         widget.clear_options()
@@ -185,10 +191,10 @@ class PersonScreen(Screen):
 
     def _person_line(self, pid: str) -> Text:
         family = self.family
-        line = Text(no_wrap=True, overflow="ellipsis")
+        line = Text(no_wrap=True)
         line.append(f"    {family.name_of(pid) or pid}", style="bold")
         line.append(f"  {family.years_of(pid)}", style="dim")
-        return line
+        return fit(line, room(self.app))
 
     # ---- events ---------------------------------------------------------------------------------------------------
     def _target(self):

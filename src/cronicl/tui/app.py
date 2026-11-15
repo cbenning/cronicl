@@ -13,6 +13,9 @@ from .session import Session
 
 class CroniclApp(App):
     TITLE = "cronicl"
+    CSS_PATH = "theme.tcss"
+    BINDINGS = [("f1", "help", "Help")]
+    ENABLE_COMMAND_PALETTE = False  # the field palette (a) is ours; Textual's own would only confuse
 
     def __init__(self, data_dir: Path) -> None:
         super().__init__()
@@ -113,6 +116,9 @@ class CroniclApp(App):
         """Ask for a name, stage the new record in `source` (with `parents`), and call `then(new id)`."""
         self.ask_person(lambda spec: then(self.stage_person(source, spec, parents)))
 
+    def action_help(self) -> None:
+        self.open_help()
+
     async def action_quit(self) -> None:
         """Quit, but go through the diff first when something is staged."""
         if self.session is not None and self.session.changed:
@@ -126,4 +132,7 @@ class CroniclApp(App):
         self.push_screen(WarningsScreen())
 
     def open_help(self) -> None:
-        self.notify("Help comes later")
+        from .screens.help import HelpScreen
+
+        if not isinstance(self.screen, HelpScreen):
+            self.push_screen(HelpScreen())

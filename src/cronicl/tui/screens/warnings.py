@@ -9,6 +9,7 @@ from textual.widgets import Footer, Label, OptionList
 from textual.widgets.option_list import Option
 
 from ...core.fixes import fix_options
+from ..widgets import fit, room
 from .editors import ChoiceEditor
 
 
@@ -16,6 +17,7 @@ class WarningsScreen(Screen):
     BINDINGS = [
         Binding("escape", "back", "Back"),
         Binding("f", "fix", "Fix"),
+        Binding("question_mark", "app.help", "Help", show=False),
         Binding("ctrl+q", "app.quit", "Quit"),
     ]
 
@@ -45,14 +47,14 @@ class WarningsScreen(Screen):
         for label in sorted(groups, key=str.casefold):
             options.append(Option(Text(label, style="bold underline"), id=f"g{len(options)}", disabled=True))
             for issue in groups[label]:
-                line = Text(no_wrap=True, overflow="ellipsis")
+                line = Text(no_wrap=True)
                 line.append("  ⚠ ", style="bold red" if issue.severity == "error" else "bold yellow")
                 line.append(issue.code, style="bold")
                 line.append(f"  line {issue.line}  " if issue.line else "  ", style="dim")
                 line.append(issue.message)
                 option_id = f"i{len(options)}"
                 self.targets[option_id] = issue
-                options.append(Option(line, id=option_id))
+                options.append(Option(fit(line, room(self.app)), id=option_id))
         widget = self.query_one("#warnings", OptionList)
         keep = widget.highlighted
         widget.clear_options()
@@ -64,7 +66,9 @@ class WarningsScreen(Screen):
             widget.highlighted = first
         count = sum(len(v) for v in groups.values())
         self.query_one("#warnings-title", Label).update(f"{count} {'warning' if count == 1 else 'warnings'}" if count else "")
-        self.query_one("#warnings-empty", Label).update("" if count else "No warnings. The family file is clean.")
+        empty = self.query_one("#warnings-empty", Label)
+        empty.update("" if count else "No warnings. The family file is clean.")
+        empty.display = not count
 
     def _issue(self):
         widget = self.query_one("#warnings", OptionList)

@@ -13,6 +13,7 @@ from textual.widgets.option_list import Option
 
 from ...core.catalog import COUPLE_EVENT_TYPES, EVENT_TYPES, Field, fields_for
 from ...core.search import _match, tokenize
+from ..widgets import dialog_room, fit
 
 VALUE_EVENT_TYPES = ("occupation", "education", "religion", "nationality")
 
@@ -79,10 +80,10 @@ class PaletteScreen(ModalScreen):
         fields.clear_options()
         rows = []
         for i, entry in enumerate(self.shown):
-            text = Text(no_wrap=True, overflow="ellipsis")
-            text.append(f"{entry.label:<22}", style="bold")
+            text = Text(no_wrap=True)
+            text.append(f"{entry.label:<22.22}", style="bold")
             text.append(entry.note, style="dim")
-            rows.append(Option(text, id=str(i)))
+            rows.append(Option(fit(text, dialog_room(self.app)), id=str(i)))
         fields.add_options(rows)
         fields.highlighted = 0 if rows else None
 

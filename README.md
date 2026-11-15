@@ -24,6 +24,7 @@ export CRONICL_DIR=~/my-family            # or pass --dir / -C on every command
 uv run cronicl init                       # creates site.yml, family.yml, media/, archive/
 uv run cronicl import-gedcom tree.ged     # preview: counts and warnings
 uv run cronicl import-gedcom tree.ged -a  # write family.yml
+uv run cronicl                            # the TUI: find, edit, add people, fix warnings
 uv run cronicl check
 uv run cronicl search ashby              # find ids
 uv run cronicl show ashby-greta         # one person, with the line each record lives on
@@ -32,6 +33,33 @@ uv run cronicl serve                      # http://127.0.0.1:8000/
 
 Coming from the old `people/*.md` layout? `cronicl migrate` previews the conversion and `cronicl migrate -a`
 writes it (see [Migrating](#migrating-from-peoplemd)).
+
+## The TUI
+
+Run `cronicl` with no command in a terminal (in a folder with a `family.yml`, or with `-C DIR`) and a full-screen
+editor opens. It is a faster way to change `family.yml`, not a replacement for it: the file stays plain YAML you can
+edit by hand, and the TUI changes only the lines it has to.
+
+- **Find people** by typing: names, years and places, with typos and accents forgiven. Enter opens a person.
+  Warnings are marked in the list.
+- **Edit a person** as their record: one field per line, and Enter on a line opens an editor that fits it. Text is
+  plain, dates read back to you as you type (and F2 to F7 insert *about*, *before*, *after*, *between*, *from-to* and
+  *unknown*), `sex` and event types are lists, parents and partners are picked by name from a list that never offers
+  someone who would make a loop. Long text and raw YAML open a text box (Ctrl+S saves).
+- **Add things** with `a`: a searchable list of the fields this record does not have yet, each event type, a partner
+  (with the marriage date and place) and a child. Choosing "New person…" in any picker creates one.
+- **Delete** a line with `d`. Ctrl+E edits the person's whole record as YAML.
+- **Fix warnings**: `F2` (or `w` on a person) lists everything `cronicl check` reports; Enter jumps to the line, `f`
+  proposes the fix. A `death: no` is never turned into a death without asking: the default answer is "they are alive".
+- **Nothing is written until you confirm.** Leaving a person, quitting, or applying a fix shows a diff of exactly
+  which lines change in which file. Enter writes, `n` keeps editing, `x` discards everything. If a file changed on
+  disk while the TUI was open, nothing is written. Comments, blank lines and the order of your records stay as they
+  were; a record written as a one-line `{...}` is rewritten in block style only when an edit needs more room, and
+  the diff shows it. Writes are atomic, and CRLF line endings and a byte-order mark are kept.
+- `F1` or `?` shows the keys. A family with more than one file in `family/` asks which file a new person goes in.
+
+Without a terminal (a pipe, a script) a bare `cronicl` still prints the usage error, and every other command works
+as before.
 
 ## Commands
 

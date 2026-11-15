@@ -1,0 +1,48 @@
+/* cronicl TUI: a calm, dense, keyboard-first look. Colours come from Textual's theme variables, so the dark and the
+   light themes both work. */
+
+Screen { background: $surface; }
+
+/* the finder */
+#finder { height: 1fr; padding: 0 1; }
+#query { margin: 1 0 0 0; border: none; height: 1; padding: 0 1; background: $boost; }
+#status { color: $text-muted; padding: 0 1; height: 1; }
+#results { height: 1fr; border: none; padding: 0; background: $surface; }
+#finder-empty { padding: 0 1; }
+
+/* the person screen */
+#person-head { height: auto; padding: 0 1; background: $boost; border-bottom: solid $primary-darken-2; }
+#record { height: 1fr; border: none; padding: 0 1; background: $surface; }
+
+/* the warnings screen */
+#warnings-title { padding: 0 1; text-style: bold; color: $accent; }
+#warnings { height: 1fr; border: none; padding: 0 1; background: $surface; }
+#warnings-empty { padding: 1 2; }
+
+/* the diff */
+#diff-title { padding: 0 1; text-style: bold; color: $accent; background: $boost; }
+#diff-scroll { height: 1fr; padding: 0 1; }
+#diff-message { padding: 0 1; height: auto; }
+
+/* start and problem screens */
+#start-title { padding: 1 2 0 2; text-style: bold; color: $accent; }
+#start-sub { padding: 0 2 1 2; color: $text-muted; }
+#start-options { height: auto; margin: 0 2; }
+#problem-title { padding: 1 2 0 2; text-style: bold; color: $error; }
+#problems { height: 1fr; margin: 1 2; }
+
+/* dialogs: editors, pickers, palette, confirmations */
+ModalScreen { align: center middle; background: $background 60%; }
+.dialog { width: 72; max-width: 96%; height: auto; max-height: 92%; padding: 1 2; background: $panel; border: round $primary; }
+.dialog.wide { width: 92%; }
+.dialog.tall { height: 80%; }
+.dialog-title { text-style: bold; color: $accent; margin-bottom: 1; }
+.dialog Input { margin-bottom: 1; }
+.dialog OptionList { height: 1fr; min-height: 3; max-height: 24; border: none; background: $panel; }
+.dialog.tall OptionList { max-height: 100%; }
+.dialog TextArea { height: 12; }
+.dialog.wide.tall TextArea { height: 1fr; }
+.hint { color: $text-muted; margin-top: 1; }
+#reading { margin-bottom: 1; height: auto; }
+#raw-error, #new-error { height: auto; }
+#message-text, #confirm-text { margin-bottom: 1; }
