@@ -7,6 +7,7 @@ from textual.app import App
 
 from ..core.family import has_family
 from ..core.store import load_tree
+from .model import Family
 
 
 class CroniclApp(App):
@@ -15,6 +16,7 @@ class CroniclApp(App):
     def __init__(self, data_dir: Path) -> None:
         super().__init__()
         self.data_dir = Path(data_dir)
+        self.family: Family | None = None
 
     def on_mount(self) -> None:
         self.open_home()
@@ -37,4 +39,18 @@ class CroniclApp(App):
         if blocking or legacy_only:
             self.push_screen(ProblemScreen(blocking or issues, old_layout=legacy_only))
             return
+        self.family = Family.load(self.data_dir)
         self.push_screen(FinderScreen())
+
+    # ---- navigation the screens call; later tasks give them bodies --------------------------------------------------
+    def open_person(self, pid: str) -> None:
+        self.opened = pid
+
+    def new_person(self) -> None:
+        self.notify("New person comes with the editing screens")
+
+    def open_warnings(self) -> None:
+        self.notify("Warnings screen comes later")
+
+    def open_help(self) -> None:
+        self.notify("Help comes later")
