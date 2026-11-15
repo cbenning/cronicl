@@ -496,3 +496,173 @@ def _remove_flow(body: str, parent, entries, index: int) -> str:
         return body[:start] + body[nxt:]
     prev_end = span(index - 1)[1]
     return body[:prev_end] + body[end:]
+
+
+# ---- lists --------------------------------------------------------------------------------------------------------
+def record_text(text: str, key: str) -> str:
+    """The record's own lines, as the raw pane shows them."""
+    span = record_span(text, key)
+    if span is None:
+        raise EditRefused(f"there is no record {key!r}")
+    return text[span[0]:span[1]]
+
+
+def _item_flow(item) -> str:
+    return _inline(item) if isinstance(item, (dict, list)) else quote(str(item))
+
+
+def list_add(text: str, path: tuple, item) -> str:
+    """Append `item` (text for `parents`, a dict for `events`) to the list at `path`, creating the list when absent."""
+    try:
+        return _list_add(text, path, item)
+    except _NeedsRewrite as fallback:
+        data = record_data(text, fallback.record)
+        node = data
+        for step in path[1:-1]:
+            node = node[step]
+        node.setdefault(path[-1], []).append(item)
+        return rewrite_record(text, fallback.record, data)
+
+
+def _list_add(text: str, path: tuple, item) -> str:
+    bom, body = _split_bom(text)
+    root = _root(body)
+    trail = _walk(root, path)
+    if len(trail) < len(path):
+        return set_value_any(text, path, [item])
+    key_node, node = trail[-1]
+    nl = _newline(body)
+    if isinstance(node, yaml.ScalarNode) and node.value == "":
+        return list_add(remove(text, path), path, item)
+    if not isinstance(node, yaml.SequenceNode):
+        raise EditRefused(f"{path[-1]} is not a list")
+    if node.flow_style:
+        start, end = node.start_mark.index, node.end_mark.index
+        if not node.value:
+            new = body[:start] + "[" + _item_flow(item) + "]" + body[end:]
+        else:
+            at = node.value[-1].end_mark.index
+            new = body[:at] + ", " + _item_flow(item) + body[at:]
+        if _line_len(new, start) > LONG:
+            raise _NeedsRewrite(path[0])
+        return bom + new
+    first = node.value[0]
+    line_start = _line_start(body, first.start_mark.index)
+    dash_col = len(body[line_start:first.start_mark.index]) - len(body[line_start:first.start_mark.index].lstrip())
+    rendered = _inline(item) if isinstance(item, (dict, list)) else quote(str(item), flow=False)
+    at = _last_line_end(body, node.value[-1].end_mark.index)
+    prefix = "" if at == 0 or body[at - 1] == "\n" else nl
+    return bom + body[:at] + prefix + " " * dash_col + "- " + rendered + nl + body[at:]
+
+
+def list_remove(text: str, path: tuple, index: int) -> str:
+    """Remove item `index` of the list at `path`; the last item takes the list's key with it."""
+    return remove(text, (*path, index))
+
+
+def list_replace(text: str, path: tuple, index: int, item) -> str:
+    """Give list item `index` the value `item` (text, or a dict written as a flow mapping)."""
+    if isinstance(item, str):
+        return set_value(text, (*path, index), item)
+    bom, body = _split_bom(text)
+    trail = _walk(_root(body), (*path, index))
+    if len(trail) != len(path) + 1:
+        raise EditRefused("there is no such list item")
+    node = trail[-1][1]
+    start = node.start_mark.index
+    end = node.end_mark.index if node.flow_style else start + len(body[start:_last_line_end(body, node.end_mark.index)].rstrip("\r\n"))
+    new = body[:start] + _inline(item) + body[end:]
+    if _line_len(new, start) > LONG + 20:
+        data = record_data(text, path[0])
+        target = data
+        for step in path[1:]:
+            target = target[step]
+        target[index] = item
+        return rewrite_record(text, path[0], data)
+    return bom + new
+
+
+# ---- couples and whole records ------------------------------------------------------------------------------------
+def couple_key(a: str, b: str) -> str:
+    first, second = sorted((a, b))
+    return f"{first} + {second}"
+
+
+def _find_couple(text: str, a: str, b: str):
+    bom, body = _split_bom(text)
+    wanted = couple_key(a, b)
+    for key_node, _ in _root(body).value:
+        if _norm_key(key_node.value) == wanted:
+            return body[key_node.start_mark.index:key_node.end_mark.index]
+    return None
+
+
+def _append_block(text: str, block_key: str, data: dict) -> str:
+    nl = "\r\n" if "\r\n" in text else "\n"
+    block = render_record(block_key, data, nl)
+    if not text.strip():
+        return block
+    base = text if text.endswith("\n") else text + nl
+    return base + nl + block
+
+
+def add_person_record(text: str, key: str, data: dict) -> str:
+    """Append a new person record (canonical layout) at the end, after a blank line."""
+    bom, body = _split_bom(text)
+    if _has_key(body, key):
+        raise EditRefused(f"{key!r} is already in the file")
+    return bom + _append_block(body, key, data)
+
+
+def _has_key(body: str, key: str) -> bool:
+    try:
+        root = _root(body) if body.strip() else None
+    except EditRefused:
+        raise
+    return bool(root) and any(_norm_key(k.value) == _norm_key(key) for k, _ in root.value)
+
+
+def add_couple_record(text: str, a: str, b: str, events=(), note: str | None = None) -> str:
+    """Add the couple record `a + b` directly after its second partner's record (at the end if that is elsewhere)."""
+    bom, body = _split_bom(text)
+    if _find_couple(body, a, b) is not None:
+        raise EditRefused(f"{couple_key(a, b)} is already in the file")
+    data: dict = {}
+    if events:
+        data["events"] = list(events)
+    if note:
+        data["note"] = note
+    key = couple_key(a, b)
+    second = sorted((a, b))[1]
+    span = record_span(body, second) if _has_key(body, second) else None
+    if span is None:
+        return bom + _append_block(body, key, data)
+    nl = _newline(body)
+    block = render_record(key, data, nl)
+    end = span[1]
+    prefix = "" if end == 0 or body[end - 1] == "\n" else nl
+    return bom + body[:end] + prefix + nl + block + body[end:]
+
+
+def add_couple_event(text: str, a: str, b: str, event: dict) -> str:
+    """Add an event to the couple's record, creating the record when there is none."""
+    existing = _find_couple(text, a, b)
+    if existing is None:
+        return add_couple_record(text, a, b, [event])
+    return list_add(text, (existing, "events"), event)
+
+
+def replace_record(text: str, key: str, raw: str) -> str:
+    """Replace a record by `raw`, which must parse as exactly that one record."""
+    result = load_text(raw)
+    if result.error or not isinstance(result.data, Mapping) or len(result.data) != 1:
+        raise EditRefused(result.error or "the text must be exactly one record")
+    (new_key,) = result.data.keys()
+    if _norm_key(new_key) != _norm_key(key):
+        raise EditRefused(f"the record key must stay {key!r} (it is {new_key!r})")
+    span = record_span(text, key)
+    if span is None:
+        raise EditRefused(f"there is no record {key!r}")
+    nl = "\r\n" if "\r\n" in text else "\n"
+    block = raw.replace("\r\n", "\n").rstrip("\n").replace("\n", nl) + nl
+    return text[: span[0]] + block + text[span[1]:]
