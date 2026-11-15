@@ -78,12 +78,12 @@ def _cycle_members(parents: dict[str, list[str]]) -> set[str]:
     return bad
 
 
-def _check_person(person: Person, issues: list[Issue]) -> None:
+def _check_person(person: Person, issues: list[Issue], linked: frozenset = frozenset()) -> None:
     where = person.location
     if not is_valid_id(person.id):
         issues.append(Issue("E-INVALID-ID", f"person id {person.id!r} is not a valid id", where))
     from_file = person.source is not None
-    if not (person.given or person.surname):
+    if not (person.given or person.surname) and person.id not in linked:  # a nameless partner or parent is a placeholder
         issues.append(Issue("W-NO-NAME", f"{person.id}: person has no name", where))
     if person.sex not in ("M", "F", "U"):
         issues.append(Issue("W-BAD-SEX", f"{person.id}: sex {person.sex!r} is not M, F or U", where))
@@ -129,6 +129,37 @@ def _check_person(person: Person, issues: list[Issue]) -> None:
             )
 
 
+def _year(event) -> int | None:
+    """The year of a plain (unqualified) date; None for anything vague, so only certain contradictions are reported."""
+    parsed = parse_date(event.date) if event is not None and event.date else None
+    return parsed.year if parsed is not None and parsed.qualifier is None and not parsed.approx else None
+
+
+def _line_of(person: Person, key: str):
+    raw = getattr(person, "raw", None)
+    lines = getattr(raw, "lines", None) or {}
+    return lines.get(key, person.line) if person.source else None
+
+
+def _date_sanity(tree: Tree, relations, issues: list[Issue]) -> None:
+    """Contradictions between plain dates: birth after death, a child before a parent or long after a parent's death."""
+    for pid, person in sorted(tree.people.items()):
+        born, died = _year(person.birth), _year(person.death)
+        if born is not None and died is not None and born > died:
+            issues.append(Issue("W-BIRTH-AFTER-DEATH", f"{pid}: born ({born}) after dying ({died})", person.location, _line_of(person, "death")))
+        if born is None:
+            continue
+        for parent_id in relations.parents.get(pid, []):
+            parent = tree.people.get(parent_id)
+            if parent is None:
+                continue
+            parent_born, parent_died = _year(parent.birth), _year(parent.death)
+            if parent_born is not None and born < parent_born:
+                issues.append(Issue("W-CHILD-BEFORE-PARENT", f"{pid}: born ({born}) before their parent {parent_id} ({parent_born})", person.location, _line_of(person, "birth")))
+            elif parent_died is not None and born > parent_died + 1:
+                issues.append(Issue("W-CHILD-AFTER-PARENT-DEATH", f"{pid}: born ({born}) more than a year after their parent {parent_id} died ({parent_died})", person.location, _line_of(person, "birth")))
+
+
 def _guard(label: str, step, issues: list[Issue], path: str | None = None) -> None:
     """Run one validation step; an unexpected exception becomes an issue instead of hiding every other finding."""
     try:
@@ -146,9 +177,12 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
         return sorted(issues, key=lambda i: (i.path or "", i.code, i.message))
     issues += relations.issues
 
+    linked = {p for ps in relations.parents.values() for p in ps} | {p for p in tree.people if relations.couples_of.get(p)}
+    linked = frozenset(linked)
+
     def person_step(person: Person) -> None:
         local: list[Issue] = []
-        _check_person(person, local)
+        _check_person(person, local, linked)
         issues.extend(replace(i, line=person.line) if person.source and i.line is None else i for i in local)
         issues.extend(family_person_issues(person))
 
@@ -169,6 +203,7 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
                     )
 
     _guard("couples", couples_step, issues)
+    _guard("dates", lambda: _date_sanity(tree, relations, issues), issues)
 
     def cycles_step() -> None:
         cycle_members = _cycle_members(relations.parents)

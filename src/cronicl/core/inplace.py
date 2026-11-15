@@ -114,7 +114,11 @@ def set_death_unknown(text: str, pid: str) -> str:
     children, indent = _children(value_node)
     if children is None:
         raise InplaceError(f"{pid}: the record is written as {{...}} on one line; add `death: unknown` by hand")
-    if "death" in children:
+    existing = children.get("death")
+    if existing is not None:
+        if isinstance(existing, yaml.ScalarNode) and not existing.value:  # blank: `death:` or `death:   # note`
+            at = existing.start_mark.index
+            return bom + body[:at] + (" " if body[at - 1:at] == ":" else "") + "unknown" + body[at:]
         return text
     anchor = children.get("birth") or children.get("sex") or children.get("name")
     if anchor is not None:

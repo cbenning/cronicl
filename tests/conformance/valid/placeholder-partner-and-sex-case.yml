@@ -1,0 +1,9 @@
+smith-john:
+  name: {given: John, surname: Smith}
+  sex: Male
+unknown-1:
+smith-john + unknown-1: {}
+kid-one:
+  name: {given: Kid}
+  parents: [smith-john, unknown-2]
+unknown-2:

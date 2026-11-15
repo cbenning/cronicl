@@ -62,6 +62,14 @@ def plan_rename(data_dir: Path, old: str, new: str) -> list[Change]:
     home = _rename_home(data_dir / "site.yml", old, new)
     if home:
         changes.append(home)
+    extra = data_dir / "archive" / "gedcom-extra.yml"  # what the importer set aside is filed under the person's id
+    if extra.is_file():
+        try:
+            updated, count = rename(_read(extra), old, new)
+        except (InplaceError, UnicodeDecodeError):
+            updated, count = "", 0
+        if count:
+            changes.append(Change(extra, updated, count))
     return changes
 
 
@@ -84,7 +92,8 @@ def plan_mark(data_dir: Path, ids: list[str], living: bool) -> list[tuple[str, P
         try:
             updated = set_living(current, pid) if living else set_death_unknown(current, pid)
         except InplaceError as exc:
-            raise EditError(f"{pid}: {exc}") from None
+            message = str(exc)
+            raise EditError(message if message.startswith(f"{pid}:") else f"{pid}: {message}") from None
         texts[path] = updated
         results.append((pid, path, updated != current, updated))
     return results

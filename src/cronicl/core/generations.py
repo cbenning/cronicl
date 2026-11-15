@@ -40,15 +40,31 @@ def _generation_pass(gen, unions, kids, siblings) -> set[str]:
     return moved
 
 
-def _generations(people, unions, kids) -> dict[str, int]:
+def _settle(people, unions, kids, siblings) -> tuple[dict[str, int] | None, set[str]]:
+    """Generation rows with the given sibling groups; (None, the couples that kept moving) when they never settle."""
     gen = {pid: 0 for pid in people}
-    siblings = _sibling_groups(unions, kids)
     for _ in range(len(people) + len(unions) + 2):
         if not _generation_pass(gen, unions, kids, siblings):
-            return gen
+            return gen, set()
     involved: set[str] = set()
     for _ in range(len(unions) + 2):
         involved |= _generation_pass(gen, unions, kids, siblings)
+    return None, involved
+
+
+def _generations(people, unions, kids) -> dict[str, int]:
+    """Row numbers: spouses share a row, children sit below their parents, and siblings share a row when they can.
+
+    A marriage inside the family (an uncle and a niece) cannot also keep every sibling group on one row, so when the
+    strict rules never settle the sibling rule is given up and the people are drawn by their couples and parents alone.
+    A person marrying their own ancestor or descendant still cannot be drawn and is reported.
+    """
+    gen, involved = _settle(people, unions, kids, _sibling_groups(unions, kids))
+    if gen is not None:
+        return gen
+    relaxed, _ = _settle(people, unions, kids, {})
+    if relaxed is not None:
+        return relaxed
     raise LayoutError(
         "could not assign generations: spouses must share a row but their ancestry puts them in different "
         "generations (or the tree has an ancestry cycle); couples involved: " + ", ".join(sorted(involved))

@@ -1,0 +1,6 @@
+# expect: W-CHILD-AFTER-PARENT-DEATH@5
+p: {name: {given: P}, birth: 1900, death: 1940}
+c:
+  name: {given: C}
+  birth: 1943
+  parents: [p]

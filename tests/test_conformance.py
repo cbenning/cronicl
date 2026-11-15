@@ -59,6 +59,8 @@ def validate(value, schema, root=None):
         problems.append(f"{value!r} not in {schema['enum']}")
     if isinstance(value, str) and "maxLength" in schema and len(value) > schema["maxLength"]:
         problems.append("too long")
+    if isinstance(value, str) and "pattern" in schema and not re.search(schema["pattern"], value):
+        problems.append(f"{value!r} does not match {schema['pattern']}")
     if isinstance(value, list):
         if "maxItems" in schema and len(value) > schema["maxItems"]:
             problems.append("too many items")
@@ -105,7 +107,8 @@ def test_every_check_code_of_the_spec_table_has_a_case():
     required = {
         "E-BAD-FAMILY", "E-RECORD-KEY", "E-RECORD-SHAPE", "E-DUPLICATE-ID", "E-COUPLE-SELF", "E-DANGLING-REF", "W-BLANK",
         "W-FLOW-COMMA", "W-DATE-UNPARSED", "W-DATE-SPAN", "W-BAD-SEX", "W-LIVING-FALSE", "W-EVENT-IS-FIELD", "W-EVENT-ONCE",
-        "W-EVENT-PLACEMENT", "W-UNKNOWN-KEY", "W-DUPLICATE-KEY", "W-NO-NAME", "W-COUPLE-EVENT", "E-CYCLE", "W-TOO-MANY-PARENTS",
+        "W-EVENT-PLACEMENT", "W-UNKNOWN-KEY", "W-DUPLICATE-KEY", "W-NO-NAME", "E-CYCLE", "W-TOO-MANY-PARENTS", "W-LIVING-AND-DEATH", "W-DUPLICATE-PARENT", "W-BIRTH-AFTER-DEATH",
+        "W-CHILD-BEFORE-PARENT", "W-CHILD-AFTER-PARENT-DEATH", "W-EVENT-NO-TYPE", "E-INVALID-ID", "W-END-BEFORE-START",
     }
     assert required <= codes, sorted(required - codes)
 

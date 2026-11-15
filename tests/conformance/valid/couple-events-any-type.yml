@@ -1,0 +1,9 @@
+a:
+  name: {given: A}
+b:
+  name: {given: B}
+a + b:
+  events:
+    - {type: marriage, date: 1900}
+    - {type: residence, date: 1905, place: "Leeds, England"}
+    - {type: census, date: 1911, note: Lodger in the household}

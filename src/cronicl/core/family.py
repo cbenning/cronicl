@@ -7,6 +7,7 @@ a couple's begin/end events become `Partnership`s on the first-sorting partner, 
 from __future__ import annotations
 
 import re
+from functools import cmp_to_key
 from pathlib import Path
 
 from .dates import parse_span, plain_form
@@ -178,15 +179,6 @@ class _Reader:
                 self.problem("E-DANGLING-REF", f"{a} + {b}: {missing[0]} is not a person in the family", source, line)
                 continue
             entries = self._events(record, f"{a} + {b}", source)
-            for index, entry in enumerate(entries):
-                kind = _text(entry.get("type")) or ""
-                if kind not in BEGIN + END:
-                    self.problem(
-                        "W-COUPLE-EVENT",
-                        f"{a} + {b}: event type {kind!r} is not one a couple can have ({', '.join(BEGIN + END)})",
-                        source,
-                        record.get("events").lines[index] if isinstance(record.get("events"), Sequence) else line,
-                    )
             partnerships = partnerships_from_events(entries, b)
             note = _text(record.get("note"))
             if note:
@@ -233,10 +225,27 @@ def partnerships_from_events(entries, other: str) -> list[Partnership]:
     return partnerships
 
 
+def _parts(entry: Mapping) -> tuple[int, ...]:
+    return tuple(int(x) for x in plain_form(_text(entry.get("date"))).split("-"))
+
+
+def _compare(a: Mapping, b: Mapping) -> int:
+    """Earlier first. Dates that agree as far as the less precise one goes (1950 and 1950-06) are the same moment:
+    a beginning event then comes before an ending one, and otherwise the written order stays."""
+    pa, pb = _parts(a), _parts(b)
+    shared = min(len(pa), len(pb))
+    if pa[:shared] != pb[:shared]:
+        return -1 if pa[:shared] < pb[:shared] else 1
+    begins_a, begins_b = _text(a.get("type")) in BEGIN, _text(b.get("type")) in BEGIN
+    if begins_a != begins_b:
+        return -1 if begins_a else 1
+    return 0
+
+
 def _in_date_order(entries: list[Mapping]) -> list[Mapping]:
     """Order events by date; an event with no (readable) date keeps its written position among the others."""
     slots = [i for i, e in enumerate(entries) if plain_form(_text(e.get("date")))]
-    dated = sorted((entries[i] for i in slots), key=lambda e: plain_form(_text(e.get("date"))))
+    dated = sorted((entries[i] for i in slots), key=cmp_to_key(_compare))
     out = list(entries)
     for slot, entry in zip(slots, dated):
         out[slot] = entry
@@ -251,6 +260,13 @@ def read_family(data_dir: Path) -> tuple[list[Person], list[Issue]]:
         reader.problem("E-BAD-FAMILY", "both family.yml and a family/ folder exist; keep one of them", "family.yml")
         return [], reader.issues
     seen_people: set[str] = set()
+    if folder.is_dir():
+        for entry in sorted(folder.iterdir()):
+            if entry.name.startswith("."):
+                continue
+            if entry.is_dir() or entry.suffix.casefold() == ".yaml":
+                what = "a folder" if entry.is_dir() else "a .yaml file"
+                reader.problem("W-IGNORED-FILE", f"family/{entry.name} is {what}; only .yml files directly in family/ are read", f"family/{entry.name}")
     for path in family_files(data_dir):
         source = path.relative_to(data_dir).as_posix()
         try:
@@ -274,11 +290,9 @@ def read_family(data_dir: Path) -> tuple[list[Person], list[Issue]]:
             reader.problem("E-BAD-FAMILY", f"{source} must be a mapping of records (person ids and couples)", source, 1)
             continue
         for key, line in result.top_duplicates:
-            reader.problem("E-DUPLICATE-ID", f"{key!r} is written twice; the later record is ignored", source, line)
+            reader.problem("E-DUPLICATE-ID", f"{key!r} is written twice; the later record is used and the earlier one is ignored", source, line)
         for key, value in result.data.items():
             line = result.data.lines.get(key, 1)
-            if (key, line) in result.top_duplicates:
-                continue  # the later copy of a repeated key
             match = COUPLE.match(key) if "+" in key else None
             if match:
                 reader.couple(key, match, value, source, line)

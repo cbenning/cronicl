@@ -1,0 +1,4 @@
+# expect: E-INVALID-ID@3
+# schema: rejects
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:
+  name: {given: Long}

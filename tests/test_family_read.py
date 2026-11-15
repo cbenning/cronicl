@@ -174,7 +174,6 @@ def test_the_result_matches_an_equivalent_hand_built_tree(tmp_path, write_family
         ("a:\n  name: {given: A}\n  events: [hello]\n", "E-RECORD-SHAPE", 3),
         ("a:\n  name: {given: A}\n  birth: [1, 2]\n", "E-RECORD-SHAPE", 3),
         ("a:\n  name: {given: A}\na + ghost: {}\n", "E-DANGLING-REF", 3),
-        ("a:\n  name: {given: A}\nb:\n  name: {given: B}\na + b:\n  events:\n    - {type: wedding, date: 1900}\n", "W-COUPLE-EVENT", 7),
     ],
 )
 def test_record_problems_are_reported_with_their_line(tmp_path, write_family, text, code, line):

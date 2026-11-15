@@ -1,0 +1,6 @@
+# expect: W-LIVING-AND-DEATH@6
+a:
+  name: {given: A}
+  birth: 1900
+  death: 1950
+  living: true

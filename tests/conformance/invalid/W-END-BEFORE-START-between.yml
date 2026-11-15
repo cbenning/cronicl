@@ -1,0 +1,4 @@
+# expect: W-END-BEFORE-START@4
+a:
+  name: {given: A}
+  birth: BET 1890 AND 1880

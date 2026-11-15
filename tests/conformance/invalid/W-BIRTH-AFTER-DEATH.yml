@@ -1,0 +1,5 @@
+# expect: W-BIRTH-AFTER-DEATH@5
+a:
+  name: {given: A}
+  birth: 1990
+  death: 1950

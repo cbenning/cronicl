@@ -1,0 +1,6 @@
+# expect: W-CHILD-BEFORE-PARENT@5
+p: {name: {given: P}, birth: 1900}
+c:
+  name: {given: C}
+  birth: 1890
+  parents: [p]

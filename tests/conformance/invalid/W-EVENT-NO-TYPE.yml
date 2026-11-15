@@ -1,0 +1,10 @@
+# expect: W-EVENT-NO-TYPE@5, W-EVENT-NO-TYPE@10
+a:
+  name: {given: A}
+  events:
+    - {date: 1900}
+b:
+  name: {given: B}
+a + b:
+  events:
+    - {date: 1920}

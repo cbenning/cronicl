@@ -49,7 +49,7 @@ FAMILY_SCHEMA = {
     "description": "Every top-level key is a person id, or two person ids joined by + (a couple).",
     "type": "object",
     "patternProperties": {
-        "^[a-z0-9]+(-[a-z0-9]+)*$": {"$ref": "#/$defs/person"},
+        "^(?=.{1,64}$)[a-z0-9]+(-[a-z0-9]+)*$": {"$ref": "#/$defs/person"},
         r"^\s*[a-z0-9]+(-[a-z0-9]+)*\s*\+\s*[a-z0-9]+(-[a-z0-9]+)*\s*$": {"$ref": "#/$defs/couple"},
     },
     "additionalProperties": False,
@@ -67,10 +67,10 @@ FAMILY_SCHEMA = {
                                 "prefix": _TEXT,
                                 "suffix": _TEXT,
                                 "nickname": _TEXT,
-                                "also": {"type": "array", "items": _TEXT},
+                                "also": {"oneOf": [_TEXT, {"type": "array", "items": _TEXT}]},
                             }
                         ),
-                        "sex": {"oneOf": [{"enum": ["male", "female", "unknown", "other"]}, {"type": "null"}]},
+                        "sex": {"oneOf": [{"type": "string", "pattern": '^([mM][aA][lL][eE]|[fF][eE][mM][aA][lL][eE]|[uU][nN][kK][nN][oO][wW][nN]|[oO][tT][hH][eE][rR])$', "description": "male, female, unknown or other, in any case"}, {"type": "null"}]},
                         "birth": _FACT,
                         "death": _FACT,
                         "parents": {"oneOf": [{"type": "null"}, {"type": "array", "items": _TEXT, "maxItems": 2}]},

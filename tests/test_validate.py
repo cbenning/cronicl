@@ -145,10 +145,10 @@ def test_a_rule_that_raises_is_reported_for_that_person_only(tmp_path, write, mo
     tree, load = load_tree(tmp_path)
     real = __import__("cronicl.core.check", fromlist=["x"])._check_person
 
-    def boom(person, out):
+    def boom(person, out, *rest):
         if person.id == "a":
             raise RuntimeError("kaput")
-        return real(person, out)
+        return real(person, out, *rest)
 
     monkeypatch.setattr("cronicl.core.check._check_person", boom)
     found = check_tree(tree, load)

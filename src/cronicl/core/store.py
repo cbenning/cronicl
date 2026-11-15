@@ -42,7 +42,12 @@ def load_tree(data_dir: Path) -> tuple[Tree, list[Issue]]:
     tree = Tree(site=site)
     if not has_family(data_dir):
         old = (data_dir / "people").is_dir() and any((data_dir / "people").glob("*.md"))
-        hint = "; this folder is in the old layout: run `cronicl migrate`" if old else "; run `cronicl init` to start one"
+        if old:
+            hint = "; this folder is in the old layout: run `cronicl migrate`"
+        elif (data_dir / "family.yaml").exists():
+            hint = "; found family.yaml: rename it to family.yml"
+        else:
+            hint = "; run `cronicl init` to start one"
         return tree, issues + [Issue("E-NO-FAMILY", f"no family.yml (or family/ folder) in {data_dir}{hint}", "family.yml")]
     people, record_issues = read_family(data_dir)
     issues = issues + record_issues

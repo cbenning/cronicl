@@ -1,0 +1,6 @@
+# expect: W-DUPLICATE-PARENT@6
+c:
+  name: {given: C}
+k:
+  name: {given: K}
+  parents: [c, c]
