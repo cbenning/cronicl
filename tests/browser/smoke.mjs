@@ -276,7 +276,7 @@ async function main() {
   check('the rows scroll natively: a plain wheel is left to the browser, zoom and sideways are ours', nat.overflow === 'auto' && nat.scrollable && !nat.plainPrevented && nat.ctrlPrevented && nat.shiftPrevented, JSON.stringify(nat));
   await ev(`document.getElementById('timeline-rows').scrollTop = 100000`);
   let last;
-  for (let i = 0; i < 30; i++) { await sleep(100); last = await ev(`(() => { const box = document.getElementById('timeline-rows'); const rows = [...document.querySelectorAll('.span-row')]; const b = box.getBoundingClientRect(); return { drawn: rows.length, visible: rows.some((r) => { const q = r.getBoundingClientRect(); return q.bottom > b.top && q.top < b.bottom; }) }; })()`); if (last.visible) break; } // rows are redrawn on the next animation frame
+  for (let i = 0; i < 30; i++) { await sleep(100); last = await ev(`(() => { const box = document.getElementById('timeline-rows'); const rows = [...document.querySelectorAll('.span-row')]; const b = box.getBoundingClientRect(); return { drawn: rows.length, visible: rows.some((r) => { const q = r.getBoundingClientRect(); return q.bottom > b.top && q.top < b.bottom; }), scrollTop: box.scrollTop, scrollHeight: box.scrollHeight, clientHeight: box.clientHeight, box: [b.top, b.bottom], first: rows[0] && [rows[0].getBoundingClientRect().top, rows[0].getBoundingClientRect().bottom, rows[0].getAttribute('transform')], inner: window.innerHeight }; })()`); if (last.visible) break; } // rows are redrawn on the next animation frame
   check('scrolling to the bottom draws the last rows', last.visible, JSON.stringify(last));
   await send('Emulation.setDeviceMetricsOverride', { width: 1400, height: 820, deviceScaleFactor: 1, mobile: false });
 
