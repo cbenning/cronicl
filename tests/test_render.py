@@ -484,7 +484,9 @@ def test_page_prints_facts_notes_and_sources_escaped(tmp_path, make_tree):
     build_site(tree, tmp_path, today=TODAY)
     page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")
     assert "Carpenter &lt;b&gt;" in page and "Carpenter <b>" not in page
-    assert "Source: Census 1911" in page and "Source: Parish register" in page
+    sources = page[page.index('class="sources"'):]
+    assert all(text in sources for text in ("Census 1911", "Parish register", "Directory"))
+    assert page.count('class="cite-ref"') == 3 and "Source:" not in page
     assert "Self-employed" in page and "Graduation" in page and "May 1960 – 1975" in page
 
 
