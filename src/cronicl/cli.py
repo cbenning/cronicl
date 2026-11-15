@@ -261,6 +261,43 @@ def cmd_migrate(args) -> int:
     return 0
 
 
+def cmd_export_gedcom(args) -> int:
+    from .core.gedcom_export import export_gedcom, read_gedcom_extra
+
+    root = Path(args.dir)
+    tree, load_issues = load_tree(root)
+    errors = [i for i in check_all(tree, load_issues) if i.severity == "error"]
+    if errors and not args.ignore_errors:
+        _print_issues(errors, "text")
+        print("error: fix the problems above or use --ignore-errors", file=sys.stderr)
+        return 1
+    out = Path(args.out) if args.out else None
+    if out is not None and out.exists():
+        print(f"error: {out} already exists; remove it or choose another name", file=sys.stderr)
+        return 2
+    privacy = privacy_settings(tree.site)
+    extra_file = root / "archive" / "gedcom-extra.yml"
+    extra = {} if args.no_extra or not extra_file.is_file() else read_gedcom_extra(extra_file.read_text(encoding="utf-8"))
+    text, issues = export_gedcom(
+        tree, mode=privacy.living, cutoff=privacy.cutoff_years, places=_place_coords(tree.site), extra=extra,
+        include_living=args.include_living,
+    )
+    if args.include_living and privacy.living != "full":
+        print("WARNING --include-living: living people are exported in full", file=sys.stderr)
+    for issue in issues:
+        print(f"WARNING {issue.code} {issue.message}", file=sys.stderr)
+    if out is None:
+        sys.stdout.write(text)
+    else:
+        out.write_text(text, encoding="utf-8", newline="\n")
+        print(f"wrote {out}: {text.count(chr(10))} lines", file=sys.stderr)
+    return 0
+
+
+def _place_coords(site: dict) -> dict:
+    return {}  # the `places:` table of site.yml arrives with the map feature
+
+
 def cmd_rename(args) -> int:
     root = Path(args.dir)
     changes = plan_rename(root, args.old, args.new)
@@ -431,6 +468,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("file", help="the .ged file to import")
     _add_apply(p)
     p.set_defaults(func=cmd_import)
+
+    p = sub.add_parser("export-gedcom", parents=[common], help="write the family as a GEDCOM 5.5.1 file (read-only on your data)")
+    p.add_argument("--out", help="write to this new file instead of standard output")
+    p.add_argument("--include-living", action="store_true", help="export living people in full even if privacy.living hides them")
+    p.add_argument("--no-extra", action="store_true", help="leave out the lines the importer set aside in archive/gedcom-extra.yml")
+    p.add_argument("--ignore-errors", action="store_true", help="export even if check reports errors")
+    p.set_defaults(func=cmd_export_gedcom)
 
     p = sub.add_parser("edit", parents=[common], help="state-changing helpers (edit person records)")
     edit_sub = p.add_subparsers(dest="edit_command", required=True)
