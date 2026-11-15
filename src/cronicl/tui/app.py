@@ -72,7 +72,53 @@ class CroniclApp(App):
             self.push_screen(PersonScreen(pid))
 
     def new_person(self) -> None:
-        self.notify("New person comes with the editing screens")
+        """Ctrl+N in the finder: create a person (asking which file when the family is a folder) and open them."""
+        from .screens.editors import ChoiceEditor
+
+        files = sorted(self.session.staged)
+        if len(files) > 1:
+            self.push_screen(ChoiceEditor("Which file?", [(name, "") for name in files], files[0]), self._new_person_in)
+        else:
+            self._new_person_in(files[0] if files else "family.yml")
+
+    def _new_person_in(self, source: str | None) -> None:
+        if not source:
+            return
+        self.create_person(source, None, lambda pid: self.open_person(pid))
+
+    def ask_person(self, then) -> None:
+        """Ask for a new person's name and id; call `then(spec)` (a dict with id, given, surname) when they accept."""
+        from .screens.newperson import NewPersonScreen
+
+        def made(spec) -> None:
+            if spec is not None:
+                then(spec)
+
+        self.push_screen(NewPersonScreen(set(self.session.family.tree.people)), made)
+
+    def stage_person(self, source: str, spec: dict, parents: list[str] | None = None) -> str:
+        """Stage the new person's record at the end of `source`; return their id."""
+        from ..core.recordedit import add_person_record
+
+        data: dict = {}
+        name = {k: spec[k] for k in ("given", "surname") if spec[k]}
+        if name:
+            data["name"] = name
+        if parents:
+            data["parents"] = list(parents)
+        self.session.stage(source, add_person_record(self.session.staged[source], spec["id"], data))
+        return spec["id"]
+
+    def create_person(self, source: str, parents: list[str] | None, then) -> None:
+        """Ask for a name, stage the new record in `source` (with `parents`), and call `then(new id)`."""
+        self.ask_person(lambda spec: then(self.stage_person(source, spec, parents)))
+
+    async def action_quit(self) -> None:
+        """Quit, but go through the diff first when something is staged."""
+        if self.session is not None and self.session.changed:
+            self.review_changes(lambda result: self.exit() if result != "back" else None)
+        else:
+            self.exit()
 
     def open_warnings(self) -> None:
         self.notify("Warnings screen comes later")

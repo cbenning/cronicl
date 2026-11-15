@@ -252,6 +252,18 @@ def descendants(family, pid: str) -> set[str]:
     return seen
 
 
+def ancestors(family, pid: str) -> set[str]:
+    """Everyone above `pid` through their parents."""
+    seen: set[str] = set()
+    stack = [pid]
+    while stack:
+        for parent in family.relations.parents.get(stack.pop(), []):
+            if parent not in seen:
+                seen.add(parent)
+                stack.append(parent)
+    return seen
+
+
 def editor_for(app, record_key: str, path: tuple, value: str):
     """The editor screen for the field at `path`, or None when the row is not a field the editors know."""
     key = catalog_key(path)

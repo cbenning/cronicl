@@ -11,7 +11,7 @@ from textual.widgets.option_list import Option
 from ...core.catalog import FIELDS
 from ...core.recordedit import EditRefused, add_couple_event, add_couple_record, couple_key, list_add, record_data, remove, set_value
 from ..recordview import Row, build
-from .editors import PeoplePicker, TextEditor, catalog_key, editor_for
+from .editors import ChoiceEditor, PeoplePicker, TextEditor, ancestors, catalog_key, descendants, editor_for
 from .modals import Confirm, Prompt
 from .palette import VALUE_EVENT_TYPES, PaletteScreen, build_entries
 from .raw import RawScreen
@@ -50,9 +50,10 @@ class PersonScreen(Screen):
         Binding("ctrl+q", "app.quit", "Quit"),
     ]
 
-    def __init__(self, pid: str) -> None:
+    def __init__(self, pid: str, nested: bool = False) -> None:
         super().__init__()
         self.pid = pid
+        self.nested = nested  # opened from another person's edit: Esc goes back without the diff
         self.expanded: set[str] = set()
         self.targets: dict[str, tuple] = {}
         self.keep_path: tuple | None = None
@@ -198,7 +199,7 @@ class PersonScreen(Screen):
             return
         kind = target[0]
         if kind == "open":
-            self.app.open_person(target[1])
+            self._leave(lambda pid=target[1]: self.app.open_person(pid))
         elif kind == "partner":
             partner = target[1]
             self.expanded.symmetric_difference_update({partner})
@@ -233,7 +234,7 @@ class PersonScreen(Screen):
         if value is None:
             return
         if value == PeoplePicker.NEW:
-            self.app.notify("New people are added from the field palette (a)", severity="warning")
+            self._new_parent(lambda pid: self._stage(source, lambda t: set_value(t, row.path, pid), row.path))
             return
         session = self.app.session
         text = session.staged[source]
@@ -256,10 +257,20 @@ class PersonScreen(Screen):
     def action_open_partner(self) -> None:
         target = self._target()
         if target and target[0] in ("partner", "couple_row"):
-            self.app.open_person(target[1])
+            self._leave(lambda pid=target[1]: self.app.open_person(pid))
+
+    def _leave(self, then) -> None:
+        """Run `then` (leave this person) once any staged changes have been written or discarded."""
+        if self.app.session.changed:
+            self.app.review_changes(lambda result: then() if result != "back" else None)
+        else:
+            then()
 
     def action_back(self) -> None:
-        self.app.pop_screen()
+        if self.nested:
+            self.app.pop_screen()
+            return
+        self._leave(self.app.pop_screen)
 
     # ---- which record the cursor is in -------------------------------------------------------------------------------
     def _record_context(self):
@@ -314,8 +325,10 @@ class PersonScreen(Screen):
             self._add_event(action[1], context)
         elif name == "custom":
             self.app.push_screen(Prompt("Name of your field (it starts with x-)", placeholder="x-nickname"), lambda k: self._custom_key(k, key, source))
-        else:
-            self.app.notify("Partners and children are added in the next step", severity="warning")
+        elif name == "partner":
+            self._add_partner()
+        elif name == "child":
+            self._add_child()
 
     def _add_field(self, field, key: str, source: str) -> None:
         steps = tuple(field.path.split("."))
@@ -333,7 +346,7 @@ class PersonScreen(Screen):
                 return
             if field.path == "parents":
                 if value == PeoplePicker.NEW:
-                    self.app.notify("New people are added in the next step", severity="warning")
+                    self._new_parent(lambda pid: self._stage(source, lambda t: list_add(t, (key, "parents"), pid), (key, "parents", 0)))
                     return
                 self._stage(source, lambda t: list_add(t, (key, "parents"), value), (key, "parents", 0))
             elif field.path == "name.also":
@@ -363,8 +376,10 @@ class PersonScreen(Screen):
         order = (["value"] if slug in VALUE_EVENT_TYPES else []) + ["date", "place"]
         self._ask_event_fields(key, source, index, order)
 
-    def _ask_event_fields(self, key: str, source: str, index: int, remaining: list[str]) -> None:
+    def _ask_event_fields(self, key: str, source: str, index: int, remaining: list[str], finish=None) -> None:
         if not remaining:
+            if finish:
+                finish()
             return
         field, rest = remaining[0], remaining[1:]
         path = (key, "events", index, field)
@@ -375,7 +390,7 @@ class PersonScreen(Screen):
                 return
             if value:
                 self._stage(source, lambda t: set_value(t, path, value), path)
-            self._ask_event_fields(key, source, index, rest)
+            self._ask_event_fields(key, source, index, rest, finish)
 
         self.app.push_screen(screen, done)
 
@@ -406,3 +421,88 @@ class PersonScreen(Screen):
     def action_raw(self) -> None:
         kind, partner, key, source = self._record_context()
         self.app.push_screen(RawScreen(self.app.session, key, source))
+
+    # ---- relationships -----------------------------------------------------------------------------------------------
+    def _own_source(self) -> str:
+        return self.family.tree.people[self.pid].source
+
+    def _open_nested(self, pid: str) -> None:
+        self.app.push_screen(PersonScreen(pid, nested=True))
+
+    def _new_parent(self, then) -> None:
+        """Create a person with no parents, call `then(new id)` to link them, and open them nested."""
+
+        def made(pid: str) -> None:
+            then(pid)
+            self._open_nested(pid)
+
+        self.app.create_person(self._own_source(), None, made)
+
+    def _add_partner(self) -> None:
+        family = self.family
+        exclude = {self.pid} | {p for cid in family.relations.couples_of.get(self.pid, []) for p in family.relations.couples[cid].partners}
+
+        def picked(value) -> None:
+            if value is None:
+                return
+            if value == PeoplePicker.NEW:
+                self.app.create_person(self._own_source(), None, lambda pid: self._partner_chosen(pid, True))
+            else:
+                self._partner_chosen(value, False)
+
+        self.app.push_screen(PeoplePicker("Add a partner", family, exclude, True), picked)
+
+    def _partner_chosen(self, other: str, created: bool) -> None:
+        source = self._own_source()
+        key = couple_key(self.pid, other)
+        if not self._stage(source, lambda t: add_couple_event(t, self.pid, other, {"type": "marriage"})):
+            return
+        self.expanded.add(other)
+        events = record_data(self.app.session.staged[source], key).get("events") or []
+        index = len(events) - 1
+        finish = (lambda: self._open_nested(other)) if created else None
+        self.keep_path = None
+        self._ask_event_fields(key, source, index, ["date", "place"], finish)
+
+    def _add_child(self) -> None:
+        family = self.family
+        exclude = {self.pid} | ancestors(family, self.pid)
+
+        def picked(value) -> None:
+            if value is None:
+                return
+            if value == PeoplePicker.NEW:
+                self._new_child()
+            else:
+                self._existing_child(value)
+
+        self.app.push_screen(PeoplePicker("Add a child", family, exclude, True), picked)
+
+    def _existing_child(self, child: str) -> None:
+        family = self.family
+        person = family.tree.people[child]
+        if len(person.parents) >= 2:
+            self.app.notify(f"{family.name_of(child)} already has two parents", severity="warning")
+            return
+        self._stage(person.source, lambda t: list_add(t, (child, "parents"), self.pid), (child, "parents", 0))
+
+    def _new_child(self) -> None:
+        family = self.family
+        partners = [p for cid in family.relations.couples_of.get(self.pid, []) for p in family.relations.couples[cid].partners if p != self.pid]
+        source = self._own_source()
+        def named(spec) -> None:
+            if not partners:
+                self._open_nested(self.app.stage_person(source, spec, [self.pid]))
+                return
+
+            def other_parent(value) -> None:
+                if value is None:
+                    return
+                parents = [self.pid] + ([value] if value else [])
+                self._open_nested(self.app.stage_person(source, spec, parents))
+
+            self.app.push_screen(
+                ChoiceEditor("Other parent", [(p, family.name_of(p)) for p in partners], "", blank="(none)"), other_parent
+            )
+
+        self.app.ask_person(named)
