@@ -25,6 +25,8 @@ _TAG_FOR_TYPE = {
     "census": ("CENS", False), "will": ("WILL", False), "probate": ("PROB", False),
 }
 _XREF_OK = re.compile(r"^[A-Za-z0-9_]{1,20}$")
+_EXTRA_LINE = re.compile(r"^\s*(\d+) (?:(@[^@\s]+@) )?(\S+)(?: (.*))?$")
+_POINTER_VALUE = re.compile(r"^@[^@\s]+@$")
 _CHUNK = 200  # characters of text per physical line; GEDCOM allows 255 including the level and tag
 
 
@@ -237,21 +239,35 @@ class _Export:
             w.line(1, "FAMS", ref, pointer=True)
 
     def person_extra(self, pid: str) -> str:
-        lines = [l for l in self.extra[pid].split("\n") if l.strip()]
-        keep: list[str] = []
-        skipping = False
-        for line in lines:
-            level = line.split(" ", 1)[0]
-            if level == "0":
-                skipping = True
+        """The lines the importer set aside for a person, safe to write again.
+
+        Their text is escaped again (the importer read `@@` as `@`). A line that points at another record (`@S9@`) or
+        belongs to a family block is dropped with its sub-lines: the records it named are not in this file, and our
+        numbering differs from the original's, so a kept pointer could link to the wrong record.
+        """
+        out: list[str] = []
+        skipping_from: int | None = None
+        dropped_family = dropped_pointer = False
+        for raw in self.extra[pid].split("\n"):
+            match = _EXTRA_LINE.match(raw)
+            if not match:
                 continue
-            if level == "1":
-                skipping = False
-            if not skipping:
-                keep.append(line)
-        if skipping or len(keep) != len(lines):
+            level, xref, tag, value = int(match.group(1)), match.group(2), match.group(3), match.group(4) or ""
+            if skipping_from is not None and level > skipping_from:
+                continue
+            skipping_from = None
+            if level == 0:
+                skipping_from, dropped_family = 0, True
+                continue
+            if xref or _POINTER_VALUE.match(value.strip()):
+                skipping_from, dropped_pointer = level, True
+                continue
+            out.append(f"{level} {tag}" + (f" {value.replace('@', '@@')}" if value else ""))
+        if dropped_family:
             self.issues.append(Issue("W-GEDCOM-EXTRA-FAM", f"{pid}: lines about a family in archive/gedcom-extra.yml are not exported"))
-        return "\n".join(keep)
+        if dropped_pointer:
+            self.issues.append(Issue("W-GEDCOM-EXTRA-POINTER", f"{pid}: lines in archive/gedcom-extra.yml that point at other records are not exported"))
+        return "\n".join(out)
 
     # ---- families ----------------------------------------------------------------------------------------------
     def plan_families(self) -> list[dict]:

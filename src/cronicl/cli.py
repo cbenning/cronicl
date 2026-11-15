@@ -284,8 +284,12 @@ def cmd_export_gedcom(args) -> int:
     )
     if args.include_living and privacy.living != "full":
         print("WARNING --include-living: living people are exported in full", file=sys.stderr)
+    shown: dict[str, list] = {}
     for issue in issues:
-        print(f"WARNING {issue.code} {issue.message}", file=sys.stderr)
+        shown.setdefault(issue.code, []).append(issue)
+    for code, group in shown.items():
+        more = f" ({len(group)} times; the first: {group[0].message})" if len(group) > 1 else f" {group[0].message}"
+        print(f"WARNING {code}{more}", file=sys.stderr)
     if out is None:
         sys.stdout.write(text)
     else:

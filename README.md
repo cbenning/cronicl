@@ -43,6 +43,7 @@ lines and the order of records stay as you left them.
 | `edit mark-deceased ID... [-a]` | Write `death: unknown` for the named people (no date needed). All ids are validated first. |
 | `edit mark-living ID... [-a]` | Write `living: true` for the named people. |
 | `import-gedcom FILE [-a]` | One-time GEDCOM import into `family.yml`; archives the original file. |
+| `export-gedcom [--out FILE] [--include-living] [--no-extra]` | Write the family as a GEDCOM 5.5.1 file ([details](#gedcom-export)). Never changes your data. |
 | `migrate [-a] [--allow-dirty]` | Convert an old `people/*.md` folder to `family.yml`. |
 | `build [--out OUT] [--ignore-errors]` | Run `check`, then generate the static site (default `OUT` is `<dir>/out`). |
 | `serve [--out OUT] [--port N] [--ignore-errors]` | Build and serve locally. |
@@ -64,6 +65,8 @@ read-only utilities. There is deliberately no bulk form.
   (`localStorage`, never sent anywhere); until then relations are told from the home person's side.
   `relate/index.html` answers "how are these two people related?" for any pair (`?a=<id>&b=<id>`). Kinship is
   worked out in the browser from `kin.json`; pages without JavaScript simply omit the line.
+- `sources/index.html` lists every source cited and who cites it (see [Citations](#citations)); it and its top-bar link exist only when something is cited.
+- `map/index.html` is the [map](#map), present only when you configure one.
 - `places/index.html` lists every place named in the files and who was born, died or married there, grouped by
   the last part of the name ("Hamburg, Germany" is under Germany). Nothing is guessed: a region such as
   "Ontario" is its own group unless `site.yml` folds it in (`place_groups: {Ontario: Canada, Holland: Netherlands}`,
@@ -255,6 +258,20 @@ redaction never have events, notes or sources published. `import-gedcom` maps in
 `events:`; a family's MARR, DIV, ENGA and ANUL become events in the couple's record; whatever it cannot map goes to
 `archive/gedcom-extra.yml`, which nothing reads. Search also finds event places and values.
 
+### Citations
+
+`cite:` on `birth`, `death` and any event holds the source of that fact: one text, or a list. A person page shows a
+small superscript number after each cited fact and a numbered **Sources** list at the foot of the page (the same
+text is the same number; each source links back to where it is first cited). `sources/index.html` lists every
+distinct source text with the people who cite it, and the top bar links to it when there is at least one. Source
+text is plain text, never HTML. People hidden or replaced by privacy redaction never show their sources, on their
+page or on the Sources page. Citations on a couple's events (marriage, divorce) are kept in the file and exported to
+GEDCOM but are not shown on the site yet.
+
+`import-gedcom` turns a `SOUR` line under a birth, death, event or marriage into `cite` (a pointer is replaced by
+the source record's title, abbreviation or text), and a `NOTE` there into `note`. `export-gedcom` writes each
+distinct source text once as a `SOUR` record and points the facts at it.
+
 ### Writing YAML safely
 
 Every value is read as text exactly as typed: `NO` is `NO`, `1066` is `1066`. Two traps, and `check` catches the first:
@@ -315,6 +332,9 @@ Warnings, and the rest:
 | `W-PRIVACY-NO-SALT` | redaction is on but there is no `id_salt`, so the anonymised ids can be guessed |
 | `W-PRIVACY-CUTOFF` | `privacy.cutoff_years` is not a whole number of at least 1; 100 is used |
 | `W-SITE-VALUE`, `W-PLACE-GROUPS` | a `site.yml` value of the wrong kind; it is ignored |
+| `W-NOINDEX-FILE` | (printed by `build`) a `robots.txt` or `_headers` in the output folder is yours, so noindex could not write its own |
+| `E-MAP-TYPE`, `E-MAP-TILES`, `W-MAP-KEY`, `W-MAP-NO-COORDS` | a `map:` block that is missing its `type`, has a bad tile template, has a key nothing reads, or has nothing to show |
+| `W-PLACE-COORDS`, `W-PLACE-UNKNOWN` | a `places:` entry that is not `[latitude, longitude]` in range; coordinates for a place no record uses |
 | `E-VALIDATOR` | a check failed unexpectedly; the message names the file or step |
 
 **Your own keys.** A key that starts with `x-` or `x_` (any case), such as `x-nickname: Annie`, is yours: it is
@@ -353,7 +373,7 @@ as living: that is a reminder that they are all published.
 
 `cronicl build --out public` writes a folder of plain files that any static host can serve (see
 [Deploying](#deploying) and [Password protection](#password-protection)). Unless you configure a
-[photo gallery](#photo-gallery), the site makes no external requests: no web fonts, scripts or analytics are loaded
+[photo gallery](#photo-gallery) or a [map](#map), the site makes no external requests: no web fonts, scripts or analytics are loaded
 from anywhere.
 
 `site.yml` keys that shape the published site:
@@ -365,6 +385,7 @@ intro: |                       # Markdown, shown on the home page
 home: hollings-nora-doreen     # the person the tree opens on (an id)
 edit_url: https://github.com/example/family/blob/main/{file}#L{line}   # adds "Edit this page"
 contact: mailto:family@example.org    # adds "Suggest a correction" (a mailto: or https:// link)
+noindex: true                 # ask search engines not to index the site (see Keeping search engines out)
 place_groups:                  # optional: fold a region into its country on the places page
   Ontario: Canada
   British Columbia: Canada
@@ -520,10 +541,13 @@ strong as a long passphrase, and this site is many files, not one page.
 
 ### Keeping search engines out
 
-None of the above affects search engines on a public site. The `X-Robots-Tag` lines above ask them not to index
-a protected site. A public site can add a `robots.txt` that disallows everything and a
-`<meta name="robots" content="noindex">` in its pages; cronicl does not generate either yet, and well-behaved
-crawlers only.
+Set `noindex: true` in `site.yml`. `build` then adds `<meta name="robots" content="noindex, nofollow">` to every page
+and writes `robots.txt` (disallow everything) and a `_headers` file (`X-Robots-Tag: noindex, nofollow`, read by
+Cloudflare Pages and Netlify) into the output folder. Both files start with a line saying cronicl wrote them: a build
+removes them only if they carry it, so switching `noindex` off cleans up, and a `robots.txt` or `_headers` you wrote
+yourself is never touched (`build` warns `W-NOINDEX-FILE` and the files you have win). This only asks well-behaved
+crawlers to stay away: it is not access control, and a public address can still be opened by anyone. For a real gate
+use the options above.
 
 ### A gallery behind a login
 
@@ -571,6 +595,61 @@ not `true` or `false`), `W-GALLERY-SECRET` (a key named like a secret) and `W-GA
 when building.
 
 Another gallery can be added later by registering a type in `galleries.py` and an adapter in `gallery.js`.
+
+## GEDCOM export
+
+`cronicl export-gedcom` writes your family as GEDCOM 5.5.1 (UTF-8) so you can take it to any other program. It reads
+your data and never changes it. Without `--out` the file goes to standard output; `--out FILE` refuses to overwrite
+an existing file.
+
+- **What is written:** names (given, surname, prefix, suffix, nickname; each `name.also` entry as another `NAME`
+  with `TYPE aka`), sex, `birth` and `death` with date, place, note and sources (`death: unknown` is `DEAT Y`),
+  events (standard tags such as `OCCU`, `RESI`, `BURI`; anything else as `EVEN` with `TYPE`), `bio` as a `NOTE`,
+  and one `FAM` per partnership (marriage, engagement, divorce, annulment; other couple events as `EVEN`), with
+  children, parents and links. Dates are written GEDCOM-style (`1850-03-15` is `15 MAR 1850`). A place that has
+  coordinates in `places:` gets a `MAP` with `LATI` and `LONG`.
+- **Not written:** `portrait`, `refs.gallery`, `x-` keys and `living` have no GEDCOM equivalent.
+- **Privacy:** with `privacy.living` set to `placeholder`, a living person is written as `NAME Living` with their
+  family links and nothing else; with `hidden` they are left out. `full` writes everyone. `--include-living` writes
+  everyone whatever the setting (and says so).
+- **Symmetry with import:** what the importer maps survives `import-gedcom` then `export-gedcom` then
+  `import-gedcom` unchanged, and a family written in `family.yml` using the things above survives export then
+  import. Lines the importer could not map (kept in `archive/gedcom-extra.yml`) are written back under their
+  person; `--no-extra` leaves them out. Families, remarriages and sources keep their shape; couple events that
+  GEDCOM 5.5.1 has no tag for (`civil-union`, `separation` and the like) come back as unmapped `EVEN` lines, not as
+  couple events.
+
+## Map
+
+A map page is opt-in. Give places coordinates in `site.yml`, then turn the page on:
+
+```yaml
+places:                              # the place as written in family.yml (case does not matter) -> [latitude, longitude]
+  "Hamburg, Germany": [53.5511, 9.9937]
+  "Vancouver, BC": [49.2827, -123.1207]
+map:
+  type: osm                          # required; the only type for now
+  tiles: https://tile.openstreetmap.org/{z}/{x}/{y}.png   # optional; this is the default
+  attribution: "© OpenStreetMap contributors"              # optional; always shown on the map
+  label: Map                        # optional; the top-bar link and the page heading
+```
+
+- With no `map:` block there is no map page, no link and no script, and the site makes no request to any tile server.
+- With it, `build` writes `map/index.html`, `map.json` and `map.js`, adds a top-bar link, and adds an "on the map"
+  link beside every place on the places page that has coordinates. The map needs JavaScript; without it the places
+  page lists the same places.
+- **The map loads tiles from the address in `tiles` in each visitor's browser.** That server learns the visitor's
+  network address and the area they look at, and the page says so. Use a tile provider you are allowed to use:
+  OpenStreetMap's own servers have a [usage policy](https://operations.osmfoundation.org/policies/tiles/) that is
+  fine for a small family site but not for heavy traffic.
+- Drag to pan; the mouse wheel, `+`/`-` buttons or keys zoom; arrow keys pan; `0` or Fit shows every place. Click a
+  marker (the number is how many entries are there) for the people, linked to their pages. `map/#<place>` opens
+  on one place.
+- A place is on the map only if the places page lists it, so people hidden or replaced by privacy redaction never
+  appear. Coordinates in `site.yml` are published to every visitor.
+- `check` reports `E-MAP-TYPE`, `E-MAP-TILES` (the template must contain `{z}`, `{x}` and `{y}` and no other
+  braces), `W-MAP-KEY`, `W-MAP-NO-COORDS` (a map with nothing to show), `W-PLACE-COORDS` (not `[lat, lon]` in range)
+  and `W-PLACE-UNKNOWN` (coordinates for a place no record uses). `places:` on its own is valid: `export-gedcom` uses it.
 
 ## Privacy
 

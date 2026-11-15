@@ -187,3 +187,43 @@ def test_cli_stdout_out_file_and_refusal(tmp_path, write_family, capsys):
 def test_cli_refuses_a_family_with_errors(tmp_path, write_family):
     write_family(tmp_path, "a:\n  name: {given: A}\n  parents: [ghost]\n")
     assert main(["export-gedcom", "--dir", str(tmp_path)]) == 1
+
+
+def test_set_aside_lines_that_point_at_other_records_are_not_written(tmp_path, write_family):
+    write_family(tmp_path, "a:\n  name: {given: A}\n")
+    tree, _ = load_tree(tmp_path)
+    extra = read_gedcom_extra(
+        "a: |\n  1 SOUR @S9@\n  2 PAGE 12\n  1 FAMC @F2@\n  2 PEDI adopted\n  1 _TAG kept\n  1 NOTE mail me@example.org\n  1 OBJE @https://x.example/@\n"
+    )
+    text, issues = export_gedcom(tree, today=TODAY, extra=extra)
+    assert problems(text) == []
+    assert "@S9@" not in text and "@F2@" not in text and "PEDI" not in text and "PAGE 12" not in text
+    assert "1 _TAG kept" in text and "1 NOTE mail me@@example.org" in text
+    assert [i.code for i in issues] == ["W-GEDCOM-EXTRA-POINTER"]
+
+
+def test_reimporting_escaped_set_aside_text_gives_the_original_back(tmp_path):
+    from cronicl.core.gedcom import import_nodes, parse_nodes
+
+    ged = tmp_path / "x.ged"
+    ged.write_text("0 HEAD\n1 CHAR UTF-8\n0 @I1@ INDI\n1 NAME A /B/\n1 _MAIL me@@example.org\n0 TRLR\n", encoding="utf-8")
+    first = import_nodes(parse_nodes(ged.read_text(encoding="utf-8"))[0]).people[0]
+    assert "me@example.org" in first.gedcom_extra
+    from cronicl.core.model import Tree
+
+    tree = Tree()
+    tree.people["b-a"] = first
+    text, _ = export_gedcom(tree, today=TODAY, extra={"b-a": first.gedcom_extra})
+    assert "1 _MAIL me@@example.org" in text and problems(text) == []
+    again = import_nodes(parse_nodes(text)[0]).people[0]
+    assert again.gedcom_extra == first.gedcom_extra
+
+
+def test_cli_prints_one_line_per_kind_of_warning(tmp_path, write_family, capsys):
+    write_family(tmp_path, "a:\n  name: {given: A}\nb:\n  name: {given: B}\n")
+    (tmp_path / "archive").mkdir()
+    (tmp_path / "archive" / "gedcom-extra.yml").write_text("a: |\n  0 FAM @F1@\n  1 NOTE x\nb: |\n  0 FAM @F2@\n  1 NOTE y\n", encoding="utf-8")
+    capsys.readouterr()
+    assert main(["export-gedcom", "--dir", str(tmp_path), "--out", str(tmp_path / "o.ged")]) == 0
+    err = capsys.readouterr().err
+    assert err.count("W-GEDCOM-EXTRA-FAM") == 1 and "2 times" in err
