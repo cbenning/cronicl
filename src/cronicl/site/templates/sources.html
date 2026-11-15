@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+{% if noindex %}<meta name="robots" content="noindex, nofollow">
+{% endif %}<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="cronicl-home" content="{{ home or '' }}">
+<meta name="cronicl-root" content="{{ root }}">
+<title>Sources — {{ title }}</title>
+<link rel="stylesheet" href="{{ root }}style.css?v={{ v.css }}">
+</head>
+<body class="site-page sources-page">
+{% include "_header.html" %}
+<main class="index">
+  <h1>Sources</h1>
+  <p class="lede">Where the facts on this site come from, and who they are about.</p>
+  <ul class="source-list">
+    {% for s in sources %}
+    <li><span class="source-text">{{ s.text }}</span> <span class="count">{{ s.people | length }}</span>
+      <ul>{% for p in s.people %}<li><a href="{{ root }}p/{{ p.id }}/">{{ p.name }}</a></li>
+      {% endfor %}</ul>
+    </li>
+    {% endfor %}
+  </ul>
+</main>
+</body>
+</html>

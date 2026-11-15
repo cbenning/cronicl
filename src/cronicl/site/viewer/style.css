@@ -277,6 +277,13 @@ img.avatar { object-fit: cover; }
 
 /* Facts, notes and sources */
 .note, .cite { display: block; font-size: .85rem; color: var(--muted); }
+.cite-ref { font-size: .75rem; margin-left: .15rem; }
+.cite-ref a { text-decoration: none; }
+.sources ol { padding-left: 1.4rem; color: var(--muted); font-size: .9rem; }
+.sources .back { text-decoration: none; margin-left: .3rem; }
+.source-list { list-style: none; padding: 0; }
+.source-list > li { margin: .8rem 0; }
+.source-list ul { margin: .2rem 0 0; padding-left: 1.2rem; font-size: .9rem; }
 .attrs { display: grid; grid-template-columns: max-content 1fr; gap: 2px var(--space-3); margin: var(--space-2) 0; }
 .attrs dt { color: var(--muted); }
 .attrs dd { margin: 0; }

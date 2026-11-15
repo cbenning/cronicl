@@ -40,7 +40,7 @@
       {% if person.summary %}<p class="summary">{{ person.summary }}</p>{% endif %}
       {% if person.facts %}
       <dl class="attrs">
-        {% for fact in person.facts %}<dt>{{ fact.label }}</dt><dd>{{ fact.text }}{% if fact.note %}<span class="note">{{ fact.note }}</span>{% endif %}{% for c in fact.cite %}<span class="cite">Source: {{ c }}</span>{% endfor %}</dd>
+        {% for fact in person.facts %}<dt>{{ fact.label }}</dt><dd>{{ fact.text }}{% if fact.note %}<span class="note">{{ fact.note }}</span>{% endif %}{% for c in fact.cite %}<sup class="cite-ref"><a href="#src-{{ c.n }}"{% if c.first %} id="cite-{{ c.n }}"{% endif %}>{{ c.n }}</a></sup>{% endfor %}</dd>
         {% endfor %}
       </dl>
       {% endif %}
@@ -84,8 +84,17 @@
       {% for e in person.events %}
       <li class="{{ 'own' if e.role == 'self' else 'rel' }}">
         <span class="when">{{ e.when }}</span>
-        <span class="what">{{ e.text }}{% if e.place %} in {{ e.place }}{% endif %}{% if e.age is not none %} <span class="age">(age {% if e.age_approx %}~{% endif %}{{ e.age }})</span>{% endif %}{% if e.note %}<span class="note">{{ e.note }}</span>{% endif %}{% for c in e.cite %}<span class="cite">Source: {{ c }}</span>{% endfor %}</span>
+        <span class="what">{{ e.text }}{% if e.place %} in {{ e.place }}{% endif %}{% if e.age is not none %} <span class="age">(age {% if e.age_approx %}~{% endif %}{{ e.age }})</span>{% endif %}{% if e.note %}<span class="note">{{ e.note }}</span>{% endif %}{% for c in e.cite %}<sup class="cite-ref"><a href="#src-{{ c.n }}"{% if c.first %} id="cite-{{ c.n }}"{% endif %}>{{ c.n }}</a></sup>{% endfor %}</span>
       </li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+  {% if sources %}
+  <section class="sources">
+    <h2>Sources</h2>
+    <ol>
+      {% for s in sources %}<li id="src-{{ s.n }}">{{ s.text }} <a class="back" href="#cite-{{ s.n }}" aria-label="Back to where this is cited">↩</a></li>
       {% endfor %}
     </ol>
   </section>

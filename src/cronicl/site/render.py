@@ -29,6 +29,7 @@ from .settings import place_groups, privacy_settings, site_text
 from ..core.slug import fold_slug, folds_cleanly, slugify
 from .stats import site_stats
 from ..core.textvalues import cites_of, parse_bool
+from .sources import annotate, source_index
 from .timeline import build_timeline, event_text
 
 _PACKAGE = Path(__file__).parent
@@ -259,7 +260,7 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-_GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate", "media", "tree", "timeline")
+_GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate", "media", "tree", "timeline", "sources")
 _GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json", "gallery.js")
 
 
@@ -401,6 +402,9 @@ def build_site(
     env = _env()
     env.globals["gallery"] = gallery
     env.globals["noindex"] = noindex_on(tree.site)
+    views = {pid: annotate(payload) for pid, payload in payloads.items()}
+    sources = source_index([(pid, payloads[pid]["name"], views[pid][1]) for pid in sorted(payloads)])
+    env.globals["has_sources"] = bool(sources)
     put("layout.json", dumps(layout))
     put("index.json", dumps(index))
     put("kin.json", dumps(build_kin(visible, relations)))
@@ -439,6 +443,11 @@ def build_site(
             groups=group_places(places, place_groups(tree.site)),
         ),
     )
+    if sources:
+        put(
+            "sources/index.html",
+            env.get_template("sources.html").render(title=title, v=versions, home=home, root="../", active="sources", sources=sources),
+        )
     put(
         "relate/index.html",
         env.get_template("relate.html").render(title=title, v=versions, home=home, root="../", people=index),
@@ -463,7 +472,7 @@ def build_site(
         put(
             f"p/{pid}/index.html",
             person_template.render(
-                title=title, person=payload, ancestors=ancestor_tree(visible, relations, pid),
+                title=title, person=views[pid][0], sources=views[pid][1], ancestors=ancestor_tree(visible, relations, pid),
                 descendants=outline, descendant_count=count_descendants(outline),
                 links=(
                     page_links(tree.site, pid, payload["name"], tree.people[pid].source, tree.people[pid].line)
