@@ -24,7 +24,7 @@
     <h2>{{ g.name }}</h2>
     {% for pl in g.places %}
     <section id="pl-{{ pl.slug }}">
-      <h3>{{ pl.place }} <span class="count">{{ pl.entries | length }}</span></h3>
+      <h3>{{ pl.place }} <span class="count">{{ pl.entries | length }}</span>{% if map_page and pl.slug in on_map %} <a class="on-map" href="{{ root }}map/#{{ pl.slug }}">on the map</a>{% endif %}</h3>
       <ul>
         {% for e in pl.entries %}<li><a href="{{ root }}p/{{ e.id }}/">{{ e.name }}</a> — {{ e.what }}{% if e.when %} {{ e.when }}{% endif %}</li>
         {% endfor %}

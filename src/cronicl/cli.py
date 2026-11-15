@@ -295,7 +295,9 @@ def cmd_export_gedcom(args) -> int:
 
 
 def _place_coords(site: dict) -> dict:
-    return {}  # the `places:` table of site.yml arrives with the map feature
+    from .site.mapdata import place_coords
+
+    return place_coords(site)
 
 
 def cmd_rename(args) -> int:

@@ -277,6 +277,21 @@ img.avatar { object-fit: cover; }
 
 /* Facts, notes and sources */
 .note, .cite { display: block; font-size: .85rem; color: var(--muted); }
+/* map page */
+.map-layout { display: flex; gap: 1rem; align-items: stretch; flex-wrap: wrap; }
+#map { flex: 1 1 28rem; min-width: 0; }
+#map-list { flex: 0 1 18rem; font-size: .95rem; }
+#map-list h2 { margin-top: 0; font-size: 1.1rem; }
+.map-view { position: relative; height: 62vh; min-height: 22rem; overflow: hidden; background: #d9e2e8; border: 1px solid var(--line, #ccc); border-radius: 6px; cursor: grab; touch-action: none; }
+.map-view.dragging { cursor: grabbing; }
+.map-view:focus-visible { outline: 2px solid var(--accent, #7a3e65); }
+.map-tiles, .map-markers { position: absolute; inset: 0; }
+.map-tile { position: absolute; width: 256px; height: 256px; user-select: none; max-width: none; }
+.map-marker { position: absolute; transform: translate(-50%, -50%); min-width: 1.6rem; height: 1.6rem; padding: 0 .35rem; border-radius: 999px; border: 2px solid #fff; background: var(--accent, #7a3e65); color: #fff; font-size: .8rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.map-controls { position: absolute; top: .5rem; left: .5rem; display: flex; flex-direction: column; gap: .25rem; }
+.map-controls button { min-width: 2rem; height: 2rem; border: 1px solid #888; background: #fff; color: #222; border-radius: 4px; cursor: pointer; }
+.map-attribution { position: absolute; right: 0; bottom: 0; padding: .1rem .4rem; font-size: .7rem; background: rgba(255,255,255,.8); color: #333; }
+.on-map { font-size: .8rem; font-weight: normal; margin-left: .4rem; }
 .cite-ref { font-size: .75rem; margin-left: .15rem; }
 .cite-ref a { text-decoration: none; }
 .sources ol { padding-left: 1.4rem; color: var(--muted); font-size: .9rem; }

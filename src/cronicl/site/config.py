@@ -6,9 +6,10 @@ from ..core.textvalues import is_extension, parse_bool, parse_int
 from ..core.validate import _hint, _unknown  # noqa: F401
 from .galleries import gallery_issues
 from .links import valid_contact, valid_edit_url
+from .mapdata import map_issues
 from .settings import privacy_settings
 
-SITE_KNOWN = {"title", "intro", "home", "edit_url", "contact", "schema_version", "privacy", "place_groups", "gallery", "noindex"}
+SITE_KNOWN = {"title", "intro", "home", "edit_url", "contact", "schema_version", "privacy", "place_groups", "gallery", "noindex", "places", "map"}
 PRIVACY_KNOWN = {"living", "cutoff_years", "id_salt"}
 SITE_TEXT_KEYS = ("title", "intro", "home", "edit_url", "contact")
 
@@ -70,6 +71,7 @@ def site_check(site: dict, people: dict) -> list[Issue]:
                 )
             )
     out.extend(gallery_issues(site or {}, people))
+    out.extend(map_issues(site or {}, people))
     home = (site or {}).get("home")
     if home and str(home) not in people:
         out.append(Issue("W-HOME-UNKNOWN", f"home {str(home)!r} is not a person id; the default home person is used", "site.yml"))

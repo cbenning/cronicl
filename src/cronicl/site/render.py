@@ -29,6 +29,7 @@ from .settings import place_groups, privacy_settings, site_text
 from ..core.slug import fold_slug, folds_cleanly, slugify
 from .stats import site_stats
 from ..core.textvalues import cites_of, parse_bool
+from .mapdata import map_markers, map_settings, place_coords
 from .sources import annotate, source_index
 from .timeline import build_timeline, event_text
 
@@ -260,8 +261,8 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-_GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate", "media", "tree", "timeline", "sources")
-_GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json", "gallery.js")
+_GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate", "media", "tree", "timeline", "sources", "map")
+_GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json", "gallery.js", "map.js", "map.json")
 
 
 NOINDEX_MARK = "# written by cronicl (noindex: true)"
@@ -405,6 +406,19 @@ def build_site(
     views = {pid: annotate(payload) for pid, payload in payloads.items()}
     sources = source_index([(pid, payloads[pid]["name"], views[pid][1]) for pid in sorted(payloads)])
     env.globals["has_sources"] = bool(sources)
+    places = [
+        {
+            **place,
+            "entries": [
+                {**entry, "name": visible.people[entry["id"]].display_name, "when": format_date(entry["date"])}
+                for entry in place["entries"]
+            ],
+        }
+        for place in place_index(visible, relations)
+    ]
+    map_cfg = map_settings(tree.site)
+    markers = map_markers(places, place_coords(tree.site)) if map_cfg else []
+    env.globals["map_page"] = map_cfg
     put("layout.json", dumps(layout))
     put("index.json", dumps(index))
     put("kin.json", dumps(build_kin(visible, relations)))
@@ -418,6 +432,8 @@ def build_site(
     versions = {"js": _asset_version("viewer.js"), "css": _asset_version("style.css"), "site": _asset_version("site.js"), "kin": _asset_version("kin.js")}
     if gallery:
         versions["gallery"] = _asset_version("gallery.js")
+    if map_cfg:
+        versions["map"] = _asset_version("map.js")
     home_context = _home_context(visible, tree.site, payloads, timeline, relations, home)
     put("index.html", env.get_template("home.html").render(title=title, v=versions, home=home, root="", active="home", **home_context))
     put(
@@ -426,23 +442,16 @@ def build_site(
             title=title, v=versions, home=home, root="../", active="people", groups=_people_groups(visible, index)
         ),
     )
-    places = [
-        {
-            **place,
-            "entries": [
-                {**entry, "name": visible.people[entry["id"]].display_name, "when": format_date(entry["date"])}
-                for entry in place["entries"]
-            ],
-        }
-        for place in place_index(visible, relations)
-    ]
     put(
         "places/index.html",
         env.get_template("places.html").render(
             title=title, v=versions, home=home, root="../", active="places", places=places,
-            groups=group_places(places, place_groups(tree.site)),
+            groups=group_places(places, place_groups(tree.site)), on_map={m["slug"] for m in markers},
         ),
     )
+    if map_cfg:
+        put("map.json", dumps(markers))
+        put("map/index.html", env.get_template("map.html").render(title=title, v=versions, home=home, root="../", active="map", map=map_cfg))
     if sources:
         put(
             "sources/index.html",
@@ -484,7 +493,7 @@ def build_site(
             ),
         )
 
-    for asset in ("viewer.js", "style.css", "site.js", "kin.js") + (("gallery.js",) if gallery else ()):
+    for asset in ("viewer.js", "style.css", "site.js", "kin.js") + (("gallery.js",) if gallery else ()) + (("map.js",) if map_cfg else ()):
         source = _PACKAGE / "viewer" / asset
         if source.exists():
             target = out_dir / asset
