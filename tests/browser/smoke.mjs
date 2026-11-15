@@ -43,6 +43,8 @@ async function main() {
   const send = (method, params = {}) => new Promise((res) => { const i = ++id; pending.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
   await send('Runtime.enable');
   await send('Page.enable');
+  // A full Chrome's headless window can be much shorter than --window-size says; fix the viewport the checks assume.
+  await send('Emulation.setDeviceMetricsOverride', { width: 1400, height: 820, deviceScaleFactor: 1, mobile: false });
   const ev = async (expr) => (await send('Runtime.evaluate', { expression: expr, returnByValue: true })).result.result.value;
   const shot = async (name) => {
     const r = await send('Page.captureScreenshot', { format: 'png' });
