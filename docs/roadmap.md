@@ -3,8 +3,8 @@
 One document for everything still open, so a session can pick portions of it. Items are numbered and independent
 unless a "Needs" line says otherwise. Pick by number, for example "do 1.3 and 1.5".
 
-Built and merged or ready to merge (not listed here): the family file, validation, gallery, GEDCOM import and
-export, citations, the map, and the noindex output. Their specs and plans are in `docs/superpowers/`.
+Built and merged (not listed here): the family file (specified in `SPEC.md`), validation, gallery, GEDCOM import
+and export, citations, the map, and the noindex output.
 Small known defects are in `docs/known-issues.md`.
 
 ## Contents
@@ -28,8 +28,7 @@ Small known defects are in `docs/known-issues.md`.
 
 ## 1. Polish batch
 
-Design carried over from the polish-batch branch (`docs/superpowers/specs/2026-11-14-polish-batch-design.md`),
-updated for the family file and the cronicl name. Checked against the code on 2026-11-15: nothing in it is built yet,
+Design written before the family file and updated for it and the cronicl name. Checked against the code on 2026-11-15: nothing in it is built yet,
 and fixes 1 to 4 still reproduce. Fix 5 (1.7) is unconfirmed; write its failing test first. Notes added since the
 design was written:
 

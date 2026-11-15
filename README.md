@@ -12,7 +12,7 @@
 Keep a family tree in one hand-edited YAML file and generate a static, pan-and-zoom website from it.
 GEDCOM files can be imported and exported.
 
-Status: v0.1. The file format is specified in `docs/superpowers/specs/2026-11-14-family-file-design.md`; a JSON
+Status: v0.1. The file format is specified in [`SPEC.md`](SPEC.md); a JSON
 Schema (`cronicl schema`) and a conformance suite (`tests/conformance/`) travel with it, so another tool can read
 and write the same file.
 
@@ -685,10 +685,8 @@ involving a living partner are dropped. Mentions of a living person's name insid
 The family file stands on kingraph (a family as one small hand-written YAML file), nissaga (a person's facts as
 plain fields under their id), GEDCOM (the record stream, event vocabulary and date keywords), GeneWeb's `.gw` format
 (a couple as two ids joined by a plus sign), GENEALOGIX (one schema-checked YAML file keyed by id) and plain-text
-accounting (a hand-edited file, a strict checker, generated views). The design document credits each and also lists
-what was considered and not used, and why: GENEALOGIX's event-and-relationship model as the working format, GEDCOM
-and GEDCOM X as working files, one file per person, household files and a custom syntax. See
-`docs/superpowers/specs/2026-11-14-family-file-design.md`.
+accounting (a hand-edited file, a strict checker, generated views). The format itself is specified in
+[`SPEC.md`](SPEC.md).
 
 ## Development
 
