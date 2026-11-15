@@ -131,8 +131,8 @@ changed or suggested beyond naming the pair. Comparisons are within the same las
    as written, so the page opens as an unknown person (the tree's normal "not found" behaviour).
 1.5 **`home:` naming a person who will be redacted is silently ignored.** With `privacy.living` set to
    `placeholder` or `hidden`, a configured home person who counts as living is not in the published tree, so the
-   default home person is used with no explanation. `check` adds `W-HOME-REDACTED` on the `home:` line of `site.yml` (message: the person is treated
-   as living and hidden, so the default home person is used). Behaviour is unchanged otherwise. Uses the same
+   home setting is ignored with no explanation. `check` adds `W-HOME-REDACTED` on the `home:` line of `site.yml` (message: the person is treated
+   as living and hidden, so the home setting is ignored). Behaviour is unchanged otherwise. Uses the same
    living rule as the build (`cronicl.core.living.is_living`: `living: true`, `death`, `death: unknown`, the
    latest-year rule for qualified birth dates) and `privacy.cutoff_years`; `check_tree` gains an optional `today: date | None = None`
    (default today) for testing.

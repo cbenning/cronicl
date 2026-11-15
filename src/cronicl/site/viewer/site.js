@@ -20,16 +20,15 @@
 
   var ME_KEY = 'cronicl.me';
 
-  // Who is looking: the person the visitor said is them, else the home person. A saved id that is no longer in
-  // the site is forgotten; a store that throws (private mode) is treated as empty.
-  function viewerId(storage, people, home) {
+  // Who is looking: the person the visitor said is them, and nobody until they do. A saved id that is no longer
+  // in the site is forgotten; a store that throws (private mode) is treated as empty.
+  function viewerId(storage, people) {
     var saved = null;
     try { saved = storage ? storage.getItem(ME_KEY) : null; } catch (e) { saved = null; }
     if (saved) {
       if (people[saved]) return { id: saved, mine: true };
       try { storage.removeItem(ME_KEY); } catch (e) { /* nothing to forget */ }
     }
-    if (home && people[home]) return { id: home, mine: false };
     return { id: null, mine: false };
   }
 
@@ -50,7 +49,6 @@
   function initKin(line) {
     var id = line.getAttribute('data-kin-for');
     var base = metaContent('cronicl-root');
-    var home = metaContent('cronicl-home');
     var button = document.getElementById('set-me');
     var kin = root.croniclKin;
     if (!kin) return;
@@ -58,7 +56,7 @@
       var people = data.people;
       var store = localStore();
       function render() {
-        var who = viewerId(store, people, home);
+        var who = viewerId(store, people);
         var text = who.id ? kin.phrase(kin.kinship(people, who.id, id), people[who.id].name, who.mine) : '';
         line.textContent = text;
         line.hidden = !text;
@@ -91,12 +89,11 @@
   function initRelate(selectA, selectB) {
     var answer = document.getElementById('relate-answer');
     var base = metaContent('cronicl-root');
-    var home = metaContent('cronicl-home');
     var kin = root.croniclKin;
     if (!kin) return;
     fetch(base + 'kin.json').then(function (r) { return r.json(); }).then(function (data) {
       var people = data.people;
-      var who = viewerId(localStore(), people, home);
+      var who = viewerId(localStore(), people);
       var a = queryValue(location.search, 'a') || who.id;
       var b = queryValue(location.search, 'b');
       if (a && people[a]) selectA.value = a;

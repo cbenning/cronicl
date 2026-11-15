@@ -301,7 +301,8 @@ async function main() {
   // ---- opening view
   await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
   await send('Page.navigate', { url: base + '/tree.html' }); await sleep(1500);
-  const home = await ev(`document.querySelector('meta[name="cronicl-home"]').content`);
+  const home = 'smith-bob';
+  check('no home person unless the owner chose one, so the Home button is hidden', (await ev(`document.querySelector('meta[name="cronicl-home"]').content`)) === '' && (await ev(`document.querySelector('#tree-controls [data-act="home"]').hidden`)) === true);
   check('with no route and nobody chosen the viewer opens the overall tree', (await ev('location.hash')) === '', await ev('location.hash'));
   check('"Everyone" is current on the overall tree', (await ev(`document.querySelector('#modes a[aria-current="page"]').textContent`)) === 'Everyone');
   await goto('#/focus/' + home);
@@ -321,8 +322,6 @@ async function main() {
   await click('#tree-controls [data-act="zoom-in"]');
   const h1 = await ev(`document.querySelector('.node rect').getBoundingClientRect().height`);
   check('the + button zooms in by one step', Math.abs(h1 / h0 - 1.4) < 0.02 || h1 === 64 * 3, h0 + ' -> ' + h1);
-  await click('#tree-controls [data-act="home"]');
-  check('Home opens the home person\'s focused tree', (await ev('location.hash')) === '#focus/' + home);
   await goto('#/tree/smith-bob');
   const p0 = await ev(`document.querySelector('.node.selected rect').getBoundingClientRect().height`);
   await ev(`(() => { const t = document.getElementById('tree'); const pe = (type, id, x, target) => (target || t).dispatchEvent(new PointerEvent(type, { pointerId: id, clientX: x, clientY: 400, bubbles: true })); pe('pointerdown', 1, 500); pe('pointerdown', 2, 600); pe('pointermove', 2, 800, window); pe('pointerup', 1, 500, window); pe('pointerup', 2, 800, window); })()`);
@@ -379,8 +378,7 @@ async function main() {
   check('filtering leaves only matching people and hides empty groups', (await ev(`(() => { const shown = [...document.querySelectorAll('[data-person]')].filter((li) => !li.hidden); return shown.length >= 1 && shown.every((li) => /bob/i.test(li.dataset.text)) && [...document.querySelectorAll('[data-group]')].every((g) => g.hidden === !g.querySelector('[data-person]:not([hidden])')); })()`)) === true);
 
   await send('Page.navigate', { url: base + '/p/smith-bob/' }); await sleep(1200);
-  const homeName = await ev(`document.querySelector('meta[name="cronicl-home"]').content`);
-  check('a person page says how they relate to the home person', homeName === 'smith-bob' || /'s /.test(await ev(`document.querySelector('.kin').textContent`)), await ev(`document.querySelector('.kin').textContent`));
+  check('a person page says nothing about kinship until the visitor says who they are', (await ev(`document.querySelector('.kin').textContent`)) === '' && (await ev(`document.querySelector('.kin').hidden`)) === true);
   await click('#set-me');
   check('"This is me" is remembered and the line turns to "This is you"', (await ev(`localStorage.getItem('cronicl.me')`)) === 'smith-bob' && (await ev(`document.querySelector('.kin').textContent`)) === 'This is you');
   await send('Page.navigate', { url: base + '/tree/' }); await sleep(1500);

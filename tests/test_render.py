@@ -276,11 +276,16 @@ def test_person_page_prints_dates_in_words(tmp_path, make_tree):
     assert "12 March 1941" in page and "1941-03-12" not in page
 
 
-def test_pages_name_the_home_person(tmp_path, make_tree):
+def test_pages_name_the_home_person_only_when_the_owner_chose_one(tmp_path, make_tree):
     tree = sample(make_tree)
-    build_site(tree, tmp_path, today=TODAY)
-    assert '<meta name="cronicl-home" content="smith-john">' in (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert '<meta name="cronicl-home" content="smith-john">' in (tmp_path / "p/smith-bob/index.html").read_text(encoding="utf-8")
+    build_site(tree, tmp_path / "none", today=TODAY)
+    assert '<meta name="cronicl-home" content="">' in (tmp_path / "none/index.html").read_text(encoding="utf-8")
+    assert "Start with" not in (tmp_path / "none/index.html").read_text(encoding="utf-8")
+    tree.site = {"home": "smith-john"}
+    build_site(tree, tmp_path / "chosen", today=TODAY)
+    assert '<meta name="cronicl-home" content="smith-john">' in (tmp_path / "chosen/index.html").read_text(encoding="utf-8")
+    assert '<meta name="cronicl-home" content="smith-john">' in (tmp_path / "chosen/p/smith-bob/index.html").read_text(encoding="utf-8")
+    assert "Start with" in (tmp_path / "chosen/index.html").read_text(encoding="utf-8")
 
 
 def test_an_empty_site_has_no_home_person(tmp_path, make_tree):
@@ -304,13 +309,14 @@ def test_home_page_content(tmp_path, make_tree):
     tree = sample(make_tree)
     tree.people["smith-bob"].birth = Event(date="1950-03-12")
     tree.site["intro"] = "Welcome to **our** family. <script>alert(1)</script>"
+    tree.site["home"] = "smith-john"
     build_site(tree, tmp_path, today=TODAY)
     home = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "<h1>Test Family</h1>" in home
     assert "<strong>our</strong>" in home and "<script>alert(1)</script>" not in home
     assert "5 people" in home and "3 generations" in home and "1920–2024" in home
     assert 'href="people/index.html#s-smith"' in home
-    assert 'href="p/smith-john/"' in home  # the home person card
+    assert 'href="p/smith-john/"' in home  # the card for the person the owner chose
     assert '<li data-md="03-12" hidden>' in home and "Bob Smith born" in home
     assert "recently updated" not in home.lower() and "ghost" not in home
 

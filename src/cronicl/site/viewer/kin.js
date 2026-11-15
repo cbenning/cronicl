@@ -104,8 +104,8 @@
     return none();
   }
 
-  // The line shown on a person's page: "Your grandmother", or "<viewer>'s grandmother" when the viewer has not
-  // said who they are and the home person stands in.
+  // The line shown on a person's page: "Your grandmother". The site shows it only once the viewer has said who they
+  // are; `mine` false (naming the viewer) is for a caller that knows someone else's reference person.
   function phrase(result, viewerName, mine) {
     if (!result || !result.label) return '';
     if (result.by === 'self') return mine ? 'This is you' : '';

@@ -57,12 +57,12 @@ read-only utilities. There is deliberately no bulk form.
 `serve` / `build` produce a static site:
 
 - `index.html` is the **home page**: a heading and optional `intro:` text (Markdown, from `site.yml`), a
-  search box, the home person, the numbers (people, generations, years), the commonest surnames, an
+  search box, a "Start with" card when `home:` is set, the numbers (people, generations, years), the commonest surnames, an
   and an "On this day" list (filled in by the browser).
 - `people/index.html` lists everyone grouped by surname; any page's search box filters it (`?q=`).
 - **Kinship:** each person page and side panel says how that person is related to you ("Your
   great-grandmother"). Press **This is me** on your own page and the choice is remembered in your browser only
-  (`localStorage`, never sent anywhere); until then relations are told from the home person's side.
+  (`localStorage`, never sent anywhere); until then no relationship line is shown, because nobody is the reference.
   `relate/index.html` answers "how are these two people related?" for any pair (`?a=<id>&b=<id>`). Kinship is
   worked out in the browser from `kin.json`; pages without JavaScript simply omit the line.
 - `sources/index.html` lists every source cited and who cites it (see [Citations](#citations)); it and its top-bar link exist only when something is cited.
@@ -118,7 +118,7 @@ The viewer has two modes on the tree page, **Everyone** and **This person's line
   hollow dot; the side panel shows "Married 1975 – divorced 1990".
 - **Tree, Overview and zoom:** opening the viewer with no address shows the **Everyone** (`tree/`): everyone, fitted
   to the screen. If you pressed "This is me" on a person page, it opens your own focused tree instead. The
-  **Tree** tab shows a focused tree on the selected person (or the home person). A focused tree opens at a
+  **Tree** tab shows a focused tree on the selected person (or the person you said is you). A focused tree opens at a
   readable size, and picking a person
   while zoomed far out zooms in on them. Zoom with the buttons at bottom right (**+**, **−**, **Fit**,
   **Home**), the keys `+`, `-` and `0`, the mouse wheel, or a two-finger pinch. Zoomed far out, names give way
@@ -141,8 +141,9 @@ When one file becomes unwieldy, make a folder `family/` of any number of `.yml` 
 say). It is one or the other: having both `family.yml` and `family/` is an error. All files are read as one
 stream, and an id must be unique across them.
 
-`home:` in `site.yml` names the person the tree opens on (a person id). Without it the person with the most
-descendants is used; `check` warns when `home:` names nobody.
+`home:` in `site.yml` is optional. It names one person (an id) the owner wants visitors to start with: it adds a
+"Start with" card on the home page and a Home button in the tree. Without it nobody is picked, so no person is
+selected or treated as the reference. `check` warns when `home:` names nobody.
 
 `portrait: scans/nora.jpg` names one picture for a person, as a path under `media/` (`.jpg`, `.jpeg`, `.png`,
 `.webp`, `.gif`, `.avif`). `build` copies each referenced file, unchanged, to `out/media/`; nothing is resized,
@@ -382,7 +383,7 @@ from anywhere.
 title: Hollings family
 intro: |                       # Markdown, shown on the home page
   Our family, from Silesia to British Columbia.
-home: hollings-nora-doreen     # the person the tree opens on (an id)
+home: hollings-nora-doreen     # optional: a person to start with (an id)
 edit_url: https://github.com/example/family/blob/main/{file}#L{line}   # adds "Edit this page"
 contact: mailto:family@example.org    # adds "Suggest a correction" (a mailto: or https:// link)
 noindex: true                 # ask search engines not to index the site (see Keeping search engines out)

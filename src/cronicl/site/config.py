@@ -74,6 +74,6 @@ def site_check(site: dict, people: dict) -> list[Issue]:
     out.extend(map_issues(site or {}, people))
     home = (site or {}).get("home")
     if home and str(home) not in people:
-        out.append(Issue("W-HOME-UNKNOWN", f"home {str(home)!r} is not a person id; the default home person is used", "site.yml"))
+        out.append(Issue("W-HOME-UNKNOWN", f"home {str(home)!r} is not a person id; it is ignored", "site.yml"))
     out.extend(site_issues(site or {}, people))
     return out

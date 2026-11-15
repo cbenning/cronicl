@@ -19,14 +19,13 @@ def test_configured_home_wins(make_tree):
     assert home_person(tree, build_relations(tree)) == "c"
 
 
-def test_default_is_most_descendants_then_earliest_birth_then_id(make_tree):
+def test_without_a_configured_home_nobody_is_the_home_person(make_tree):
     tree = make_tree(people())
-    assert home_person(tree, build_relations(tree)) == "h"  # g and h both have 2; h was born first
-
-
-def test_unknown_home_falls_back_and_empty_tree_has_none(make_tree):
-    tree = make_tree(people())
+    assert home_person(tree, build_relations(tree)) is None
     tree.site = {"home": "nobody"}
-    assert home_person(tree, build_relations(tree)) == "h"
+    assert home_person(tree, build_relations(tree)) is None  # an unknown id is no one either
+
+
+def test_an_empty_tree_has_no_home_person(make_tree):
     empty = make_tree([])
     assert home_person(empty, build_relations(empty)) is None
