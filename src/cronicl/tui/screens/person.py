@@ -8,7 +8,9 @@ from textual.screen import Screen
 from textual.widgets import Footer, OptionList, Static
 from textual.widgets.option_list import Option
 
+from ...core.recordedit import EditRefused, remove, set_value
 from ..recordview import Row, build
+from .editors import PeoplePicker, editor_for
 
 
 def row_text(row: Row, indent_extra: int = 0) -> Text:
@@ -46,6 +48,7 @@ class PersonScreen(Screen):
         self.pid = pid
         self.expanded: set[str] = set()
         self.targets: dict[str, tuple] = {}
+        self.keep_path: tuple | None = None
 
     def compose(self) -> ComposeResult:
         yield Static("", id="person-head")
@@ -155,12 +158,18 @@ class PersonScreen(Screen):
         widget.clear_options()
         widget.add_options(options)
         first = next((i for i, o in enumerate(options) if not o.disabled), None)
-        if keep:
+        index = first
+        if self.keep_path is not None:
+            index = next((i for i, o in enumerate(options) if self._path_of(o) == self.keep_path), first)
+            self.keep_path = None
+        elif keep:
             index = next((i for i, o in enumerate(options) if o.id == keep), first)
-        else:
-            index = first
         if index is not None:
             widget.highlighted = index
+
+    def _path_of(self, option):
+        target = self.targets.get(option.id)
+        return getattr(target[-1], "path", None) if target else None
 
     def _person_line(self, pid: str) -> Text:
         family = self.family
@@ -189,7 +198,45 @@ class PersonScreen(Screen):
             self.rebuild(keep=event.option.id)
         elif kind == "warning":
             self._jump_to(target[1])
-        # editing a row is added with the editors
+        elif kind in ("row", "couple_row"):
+            self.edit_row(target)
+
+    # ---- editing a row ---------------------------------------------------------------------------------------------
+    def edit_row(self, target) -> None:
+        row = target[-1]
+        if row.kind in ("group", "item") or row.comment_only or not row.path:
+            return
+        record_key = row.path[0]
+        source = self._source_of(target)
+        if source is None:
+            return
+        screen = editor_for(self.app, record_key, row.path, row.value)
+        if screen is None:
+            self.app.notify("That line is edited with Ctrl+E (the raw record)", severity="warning")
+            return
+        self.app.push_screen(screen, lambda value, row=row, source=source: self._apply_row(row, source, value))
+
+    def _source_of(self, target) -> str | None:
+        if target[0] == "row":
+            return self.family.tree.people[self.pid].source
+        found = self.family.couple_key_text(self.pid, target[1])
+        return found[1] if found else None
+
+    def _apply_row(self, row: Row, source: str, value) -> None:
+        if value is None:
+            return
+        if value == PeoplePicker.NEW:
+            self.app.notify("New people are added from the field palette (a)", severity="warning")
+            return
+        session = self.app.session
+        text = session.staged[source]
+        try:
+            new = remove(text, row.path) if value == "" else set_value(text, row.path, value)
+        except EditRefused as exc:
+            self.app.notify(str(exc), severity="error")
+            return
+        self.keep_path = row.path
+        session.stage(source, new)
 
     def _jump_to(self, issue) -> None:
         widget = self.query_one("#record", OptionList)

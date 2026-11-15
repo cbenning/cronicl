@@ -160,5 +160,28 @@ class Family:
             return []
         return [self._row(h.id, counts) for h in hits]
 
+    def places(self) -> list[str]:
+        """Every place written in the family, the most used first."""
+        counts: dict[str, int] = {}
+
+        def note(place):
+            if place:
+                counts[place] = counts.get(place, 0) + 1
+
+        for person in self.tree.people.values():
+            for event in (person.birth, person.death):
+                note(event.place if event else None)
+            for e in person.events:
+                note(e.place)
+            for p in person.partnerships:
+                note(p.place)
+        return [p for p, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0].casefold()))]
+
+    def media_files(self) -> list[str]:
+        folder = self.data_dir / "media"
+        if not folder.is_dir():
+            return []
+        return sorted(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file() and not p.name.startswith("."))
+
     def living_count(self) -> int:
         return sum(1 for p in self.tree.people.values() if is_living(p, self.today, self.cutoff))
