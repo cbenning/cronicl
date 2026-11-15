@@ -413,7 +413,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install cronicl    # or however you install cronicl; see the note below
+      - run: pip install git+https://<where-your-copy-lives>   # see the note below
       - run: cronicl build --out public
       - uses: actions/upload-pages-artifact@v4
         with:
@@ -432,8 +432,9 @@ jobs:
 Every push to `main` rebuilds and publishes the site. With `edit_url` pointing at the repository (see
 [Publishing](#publishing)), a relative can use "Edit this page" on GitHub, and the change goes live by itself.
 The action versions above were current when this was written; use the current major versions. The `pip install`
-line is the one part that depends on where you keep cronicl: use the package name once it is published, or
-`pip install git+https://<where-your-copy-lives>` until then.
+line is the one part that depends on where you keep cronicl. Do not run `pip install cronicl`: that name on PyPI
+belongs to an unrelated project. Install from the repository where your copy lives until cronicl is published
+under its own distribution name.
 
 **A GitHub Pages site is public, even when its repository is private.** Only organisations on GitHub Enterprise
 Cloud can restrict a Pages site to people with access to the repository. Plan accordingly: redact living people,
@@ -450,7 +451,7 @@ Point any web server at that folder. The files are static; there is nothing to c
 
 ### Netlify, Cloudflare Pages, Vercel and similar
 
-Connect the repository, set the build command to `pip install cronicl && cronicl build --out public` and the
+Connect the repository, set the build command to `pip install git+https://<where-your-copy-lives> && cronicl build --out public` and the
 publish directory to `public`.
 
 ## Password protection

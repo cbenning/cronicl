@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cronicl"  # PyPI name taken: choose a distribution name before publishing
 version = "0.1.0"
-description = "Markdown family tree to static site generator"
+description = "Static site generator for a family tree kept in one YAML file"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

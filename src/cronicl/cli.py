@@ -372,7 +372,7 @@ def _add_apply(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     common = _common()
     parser = argparse.ArgumentParser(
-        prog="cronicl", description="Markdown family tree to static site", parents=[common]
+        prog="cronicl", description="Family tree file to static site", parents=[common]
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
