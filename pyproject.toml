@@ -9,7 +9,12 @@ description = "Static site generator for a family tree kept in one YAML file"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-dependencies = ["PyYAML>=6.0", "Jinja2>=3.1", "markdown-it-py>=3.0"]
+dependencies = [
+    "PyYAML>=6.0",
+    "Jinja2>=3.1",
+    "markdown-it-py>=3.0",
+    "textual>=8.2.8",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

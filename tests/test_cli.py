@@ -313,3 +313,30 @@ def test_a_text_cutoff_really_applies(tmp_path, write_family):
         assert ("Midlife" in _everything(tmp_path / f"out{cutoff}")) is shown, cutoff
 
 
+
+
+# ---- bare `cronicl` opens the TUI, but only on a terminal
+def test_bare_cronicl_without_a_terminal_is_still_the_usage_error(capsys, monkeypatch):
+    monkeypatch.setattr("cronicl.cli._has_terminal", lambda: False)
+    with pytest.raises(SystemExit) as stop:
+        main([])
+    assert stop.value.code == 2 and "arguments are required" in capsys.readouterr().err
+
+
+def test_bare_cronicl_on_a_terminal_opens_the_tui_on_the_folder(tmp_path, monkeypatch):
+    opened = []
+    monkeypatch.setattr("cronicl.cli._has_terminal", lambda: True)
+    monkeypatch.setattr("cronicl.tui.run", lambda folder: opened.append(str(folder)) or 0)
+    monkeypatch.delenv("CRONICL_DIR", raising=False)
+    assert main([]) == 0 and opened == ["."]
+    assert main(["-C", str(tmp_path)]) == 0 and opened[-1] == str(tmp_path)
+    assert main([f"--dir={tmp_path}"]) == 0 and opened[-1] == str(tmp_path)
+    monkeypatch.setenv("CRONICL_DIR", str(tmp_path))
+    assert main([]) == 0 and opened[-1] == str(tmp_path)
+
+
+def test_a_command_never_opens_the_tui_even_on_a_terminal(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr("cronicl.cli._has_terminal", lambda: True)
+    monkeypatch.setattr("cronicl.tui.run", lambda folder: pytest.fail("the TUI must not open"))
+    assert main(["init", "--dir", str(tmp_path)]) == 0
+    assert main(["check", "--dir", str(tmp_path)]) in (0, 1)

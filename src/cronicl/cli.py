@@ -513,7 +513,34 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _has_terminal() -> bool:
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _bare_data_dir(argv: list[str]) -> str | None:
+    """The data folder when `argv` has no command (nothing, or only -C/--dir); None when there is a command or option."""
+    rest = list(argv)
+    folder = None
+    while rest:
+        word = rest.pop(0)
+        if word in ("-C", "--dir") and rest:
+            folder = rest.pop(0)
+        elif word.startswith("--dir="):
+            folder = word.split("=", 1)[1]
+        elif word.startswith("-C") and len(word) > 2:
+            folder = word[2:]
+        else:
+            return None
+    return folder or os.environ.get("CRONICL_DIR") or "."
+
+
 def main(argv: list[str] | None = None) -> int:
+    raw = sys.argv[1:] if argv is None else argv
+    folder = _bare_data_dir(raw)
+    if folder is not None and _has_terminal():
+        from .tui import run
+
+        return run(Path(folder))
     parser = build_parser()
     args = parser.parse_args(argv)
     args.dir = getattr(args, "dir", None) or os.environ.get("CRONICL_DIR") or "."

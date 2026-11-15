@@ -31,6 +31,16 @@ def test_core_does_not_import_site():
 
 def test_the_package_layout():
     names = sorted(p.name for p in PKG.iterdir() if p.name != "__pycache__")
-    assert names == ["__init__.py", "checks.py", "checktext.py", "cli.py", "core", "site"]
+    assert names == ["__init__.py", "checks.py", "checktext.py", "cli.py", "core", "site", "tui"]
     assert (PKG / "core" / "__init__.py").exists() and (PKG / "site" / "__init__.py").exists()
     assert (PKG / "site" / "templates").is_dir() and (PKG / "site" / "viewer").is_dir()
+
+
+def test_core_site_and_checks_do_not_import_the_tui():
+    offenders = []
+    for path in [*sorted((PKG / "core").rglob("*.py")), *sorted((PKG / "site").rglob("*.py")), PKG / "checks.py", PKG / "checktext.py"]:
+        for module, level in _imports(path):
+            top = module.split(".")[0] if level else (module.split(".")[1] if module.startswith("cronicl.") and "." in module else "")
+            if top == "tui" or module == "cronicl.tui" or module.startswith("cronicl.tui."):
+                offenders.append((path.name, module))
+    assert offenders == []
