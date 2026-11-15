@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12", "3.13"]
+    env:
+      # The browser tests drive the Chrome that ships on the runner; they skip themselves when it is missing.
+      CRONICL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check that Chrome is there
+        run: google-chrome --version
+      - name: Run the tests
+        run: uv run --python ${{ matrix.python }} --extra dev pytest -q
+
+  package:
+    name: Package builds and runs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build the wheel and sdist
+        run: uv build
+      - name: Install the wheel into a clean environment and build a one-person site
+        run: |
+          uv venv "$RUNNER_TEMP/venv"
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" dist/*.whl
+          mkdir "$RUNNER_TEMP/family"
+          cd "$RUNNER_TEMP/family"
+          "$RUNNER_TEMP/venv/bin/cronicl" init
+          "$RUNNER_TEMP/venv/bin/cronicl" new --given Ada --surname Lovelace --apply
+          "$RUNNER_TEMP/venv/bin/cronicl" check
+          "$RUNNER_TEMP/venv/bin/cronicl" build
+          test -f out/index.html
+          test -f out/viewer.js

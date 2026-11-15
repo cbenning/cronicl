@@ -5,6 +5,10 @@
   </picture>
 </p>
 
+<p align="center">
+  <a href="https://github.com/cbenning/cronicl/actions/workflows/ci.yml"><img src="https://github.com/cbenning/cronicl/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
+
 Keep a family tree in one hand-edited YAML file and generate a static, pan-and-zoom website from it.
 GEDCOM files can be imported and exported.
 
