@@ -318,11 +318,11 @@ Errors about the family file:
 | `E-BAD-FAMILY` | `family.yml` cannot be parsed, is not a mapping, uses a merge key, or both `family.yml` and `family/` exist |
 | `E-NO-FAMILY` | there is no `family.yml` or `family/`; the message says to run `cronicl migrate` when `people/*.md` exists |
 | `E-RECORD-KEY` | a top-level key is neither a person id nor a couple key |
-| `E-RECORD-SHAPE` | a record is not a mapping; `name` is not a mapping; `parents` or `events` has the wrong shape |
+| `E-RECORD-SHAPE` | a record is not a mapping; `name` is not a mapping; `parents` or `events` has the wrong shape; a list or mapping where text belongs |
 | `E-DUPLICATE-ID` | the same person, or the same couple in either order, twice (also across split files) |
 | `E-COUPLE-SELF` | a couple key names one person twice |
 | `E-DANGLING-REF` | a parent, or half of a couple key, is not a person in the family |
-| `E-CYCLE`, `E-GENERATION-CONFLICT` | a person is their own ancestor; a marriage across generations the layout cannot draw |
+| `E-CYCLE`, `E-GENERATION-CONFLICT` | a person is their own ancestor; a person marrying their own ancestor or descendant, which the layout cannot draw |
 
 Warnings, and the rest:
 
@@ -336,7 +336,11 @@ Warnings, and the rest:
 | `W-BAD-SEX` | `sex` is not `male`, `female`, `unknown` or `other` |
 | `W-LIVING-FALSE` | `living:` is not `true`; it is ignored (dates decide), so say `death: unknown` for someone who has died |
 | `W-EVENT-IS-FIELD`, `W-EVENT-ONCE`, `W-EVENT-PLACEMENT` | a birth or death in `events` (use the field); two burials or cremations; a marriage or divorce in a person's events (put it in the couple's record) |
-| `W-NO-NAME`, `W-TOO-MANY-PARENTS` | a person with no name; more than two parents |
+| `W-NO-NAME`, `W-TOO-MANY-PARENTS`, `W-DUPLICATE-PARENT` | a person with no name who is not a partner or parent either; more than two parents; the same parent twice |
+| `E-INVALID-ID` | a person id over 64 characters |
+| `W-EVENT-NO-TYPE`, `W-IGNORED-FILE` | an event with no `type`; a `.yaml` file or folder inside `family/`, which is not read |
+| `W-LIVING-AND-DEATH` | `living: true` and a `death` together; the person counts as living |
+| `W-BIRTH-AFTER-DEATH`, `W-CHILD-BEFORE-PARENT`, `W-CHILD-AFTER-PARENT-DEATH` | plain years that contradict each other |
 | `E-PRIVACY-MODE` | `privacy` is not a mapping, or `privacy.living` is not `full`, `placeholder` or `hidden` |
 | `E-PRIVACY-SALT` | `privacy.id_salt` is a list or mapping |
 | `W-PRIVACY-NO-SALT` | redaction is on but there is no `id_salt`, so the anonymised ids can be guessed |

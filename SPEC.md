@@ -28,7 +28,11 @@ archive/        original .ged files; material set aside by import
 
 When one file becomes unwieldy the owner MAY instead keep a folder `family/` of `.yml` files in the same format,
 split however they like. Having both `family.yml` and `family/` is an error. All files are read as one stream, and
-a record's id MUST be unique across them. Only the `.yml` files directly in `family/` are read.
+a record's id MUST be unique across them. Only the `.yml` files directly in `family/` are read; a `.yaml` file or a
+subfolder there is not read and is reported, so that a branch is never lost without a word.
+
+`family.yml` carries no version marker. The format version is the `schema_version` in `site.yml`: `3` means this
+format (`1` and `2` are the older one-file-per-person layouts, which cronicl converts with `cronicl migrate`).
 
 ## 3. Reading the file
 
@@ -36,8 +40,12 @@ a record's id MUST be unique across them. Only the `.yml` files directly in `fam
 
 - read every scalar as text exactly as typed: `NO` is the text `NO`, `1066` is the text `1066`, `2020-01-01` is
   text, not a date (YAML's "failsafe" schema);
-- report a key that occurs twice in one mapping (the later value wins);
-- reject merge keys (`<<`).
+- report a key that occurs twice in one mapping (the later value wins; for two records with the same key see
+  `E-DUPLICATE-ID`: the later record is used);
+- reject merge keys (`<<`);
+- accept UTF-8 text, with or without a byte-order mark and with either line ending, and a single YAML document
+  (a second document is an error). YAML anchors and aliases (`&x`, `*x`) are allowed and are read as the text they
+  stand for. Tabs cannot indent YAML, so a tab-indented file is a syntax error.
 
 Two things trip people up when typing YAML:
 
@@ -132,23 +140,23 @@ person as dead without a date. A fact left blank (`death:` with nothing after it
 | Key | Shape | Notes |
 |---|---|---|
 | `name` | mapping | `given`, `surname`; optional `prefix`, `suffix`, `nickname`, and `also` (a list of other names, such as a married name). The displayed name is prefix, given, surname, suffix |
-| `sex` | `male`, `female`, `unknown`, `other` | absent means unknown |
+| `sex` | `male`, `female`, `unknown`, `other` | in any case; absent means unknown. Anything else, including `M` and `F`, is reported and read as unknown |
 | `birth`, `death` | dated fact | a person with `death` is deceased |
-| `parents` | list of at most two person ids | birth parents |
+| `parents` | list of at most two person ids | birth parents. A third is reported and ignored; the same id twice is reported |
 | `events` | list of mappings | see 4.6 |
 | `portrait` | text | a path under `media/` |
-| `living` | `true` | only to say someone is alive when their dates suggest otherwise. To say someone is dead, use `death` |
+| `living` | `true` | only to say someone is alive when their dates suggest otherwise (`yes`, `on` and `1` are read as `true`, in any case; any other value is reported and ignored). To say someone is dead, use `death`. `living: true` next to a `death` is reported, and the person is treated as living |
 | `refs` | mapping | ids in other systems: `gedcom` (the record's id in an imported file), `gallery` (the person's id in a photo gallery) |
 | `bio` | text | the biography, as markdown |
 | `x-...` | anything | the owner's own keys (section 7) |
 
-Only the key is required. A person with no name is reported.
+Only the key is required. A person with no name is reported, unless they are someone's partner or parent: a nameless record is the placeholder for an unknown partner or parent.
 
 ### 4.5 A couple record
 
 | Key | Shape | Notes |
 |---|---|---|
-| `events` | list of mappings | what happened to the couple: `marriage`, `divorce`, `engagement`, `civil-union`, `partnership`, `separation`, `annulment`, `end`, ... |
+| `events` | list of mappings | what happened to the couple. Any `type` is allowed. `marriage`, `divorce`, `engagement`, `civil-union`, `partnership`, `separation`, `annulment` and `end` have a meaning (below); other types, such as `residence` or `census`, are kept as written. cronicl does not show them on the site yet, and writes them to GEDCOM as `EVEN` |
 | `note` | text | a remark about the couple |
 | `x-...` | anything | the owner's own keys |
 
@@ -163,6 +171,15 @@ date; where a date is missing, by the order written. So married, divorced and ma
 couple has not ended. A partner's death never ends a couple, and a `FROM ... TO` span does not either: an ending
 is always its own event.
 
+The finer points, so that two implementations agree:
+
+- Events are put in date order before they are read. Two dates that agree as far as the less precise one goes (`1950`
+  and `1950-06`) are the same moment, and then a beginning event comes before an ending one.
+- An event with no date keeps the place where it was written among the others. An undated divorce written before a
+  dated marriage therefore reads as "divorced, then married", and the couple has not ended. Put the date in.
+- An engagement and a marriage are two partnerships, not one. A separation followed by a divorce or annulment is one
+  partnership that ended for its final reason.
+
 ### 4.6 Events
 
 `events:` is a list of mappings. Each has a `type` and any of `date`, `place`, `note`, `cite` and `value`.
@@ -170,9 +187,27 @@ is always its own event.
 - `type` is a slug such as `occupation`, `residence`, `burial`, `immigration`. Hyphens read as spaces. Any slug is
   allowed; readers show unknown types as written.
 - `value` carries the content of an attribute, such as the occupation `Mathematician`.
-- A person's `events` MUST NOT contain `birth` or `death` (use the fields), SHOULD NOT contain more than one
-  `burial` or more than one `cremation`, and SHOULD NOT contain couple-only types (`marriage`, `divorce`,
-  `engagement`, `civil-union`, `partnership`, `separation`, `annulment`, `end`), which belong in the couple's record.
+- A person's `events` SHOULD NOT contain `birth` or `death` (use the fields), more than one `burial` or more than one
+  `cremation`, or couple-only types (`marriage`, `divorce`, `engagement`, `civil-union`, `partnership`, `separation`,
+  `annulment`, `end`), which belong in the couple's record. A checker reports each of these; nothing is dropped.
+- `type` is required, on a couple's events as well as a person's.
+- Where text is expected (`type`, `date`, `place`, `value`, `note`, and `cite` as text or a list of text) a list or
+  mapping is an error. The same holds for every text field of a person record: `name` parts, `sex`, `portrait`,
+  `bio`, `refs` values and the dated-fact keys.
+
+### 4.7 Living and deceased
+
+Privacy rules need to know who may be alive, so the format defines it. A person is **deceased** when they have a
+`death` fact whose date is a readable date, a span, or `unknown`, or that has no date at all (`death: {place: Leeds}`).
+A `death` whose date is not a date (`no`, `~`, `n/a`) is reported and does **not** count as a death: a value that
+only looks like "not dead" must never switch privacy off.
+
+Otherwise a person is **living** when `living: true` is written, or when they have no birth date, or when their birth
+year is less than the cutoff ago. The cutoff is 100 years, or `privacy.cutoff_years` in `site.yml`. For this test only,
+a qualified birth date counts as the **latest** year it allows (`BET 1920 AND 1950` is 1950; `ABT` and `BEF` use their
+year), and `AFT` gives no usable year, so an uncertain date can never make a living person look dead. `living: true`
+wins over a `death` fact; a checker reports the conflict. An old ancestor with a birth date and no `death` is
+deceased once the cutoff has passed; one with no birth date is living until `death: unknown` is added.
 
 ## 5. Dates
 
@@ -188,21 +223,30 @@ A `date` is one value everywhere. There are no separate start and end keys.
 | `unknown` | happened, date not known |
 
 The keywords are GEDCOM's and are accepted in any case. Each date inside a keyword form is a year, month or day as
-in the first row. A span is reported on `birth`, `death`, and `marriage` or `divorce` events. For sorting, ages and
-timelines a qualified date counts as its first year and is shown as approximate.
+in the first row. A year has exactly four digits (`0850`, not `850`); there are no negative or BC years. Qualifiers do
+not nest (`BET ABT 1880 AND 1890` and `FROM ABT 1900` are not dates), and there is no other spelling: `c. 1850`,
+`1850s`, `12 MAR 1850` and `March 1850` are reported as unreadable. The old form `~1850` is read as `ABT 1850`. A span is reported on `birth`, `death`, and `marriage` or `divorce` events, and so is a range that runs backwards
+(`BET 1890 AND 1880`, `FROM 1950 TO 1900`). For sorting, ages and
+timelines a qualified date counts as its first year and is shown as approximate. A checker also reports dates that
+contradict each other, using plain (unqualified) years only: a birth after the death, a child born before a parent,
+and a child born more than a year after a parent died. These are warnings; a date is never changed.
 
 ## 6. Checking
 
 A conforming checker reports problems with the file name and line (`family.yml:214`) and never changes a file. An
-error means the file cannot be used; a warning means something is ignored or probably wrong.
+error means the file cannot be used; a warning means something is ignored or probably wrong. A checker may report more
+than this table, for what belongs to the site and not to the format: portrait files, settings in `site.yml`, and
+`E-GENERATION-CONFLICT`, which says the tree views cannot draw a person marrying their own ancestor or descendant
+(a marriage between other relatives, such as an uncle and a niece, is drawn).
 
 | Code | Level | When |
 |---|---|---|
 | `E-BAD-FAMILY` | error | the file cannot be parsed, is not a mapping, uses a merge key, or both `family.yml` and `family/` exist |
 | `E-NO-FAMILY` | error | there is neither `family.yml` nor `family/` |
 | `E-RECORD-KEY` | error | a top-level key is neither a person id nor a couple key |
-| `E-RECORD-SHAPE` | error | a record is not a mapping; `name` is not a mapping; `parents` is not a list of ids; `events` is not a list of mappings; a dated fact is neither text nor a mapping |
-| `E-DUPLICATE-ID` | error | the same person, or the same couple in either order, twice (also across split files) |
+| `E-RECORD-SHAPE` | error | a record is not a mapping; `name` or `refs` is not a mapping; `parents` is not a list of ids; `events` is not a list of mappings; a dated fact is neither text nor a mapping; a list or mapping where text is expected |
+| `E-INVALID-ID` | error | a person id longer than 64 characters |
+| `E-DUPLICATE-ID` | error | the same person, or the same couple in either order, twice (also across split files). The later record is used |
 | `E-COUPLE-SELF` | error | a couple key names one person twice |
 | `E-DANGLING-REF` | error | a parent, or either half of a couple key, is not a person in the family |
 | `E-CYCLE` | error | a person is their own ancestor |
@@ -210,21 +254,30 @@ error means the file cannot be used; a warning means something is ignored or pro
 | `W-FLOW-COMMA` | warning | an empty key inside `{...}`: probably an unquoted comma |
 | `W-BLANK` | warning | a known key with no value |
 | `W-DUPLICATE-KEY` | warning | the same key twice in one mapping |
-| `W-DATE-UNPARSED` | warning | a date that is not one of the forms in section 5 |
+| `W-DATE-UNPARSED` | warning | a date that is not one of the forms in section 5. A `death` of this kind does not count as a death |
 | `W-DATE-SPAN` | warning | a span on `birth`, `death`, or a `marriage` or `divorce` event |
-| `W-END-BEFORE-START` | warning | an end date before its start |
-| `W-BAD-SEX` | warning | `sex` is not one of the four words |
+| `W-END-BEFORE-START` | warning | an end date before its start, or a `BET` range that runs backwards |
+| `W-BAD-SEX` | warning | `sex` is not one of the four words (in any case) |
 | `W-LIVING-FALSE` | warning | `living:` is not `true`; it is ignored |
 | `W-EVENT-IS-FIELD` | warning | a `birth` or `death` entry in a person's `events` |
 | `W-EVENT-ONCE` | warning | more than one `burial` or `cremation` for a person |
 | `W-EVENT-PLACEMENT` | warning | a couple-only event type in a person's `events` |
-| `W-NO-NAME` | warning | a person with no name |
+| `W-NO-NAME` | warning | a person with no name who is neither a partner nor a parent |
+| `W-EVENT-NO-TYPE` | warning | an event with no `type` |
+| `W-IGNORED-FILE` | warning | a `.yaml` file or a folder inside `family/`, which is not read |
+| `W-LIVING-AND-DEATH` | warning | `living: true` together with a `death` |
+| `W-DUPLICATE-PARENT` | warning | the same parent listed twice |
+| `W-BIRTH-AFTER-DEATH` | warning | a plain birth year after the plain death year |
+| `W-CHILD-BEFORE-PARENT` | warning | a child born before a parent |
+| `W-CHILD-AFTER-PARENT-DEATH` | warning | a child born more than a year after a parent died |
 | `W-TOO-MANY-PARENTS` | warning | more than two parents |
 
 ## 7. Your own keys
 
 A key that starts with `x-` or `x_` (any case), such as `x-nickname`, belongs to the owner. A reader MUST keep it
-when it rewrites the file and MUST NOT report it. It is allowed at every level.
+when it rewrites the file and MUST NOT report it. It is allowed inside records and inside the mappings of a record
+(a name, a dated fact, an event). A key at the top level is always a record: `x-notes:` there is a person whose id
+is `x-notes`, so keep your own notes inside a record.
 
 ## 8. Conformance
 

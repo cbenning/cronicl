@@ -299,3 +299,13 @@ def test_a_long_set_aside_line_is_split_and_reads_back_whole(tmp_path, write_fam
     assert problems(text) == [] and "CONC" in text
     again = import_nodes(parse_nodes(text)[0]).people[0]
     assert long.strip() in again.gedcom_extra.replace("\n", " ")
+
+
+def test_a_couples_other_events_are_exported_as_even(tmp_path, write_family):
+    write_family(tmp_path, "a: {name: {given: A}}\nb: {name: {given: B}}\na + b:\n  events:\n    - {type: marriage, date: 1900}\n    - {type: residence, date: 1905, place: 'Leeds, England', note: Rented rooms}\n")
+    tree, _ = load_tree(tmp_path)
+    text, _ = export_gedcom(tree, today=TODAY)
+    lines = text.splitlines()
+    at = lines.index("2 TYPE residence")
+    assert lines[at - 1] == "1 EVEN" and "2 DATE 1905" in lines[at:at + 4] and "2 PLAC Leeds, England" in lines[at:at + 4] and "2 NOTE Rented rooms" in lines[at:at + 5]
+    assert problems(text) == []

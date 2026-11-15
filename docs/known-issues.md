@@ -46,3 +46,12 @@ When `noindex: true` is set and the output folder already holds a `robots.txt` o
 write, `build` leaves the file alone and prints `W-NOINDEX-FILE`. `check` cannot print it because it never looks at
 the output folder. The owner learns it only from `build`. Code: `_write_noindex_files` in
 `src/cronicl/site/render.py`.
+
+## Couple events
+
+### A couple's events other than marriage, divorce and the like are not shown on the site
+
+Any event `type` is allowed in a couple record (`residence`, `census`, ...). They are kept in `family.yml`, survive
+`rename` and the editing commands, and are written to GEDCOM as `EVEN`, but the person pages and the timeline do not
+show them. On re-import they come back as set-aside lines, not as couple events. Code: `partnerships_from_events` in
+`src/cronicl/core/family.py` keeps only beginning and ending events.

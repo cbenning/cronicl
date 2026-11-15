@@ -25,6 +25,7 @@ _TAG_FOR_TYPE = {
     "nationality": ("NATI", True), "graduation": ("GRAD", False), "retirement": ("RETI", False),
     "census": ("CENS", False), "will": ("WILL", False), "probate": ("PROB", False),
 }
+_PARTNERSHIP_TYPES = ("marriage", "civil-union", "partnership", "engagement", "divorce", "annulment", "separation", "end")
 _MAPPED_TAGS = {"BIRT", "DEAT", "NAME", "NOTE", *(tag for tag, _ in _TAG_FOR_TYPE.values())}
 _XREF_OK = re.compile(r"^[A-Za-z0-9_]{1,20}$")
 _EXTRA_LINE = re.compile(r"^\s*(\d+) (?:(@[^@\s]+@) )?(\S+)(?: (.*))?$")
@@ -330,8 +331,22 @@ class _Export:
                 fams.append({
                     "xref": self.fresh("F", number), "partners": partners, "key": key, "entries": [] if redacted or entry is None else [entry],
                     "children": children if index == 0 else [],
+                    "extras": [] if redacted or index else self.other_couple_events(key),
                 })
         return fams
+
+    def other_couple_events(self, key: tuple) -> list:
+        """A couple record's events of types that do not begin or end a partnership (a residence, a census): kept as EVEN."""
+        first = self.tree.people.get(key[0])
+        out = []
+        for other, record, *_ in getattr(first, "couple_records", []):
+            if other != key[-1] or not hasattr(record, "get"):
+                continue
+            for entry in record.get("events") or []:
+                kind = entry.get("type") if hasattr(entry, "get") else None
+                if isinstance(kind, str) and kind.strip() and kind.strip() not in _PARTNERSHIP_TYPES:
+                    out.append(entry)
+        return out
 
     def roles(self, partners: list[str]) -> list[tuple[str, str]]:
         people = self.tree.people
@@ -356,6 +371,13 @@ class _Export:
             w.line(1, "CHIL", self.person_xref[child], pointer=True)
         for p in fam["entries"]:
             self.partnership(p)
+        for entry in fam.get("extras", []):
+            w.line(1, "EVEN")
+            w.line(2, "TYPE", entry["type"].strip())
+            note = entry.get("note")
+            self.fact_tail(2, date_text=_date_text(entry.get("date")) if isinstance(entry.get("date"), str) else None,
+                           place=entry.get("place") if isinstance(entry.get("place"), str) else None,
+                           note=note if isinstance(note, str) and note.strip() else None, cites=cites_of(entry.get("cite")))
 
     def partnership(self, p) -> None:
         w = self.out
