@@ -116,6 +116,8 @@ main { flex: 1; display: flex; min-height: 0; }
 .avatar-lg { width: var(--avatar-lg); height: var(--avatar-lg); font-size: 2.2rem; }
 .pills { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0; }
 .pill { padding: 3px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-size: .85rem; }
+.surname-pills { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0; }
+.surname-pills .pill { white-space: nowrap; }
 .pill:hover { border-color: var(--accent); color: var(--accent); }
 #panel .bio { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 .bio > :first-child { margin-top: 0; }

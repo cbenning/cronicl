@@ -426,6 +426,11 @@ async function main() {
   const direct = await ev(`document.querySelector('#tree > g').getAttribute('transform')`);
   check('the tree opens the same after the timeline as when opened directly', afterTimeline === direct, afterTimeline + ' vs ' + direct);
 
+  // ---- the surname pills on the home page wrap as whole pills, never split or overlapping
+  await send('Page.navigate', { url: base + '/index.html' }); await sleep(900);
+  const pills = await ev(`(() => { const box = document.querySelector('.surnames .surname-pills'); if (!box) return null; const list = [...box.querySelectorAll('a.pill')]; const rects = list.map((a) => a.getBoundingClientRect()); let overlap = 0; for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) { const a = rects[i], b = rects[j]; if (a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5) overlap++; } return { display: getComputedStyle(box).display, count: list.length, split: list.filter((a) => a.getClientRects().length !== 1).length, overlap }; })()`);
+  check('the surname pills are laid out as whole, separate pills', pills && pills.display === 'flex' && pills.count >= 1 && pills.split === 0 && pills.overlap === 0, JSON.stringify(pills));
+
   // ---- site pages lay out as one column
   const barShape = [];
   for (const path of ['/index.html', '/people/index.html', '/tree/', '/timeline/', '/p/smith-bob/', '/relate/index.html']) {

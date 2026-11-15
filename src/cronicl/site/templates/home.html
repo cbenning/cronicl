@@ -40,8 +40,9 @@
   {% if stats.surnames %}
   <section class="surnames">
     <h2>Surnames</h2>
-    <p>
-      {% for s in stats.surnames[:12] %}<a class="pill" href="people/index.html#s-{{ s.slug }}">{{ s.surname }} · {{ s.count }}</a> {% endfor %}
+    <p class="surname-pills">
+      {% for s in stats.surnames[:12] %}<a class="pill" href="people/index.html#s-{{ s.slug }}">{{ s.surname }} · {{ s.count }}</a>
+      {% endfor %}
     </p>
     <p><a href="people/index.html">All people</a> · <a href="places/index.html">All places</a></p>
   </section>
