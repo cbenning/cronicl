@@ -426,6 +426,11 @@ async function main() {
   const direct = await ev(`document.querySelector('#tree > g').getAttribute('transform')`);
   check('the tree opens the same after the timeline as when opened directly', afterTimeline === direct, afterTimeline + ' vs ' + direct);
 
+  // ---- a long date stays on one line in the person page's timeline, and the dates line up
+  await send('Page.navigate', { url: base + '/p/long-date/' }); await sleep(900);
+  const whens = await ev(`(() => { const list = [...document.querySelectorAll('.events .when')]; const line = parseFloat(getComputedStyle(list[0]).lineHeight) || 24; return { count: list.length, wrapped: list.filter((w) => w.getBoundingClientRect().height > line * 1.5).length, lefts: [...new Set(document.querySelectorAll('.events .what') && [...document.querySelectorAll('.events .what')].map((w) => Math.round(w.getBoundingClientRect().left)))].length }; })()`);
+  check('long dates do not wrap and the event text lines up', whens.count >= 2 && whens.wrapped === 0 && whens.lefts === 1, JSON.stringify(whens));
+
   // ---- the surname pills on the home page wrap as whole pills, never split or overlapping
   await send('Page.navigate', { url: base + '/index.html' }); await sleep(900);
   const pills = await ev(`(() => { const box = document.querySelector('.surnames .surname-pills'); if (!box) return null; const list = [...box.querySelectorAll('a.pill')]; const rects = list.map((a) => a.getBoundingClientRect()); let overlap = 0; for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) { const a = rects[i], b = rects[j]; if (a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5) overlap++; } return { display: getComputedStyle(box).display, count: list.length, split: list.filter((a) => a.getClientRects().length !== 1).length, overlap }; })()`);

@@ -53,6 +53,7 @@ def test_viewer_in_a_real_browser(tmp_path, sample_ged):
             "  events:\n    - {type: occupation, value: Teacher, date: 1950}\n"
             "\nkid-now:\n  name: {given: Kid, surname: Now}\n  birth: 2000-05-05\n  parents: [smith-bob]\n"
             "\nold-open:\n  name: {given: Old, surname: Open}\n  birth: 1850\n"
+            "\nlong-date:\n  name: {given: Long, surname: Date}\n  birth: 1941-09-30\n  death: 1999-12-28\n"
             "\nlone-person:\n  name: {given: Lone, surname: Person}\n"
             "\nwife-first:\n  name: {given: Ex, surname: Wife}\n"
             "\nsmith-john + wife-first:\n  events:\n    - {type: marriage, date: 1940}\n"
