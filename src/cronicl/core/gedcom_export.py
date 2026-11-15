@@ -11,9 +11,9 @@ from datetime import date
 
 from .dates import parse_span, to_gedcom
 from .issues import Issue
-from .living import is_living
+from .living import counts_as_death, is_living
 from .model import Person, Tree
-from .textvalues import cites_of
+from .textvalues import cites_of, normal_type
 from .yamltext import load_text
 
 # The inverse of gedcom._EVENT_TAGS: event type -> (tag, whether the value is the line's own text).
@@ -176,7 +176,7 @@ class _Export:
         self.fact_tail(2, date_text=date_text, place=e.place, note=e.note, cites=e.cite)
 
     # ---- records -----------------------------------------------------------------------------------------------
-    def collect_cites(self, people: list[Person], fam_entries: list) -> None:
+    def collect_cites(self, people: list[Person], fam_entries: list, extras: list = ()) -> None:
         found: set[str] = set()
         for person in people:
             for vital in (person.birth, person.death):
@@ -186,6 +186,8 @@ class _Export:
                 found.update(e.cite)
         for entry in fam_entries:
             found.update(entry.cite)
+        for entry in extras:
+            found.update(cites_of(entry.get("cite")))
         for number, text in enumerate(sorted(found), start=1):
             self.sources[text] = self.fresh("S", number)
 
@@ -195,7 +197,7 @@ class _Export:
         self.assign_xrefs()
         fams = self.plan_families()
         shown_entries = [e for fam in fams for e in fam["entries"]]
-        self.collect_cites([p for p in people if p.id not in self.living], shown_entries)
+        self.collect_cites([p for p in people if p.id not in self.living], shown_entries, [e for fam in fams for e in fam.get("extras", [])])
 
         from .. import __version__
 
@@ -245,7 +247,7 @@ class _Export:
             if person.sex in ("M", "F") or "\n1 SEX " not in "\n" + self.extra.get(person.id, ""):
                 w.line(1, "SEX", {"M": "M", "F": "F"}.get(person.sex, "U"))
             self.vital("BIRT", person.birth)
-            self.vital("DEAT", person.death, unknown_means_y=True)
+            self.vital("DEAT", person.death if counts_as_death(person.death) else None, unknown_means_y=True)
             for event in person.events:
                 self.life_event(event)
             if person.body:
@@ -344,7 +346,7 @@ class _Export:
                 continue
             for entry in record.get("events") or []:
                 kind = entry.get("type") if hasattr(entry, "get") else None
-                if isinstance(kind, str) and kind.strip() and kind.strip() not in _PARTNERSHIP_TYPES:
+                if isinstance(kind, str) and kind.strip() and normal_type(kind) not in _PARTNERSHIP_TYPES:
                     out.append(entry)
         return out
 
@@ -372,7 +374,8 @@ class _Export:
         for p in fam["entries"]:
             self.partnership(p)
         for entry in fam.get("extras", []):
-            w.line(1, "EVEN")
+            value = entry.get("value")
+            w.line(1, "EVEN", value.strip() if isinstance(value, str) and value.strip() else "")
             w.line(2, "TYPE", entry["type"].strip())
             note = entry.get("note")
             self.fact_tail(2, date_text=_date_text(entry.get("date")) if isinstance(entry.get("date"), str) else None,

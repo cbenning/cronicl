@@ -55,3 +55,18 @@ Any event `type` is allowed in a couple record (`residence`, `census`, ...). The
 `rename` and the editing commands, and are written to GEDCOM as `EVEN`, but the person pages and the timeline do not
 show them. On re-import they come back as set-aside lines, not as couple events. Code: `partnerships_from_events` in
 `src/cronicl/core/family.py` keeps only beginning and ending events.
+
+### Other keys of a couple event are not exported
+
+Of a couple's extra events, GEDCOM export writes the type, `value`, `date`, `place`, `note` and `cite`. Your own `x-`
+keys under such an event stay in `family.yml` and are not exported. The same events come back on re-import as
+set-aside lines, and a second export drops them again with `W-GEDCOM-EXTRA-FAM`, so exporting, importing and
+exporting again is not a round trip for them.
+
+## Tree layout
+
+### One marriage between relatives drops the sibling rule for the whole connected tree
+
+When a marriage such as an uncle and a niece makes the strict layout impossible, the tree views stop keeping sibling
+groups on one row for the whole connected family, not only for the groups involved. Nothing overlaps and nothing is
+lost, but unrelated siblings can end up on different rows. Code: `_generations` in `src/cronicl/core/generations.py`.

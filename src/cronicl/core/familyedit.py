@@ -8,6 +8,7 @@ import yaml
 
 from .edit import EditError
 from .family import family_files
+from .living import counts_as_death
 from .inplace import InplaceError, _id_span, _root, _split_bom, rename, set_death_unknown, set_living
 from .slug import is_valid_id
 from .store import load_tree
@@ -67,7 +68,8 @@ def plan_rename(data_dir: Path, old: str, new: str) -> list[Change]:
         try:
             updated, count = rename(_read(extra), old, new)
         except (InplaceError, UnicodeDecodeError):
-            updated, count = "", 0
+            raise EditError(f"archive/gedcom-extra.yml cannot be read, so the lines set aside for {old} cannot follow the rename; "
+                            "fix or move that file and try again") from None
         if count:
             changes.append(Change(extra, updated, count))
     return changes
@@ -87,7 +89,14 @@ def plan_mark(data_dir: Path, ids: list[str], living: bool) -> list[tuple[str, P
         if pid in seen:
             continue
         seen.add(pid)
-        path = data_dir / tree.people[pid].source
+        person = tree.people[pid]
+        if not living:
+            if person.living is True:
+                raise EditError(f"{pid}: has `living: true`, which wins over any death; remove it by hand first")
+            if person.death is not None and not counts_as_death(person.death):
+                raise EditError(f"{pid}: death {person.death.date or '(no date)'!r} is not a date, so it does not count as a death; "
+                                "edit it by hand (write `unknown` if they died)")
+        path = data_dir / person.source
         current = texts.get(path) or _read(path)
         try:
             updated = set_living(current, pid) if living else set_death_unknown(current, pid)

@@ -1,0 +1,8 @@
+# expect: W-COUPLE-EVENT-TYPE@8
+a:
+  name: {given: A}
+b:
+  name: {given: B}
+a + b:
+  events:
+    - {type: wedding, date: 1900}

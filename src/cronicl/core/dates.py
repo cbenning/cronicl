@@ -118,6 +118,32 @@ def plain_form(text: str | None) -> str | None:
     return out
 
 
+def bounds(plain: str | None) -> tuple[tuple[int, int, int], tuple[int, int, int]] | None:
+    """The earliest and latest day a plain `YYYY[-MM[-DD]]` date can mean: 1950 is 1950-01-01 to 1950-12-31."""
+    parsed = parse_date(plain)
+    if parsed is None:
+        return None
+    month_first, month_last = (parsed.month, parsed.month) if parsed.month else (1, 12)
+    day_first = parsed.day or 1
+    day_last = parsed.day or calendar.monthrange(parsed.year, month_last)[1]
+    return (parsed.year, month_first, day_first), (parsed.year, month_last, day_last)
+
+
+def parse_between(text: str | None) -> tuple[str, str] | None:
+    """`BET a AND b` as its two plain dates; None for anything else."""
+    match = _BETWEEN.match(_squash(text)) if text else None
+    if not match:
+        return None
+    g = match.groups()
+    return plain_form(g[0] + (f"-{g[1]}" if g[1] else "") + (f"-{g[2]}" if g[2] else "")), plain_form(g[3] + (f"-{g[4]}" if g[4] else "") + (f"-{g[5]}" if g[5] else ""))
+
+
+def runs_backwards(first: str | None, last: str | None) -> bool:
+    """True when `last` is certainly before `first` (a month-precise end inside the start's year is not)."""
+    a, b = bounds(first), bounds(last)
+    return bool(a and b and b[1] < a[0])
+
+
 def date_year(text: str | None) -> int | None:
     parsed = parse_date(text)
     return parsed.year if parsed else None

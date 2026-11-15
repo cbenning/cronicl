@@ -1,0 +1,5 @@
+# expect: W-DEATH-EMPTY@5
+a:
+  name: {given: A}
+  birth: 1990
+  death: {note: still going strong}

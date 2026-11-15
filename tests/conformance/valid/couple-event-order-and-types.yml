@@ -1,0 +1,9 @@
+a:
+  name: {given: A}
+b:
+  name: {given: B}
+a + b:
+  events:
+    - {type: Divorce, date: 1950}
+    - {type: Marriage, date: 1950-06}
+    - {type: Civil Union, date: 1960}

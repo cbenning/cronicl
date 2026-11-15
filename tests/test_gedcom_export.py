@@ -272,10 +272,10 @@ def test_family_source_and_submitter_references_never_collide_with_people(tmp_pa
 
 
 def test_legacy_approximate_dates_and_free_text_are_valid_gedcom(tmp_path, write_family):
-    write_family(tmp_path, "a:\n  name: {given: A}\n  birth: ~1850\n  death: spring 1900\n")
+    write_family(tmp_path, "a:\n  name: {given: A}\n  birth: spring 1850\n  death: ~1900\n")
     tree, _ = load_tree(tmp_path)
     text = export(tree)
-    assert "2 DATE ABT 1850" in text and "2 DATE (spring 1900)" in text
+    assert "2 DATE (spring 1850)" in text and "2 DATE ABT 1900" in text
 
 
 def test_a_place_with_inner_spaces_still_gets_its_coordinates(tmp_path, write_family):

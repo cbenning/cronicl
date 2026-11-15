@@ -13,6 +13,11 @@ def is_extension(key: str) -> bool:
     return str(key)[:2].casefold() in ("x-", "x_")
 
 
+def normal_type(kind) -> str:
+    """An event type as the reader takes it: any case, with spaces and underscores read as hyphens."""
+    return re.sub(r"[\s_]+", "-", kind.strip().casefold()) if isinstance(kind, str) else ""
+
+
 def parse_bool(value) -> bool | None:
     if isinstance(value, bool):
         return value

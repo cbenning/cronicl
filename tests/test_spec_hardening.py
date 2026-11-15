@@ -46,9 +46,9 @@ def test_real_death_dates_still_count(tmp_path, value):
     assert is_living(tree.people["a"], TODAY) is False
 
 
-def test_a_death_with_only_a_place_or_note_still_counts(tmp_path):
+def test_a_death_with_a_place_counts_but_a_bare_note_does_not(tmp_path):
     tree, _ = load(tmp_path, "a: {name: {given: A}, birth: 1990, death: {place: Leeds}}\nb: {name: {given: B}, birth: 1990, death: {note: died young}}\n")
-    assert not is_living(tree.people["a"], TODAY) and not is_living(tree.people["b"], TODAY)
+    assert not is_living(tree.people["a"], TODAY) and is_living(tree.people["b"], TODAY)
 
 
 # ---- B14: living: true next to a death is a conflict, reported
@@ -216,3 +216,156 @@ def test_marrying_a_descendant_is_still_a_layout_conflict(tmp_path):
     tree, issues = load(tmp_path, "a: {name: {given: A}}\nb: {name: {given: B}, parents: [a]}\nc: {name: {given: C}, parents: [b]}\na + c: {}\n")
     assert generation_conflict(tree) is not None
     assert "E-GENERATION-CONFLICT" in [c for c, _ in codes(issues)]
+
+
+# ================= review pass: fixes =================
+import itertools
+from datetime import date
+
+from cronicl.core.familyedit import plan_mark
+from cronicl.core.gedcom import import_nodes, parse_nodes
+from cronicl.core.gedcom_export import export_gedcom
+from cronicl.core.yamltext import load_text
+
+
+def _marked(tmp_path, record):
+    load(tmp_path, f"a:\n  name: {{given: A}}\n  birth: 1990\n{record}  bio: x\n")
+    [(_, _, changed, text)] = plan_mark(tmp_path, ["a"], living=False)
+    return changed, text
+
+
+@pytest.mark.parametrize("blank", ['  death: ""\n', "  death: ''\n", "  death: !!null\n", "  death: |\n", "  death:   # unknown yet\n"])
+def test_mark_deceased_fills_every_blank_form_of_death(tmp_path, blank):
+    changed, text = _marked(tmp_path, blank)
+    assert changed
+    (tmp_path / "family.yml").write_text(text, encoding="utf-8")
+    tree, issues = load_tree(tmp_path)
+    assert tree.people["a"].death.date == "unknown" and is_living(tree.people["a"], TODAY) is False
+
+
+@pytest.mark.parametrize("record", ["  death: no\n", "  death: {}\n", "  death: {date: no}\n", "  living: true\n"])
+def test_mark_deceased_says_when_it_cannot_make_the_person_deceased(tmp_path, record):
+    load(tmp_path, f"a:\n  name: {{given: A}}\n  birth: 1990\n{record}")
+    with pytest.raises(EditError) as err:
+        plan_mark(tmp_path, ["a"], living=False)
+    assert "by hand" in str(err.value)
+
+
+def test_mark_living_fills_a_quoted_blank_living(tmp_path):
+    load(tmp_path, 'a:\n  name: {given: A}\n  living: ""\n  bio: x\n')
+    [(_, _, changed, text)] = plan_mark(tmp_path, ["a"], living=True)
+    assert changed and 'living: true' in text and '""' not in text
+
+
+def _partnerships(tmp_path, events):
+    body = "".join(f"    - {e}\n" for e in events)
+    tree, issues = load(tmp_path, "a: {name: {given: A}}\nb: {name: {given: B}}\na + b:\n  events:\n" + body)
+    return [(p.type, p.start, p.end, p.end_reason) for p in tree.people["a"].partnerships], issues
+
+
+def test_couple_event_order_does_not_depend_on_how_they_were_written(tmp_path):
+    events = ["{type: divorce, date: 1950}", "{type: marriage, date: 1950-09}", "{type: divorce, date: 1950-03}"]
+    outcomes = set()
+    for order in itertools.permutations(events):
+        sub = tmp_path / str(len(outcomes)) / "x"
+        sub.mkdir(parents=True, exist_ok=True)
+        got, _ = _partnerships(sub, order)
+        outcomes.add(tuple(got))
+    assert len(outcomes) == 1, outcomes
+
+
+def test_a_partly_dated_ending_follows_a_beginning_in_the_same_period(tmp_path):
+    got, issues = _partnerships(tmp_path, ["{type: marriage, date: 1950-06}", "{type: divorce, date: 1950}"])
+    assert got == [("marriage", "1950-06", "1950", "divorce")]
+    assert codes(issues) == []
+
+
+@pytest.mark.parametrize("kind", ["Marriage", "MARRIAGE", " marriage ", "civil union", "Civil_Union"])
+def test_couple_event_types_ignore_case_and_spacing(tmp_path, kind):
+    got, issues = _partnerships(tmp_path, [f"{{type: '{kind}', date: 1900}}"])
+    assert got[0][0] in ("marriage", "civil-union") and got[0][1] == "1900" and codes(issues) == []
+
+
+@pytest.mark.parametrize("kind, guess", [("wedding", "marriage"), ("married", "marriage"), ("divorced", "divorce"), ("marraige", "marriage"), ("separated", "separation")])
+def test_a_mistyped_couple_event_type_is_reported_with_a_suggestion(tmp_path, kind, guess):
+    _, issues = _partnerships(tmp_path, [f"{{type: {kind}, date: 1900}}"])
+    [issue] = [i for i in issues if i.code == "W-COUPLE-EVENT-TYPE"]
+    assert guess in issue.message and issue.line == 5
+
+
+def test_other_couple_event_types_are_not_reported(tmp_path):
+    _, issues = _partnerships(tmp_path, ["{type: residence, date: 1900}", "{type: census, date: 1911}"])
+    assert codes(issues) == []
+
+
+# ---- export: a couple's extra events with a source or value
+def test_extra_couple_events_with_a_source_export_without_crashing(tmp_path):
+    load(tmp_path, "a: {name: {given: A}}\nb: {name: {given: B}}\na + b:\n  events:\n    - {type: census, date: 1851, value: Boarders, cite: 1851 census}\n")
+    tree, _ = load_tree(tmp_path)
+    text, _ = export_gedcom(tree, today=TODAY)
+    assert "0 @S1@ SOUR" in text and "2 TITL 1851 census" in text.replace("1 TITL", "2 TITL") or "1 TITL 1851 census" in text
+    assert "1 EVEN Boarders" in text and "2 SOUR @S1@" in text
+
+
+def test_a_death_that_does_not_count_is_not_exported_as_a_death(tmp_path):
+    load(tmp_path, "a:\n  name: {given: A}\n  birth: 1990\n  death: 'no'\n")
+    tree, _ = load_tree(tmp_path)
+    text, _ = export_gedcom(tree, today=TODAY)
+    assert "DEAT" not in text
+
+
+# ---- import: a DEAT with words for a date is a death
+@pytest.mark.parametrize("phrase", ["Stillborn", "Deceased", "Bef. 1990", "11 FEB 1731/32"])
+def test_an_imported_death_with_a_date_phrase_still_counts_as_a_death(phrase):
+    nodes, _ = parse_nodes(f"0 HEAD\n0 @I1@ INDI\n1 NAME A /B/\n1 DEAT\n2 DATE {phrase}\n0 TRLR\n")
+    [person] = import_nodes(nodes).people
+    assert person.death is not None and person.death.date == "unknown" and phrase.replace("Bef. ", "Bef. ") in person.death.extra["note"]
+    assert is_living(person, TODAY) is False
+
+
+# ---- minors
+def test_uppercase_yml_and_a_family_yaml_beside_family_yml_are_reported(tmp_path):
+    _, issues = load(tmp_path, None, files={"family/one.yml": "a: {name: {given: A}}\n", "family/Two.YML": "b: {name: {given: B}}\n"})
+    assert [i.code for i in issues] == ["W-IGNORED-FILE"]
+    sub = tmp_path / "second"
+    sub.mkdir()
+    _, issues = load(sub, "a: {name: {given: A}}\n", files={"family.yml": "a: {name: {given: A}}\n", "family.yaml": "b: {name: {given: B}}\n"})
+    assert [i.code for i in issues] == ["W-IGNORED-FILE"]
+
+
+def test_a_death_mapping_with_only_a_note_does_not_count_and_is_reported(tmp_path):
+    tree, issues = load(tmp_path, "a:\n  name: {given: A}\n  birth: 1990\n  death: {note: still going strong}\n")
+    assert is_living(tree.people["a"], TODAY) is True
+    assert codes(issues) == [("W-DEATH-EMPTY", 4)]
+
+
+def test_month_precise_ranges_are_compared_by_their_bounds(tmp_path):
+    _, issues = load(tmp_path, "a:\n  name: {given: A}\n  events:\n    - {type: residence, date: FROM 1950-06 TO 1950}\n    - {type: residence, date: BET 1890-06 AND 1890-03}\n")
+    assert codes(issues) == [("W-END-BEFORE-START", 5)]
+
+
+def test_a_couple_that_ends_in_the_year_it_began_is_not_reported(tmp_path):
+    _, issues = _partnerships(tmp_path, ["{type: marriage, date: 1950-06}", "{type: divorce, date: 1950}"])
+    assert [i.code for i in issues] == []
+
+
+def test_birth_after_death_compares_months_when_both_are_given(tmp_path):
+    _, issues = load(tmp_path, "a:\n  name: {given: A}\n  birth: 1950-06\n  death: 1950-03\n")
+    assert [c for c, _ in codes(issues)] == ["W-BIRTH-AFTER-DEATH"]
+
+
+def test_rename_stops_when_the_gedcom_extra_file_cannot_be_read(tmp_path):
+    load(tmp_path, "old-id: {name: {given: A}}\n")
+    (tmp_path / "archive").mkdir()
+    (tmp_path / "archive" / "gedcom-extra.yml").write_text("old-id: [unclosed\n", encoding="utf-8")
+    with pytest.raises(EditError) as err:
+        plan_rename(tmp_path, "old-id", "new-id")
+    assert "gedcom-extra.yml" in str(err.value)
+
+
+def test_a_person_whose_death_is_not_a_date_is_still_redacted_in_the_site(tmp_path):
+    from cronicl.site.privacy import redact
+
+    tree, _ = load(tmp_path, "a:\n  name: {given: Real, surname: Person}\n  birth: 1990\n  death: 'no'\n")
+    shown = redact(tree, mode="placeholder", today=TODAY)
+    assert [p.given for p in shown.people.values()] == ["Living"]

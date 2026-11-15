@@ -7,13 +7,12 @@ a couple's begin/end events become `Partnership`s on the first-sorting partner, 
 from __future__ import annotations
 
 import re
-from functools import cmp_to_key
 from pathlib import Path
 
-from .dates import parse_span, plain_form
+from .dates import bounds, parse_span, plain_form
 from .issues import Issue
 from .model import Event, LifeEvent, Partnership, Person
-from .textvalues import parse_bool
+from .textvalues import normal_type, parse_bool
 from .yamltext import Mapping, Sequence, load_text
 
 ID = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
@@ -198,12 +197,13 @@ def partnerships_from_events(entries, other: str) -> list[Partnership]:
     """A couple's events (mappings with type, date, place, note, cite) as the Partnerships the model carries.
 
     Events are taken in date order (undated ones keep their written place). A beginning event starts a partnership; an
-    ending event closes the latest open one, or makes a partnership of its own when nothing is open.
+    ending event closes the latest open one, or makes a partnership of its own when nothing is open. Types are read in
+    any case, with spaces or underscores as hyphens; types that begin or end nothing (a residence) are not read here.
     """
-    entries = [e for e in entries if (_text(e.get("type")) or "") in BEGIN + END]
+    entries = [e for e in entries if normal_type(e.get("type")) in BEGIN + END]
     partnerships: list[Partnership] = []
     for entry in _in_date_order(entries):
-        kind, date = _text(entry.get("type")), _text(entry.get("date"))
+        kind, date = normal_type(entry.get("type")), _text(entry.get("date"))
         if kind in BEGIN:
             partnerships.append(
                 Partnership(with_id=other, distinct=True, type=kind, start=date, place=_text(entry.get("place")), note=_text(entry.get("note")),
@@ -225,27 +225,20 @@ def partnerships_from_events(entries, other: str) -> list[Partnership]:
     return partnerships
 
 
-def _parts(entry: Mapping) -> tuple[int, ...]:
-    return tuple(int(x) for x in plain_form(_text(entry.get("date"))).split("-"))
+def _moment(entry: Mapping) -> tuple[int, int, int]:
+    """Where an event sorts: a beginning at the earliest day its date allows, an ending at the latest.
 
-
-def _compare(a: Mapping, b: Mapping) -> int:
-    """Earlier first. Dates that agree as far as the less precise one goes (1950 and 1950-06) are the same moment:
-    a beginning event then comes before an ending one, and otherwise the written order stays."""
-    pa, pb = _parts(a), _parts(b)
-    shared = min(len(pa), len(pb))
-    if pa[:shared] != pb[:shared]:
-        return -1 if pa[:shared] < pb[:shared] else 1
-    begins_a, begins_b = _text(a.get("type")) in BEGIN, _text(b.get("type")) in BEGIN
-    if begins_a != begins_b:
-        return -1 if begins_a else 1
-    return 0
+    So a divorce dated only `1950` follows a marriage in `1950-06`, and one dated `1950-03` precedes a marriage in
+    `1950-09`. Written order only settles events that land on the same day.
+    """
+    early, late = bounds(plain_form(_text(entry.get("date"))))
+    return early if normal_type(entry.get("type")) in BEGIN else late
 
 
 def _in_date_order(entries: list[Mapping]) -> list[Mapping]:
     """Order events by date; an event with no (readable) date keeps its written position among the others."""
     slots = [i for i, e in enumerate(entries) if plain_form(_text(e.get("date")))]
-    dated = sorted((entries[i] for i in slots), key=cmp_to_key(_compare))
+    dated = sorted((entries[i] for i in slots), key=_moment)
     out = list(entries)
     for slot, entry in zip(slots, dated):
         out[slot] = entry
@@ -260,12 +253,14 @@ def read_family(data_dir: Path) -> tuple[list[Person], list[Issue]]:
         reader.problem("E-BAD-FAMILY", "both family.yml and a family/ folder exist; keep one of them", "family.yml")
         return [], reader.issues
     seen_people: set[str] = set()
+    if single.exists() and (data_dir / "family.yaml").exists():
+        reader.problem("W-IGNORED-FILE", "family.yaml is not read; the family is in family.yml", "family.yaml")
     if folder.is_dir():
         for entry in sorted(folder.iterdir()):
             if entry.name.startswith("."):
                 continue
-            if entry.is_dir() or entry.suffix.casefold() == ".yaml":
-                what = "a folder" if entry.is_dir() else "a .yaml file"
+            if entry.is_dir() or (entry.suffix.casefold() in (".yml", ".yaml") and entry.suffix != ".yml"):
+                what = "a folder" if entry.is_dir() else f"a {entry.suffix} file"
                 reader.problem("W-IGNORED-FILE", f"family/{entry.name} is {what}; only .yml files directly in family/ are read", f"family/{entry.name}")
     for path in family_files(data_dir):
         source = path.relative_to(data_dir).as_posix()

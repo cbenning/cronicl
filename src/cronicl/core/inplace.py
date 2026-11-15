@@ -104,6 +104,15 @@ def _blank(value_node) -> bool:
     return isinstance(value_node, yaml.ScalarNode) and value_node.value == ""
 
 
+def _fill_blank(body: str, node, word: str) -> str:
+    """Give a blank scalar (`key:`, `key: ""`, `key: ''`, `key: !!null`, `key: |`) the value `word`, replacing all of it."""
+    start, end = node.start_mark.index, node.end_mark.index
+    end = start + len(body[start:end].rstrip("\r\n"))  # an empty block scalar's span runs on to the line end
+    if end > start:
+        return body[:start] + word + body[end:]
+    return body[:start] + (" " if body[start - 1:start] == ":" else "") + word + body[start:]
+
+
 def set_death_unknown(text: str, pid: str) -> str:
     """Add `death: unknown` to the person's record (after `birth` when there is one); unchanged when they have a death."""
     bom, body = _split_bom(text)
@@ -116,9 +125,10 @@ def set_death_unknown(text: str, pid: str) -> str:
         raise InplaceError(f"{pid}: the record is written as {{...}} on one line; add `death: unknown` by hand")
     existing = children.get("death")
     if existing is not None:
-        if isinstance(existing, yaml.ScalarNode) and not existing.value:  # blank: `death:` or `death:   # note`
-            at = existing.start_mark.index
-            return bom + body[:at] + (" " if body[at - 1:at] == ":" else "") + "unknown" + body[at:]
+        if isinstance(existing, yaml.ScalarNode) and not existing.value:  # blank, in any of its spellings
+            return bom + _fill_blank(body, existing, "unknown")
+        if isinstance(existing, yaml.MappingNode) and not existing.value:
+            raise InplaceError(f"{pid}: death is an empty {{}}; write `death: unknown` by hand")
         return text
     anchor = children.get("birth") or children.get("sex") or children.get("name")
     if anchor is not None:
@@ -143,9 +153,8 @@ def set_living(text: str, pid: str) -> str:
     if existing is not None:
         if not isinstance(existing, yaml.ScalarNode):
             raise InplaceError(f"{pid}: `living` is not a single value; edit it by hand")
-        if not existing.value:  # blank: `living:` or `living:   # note`
-            at = existing.start_mark.index
-            return bom + body[:at] + (" " if body[at - 1:at] == ":" else "") + "true" + body[at:]
+        if not existing.value:  # blank, in any of its spellings
+            return bom + _fill_blank(body, existing, "true")
         start, end = _id_span(existing)
         return text if existing.value == "true" else bom + body[:start] + "true" + body[end:]
     at = _last_line_end(body, value_node.end_mark.index)

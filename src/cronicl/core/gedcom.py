@@ -187,7 +187,12 @@ def _event(node: Node, label: str, owner: str, extra: list[Node], issues: list[I
         if child.tag == "DATE" and date is None:
             value, ok = from_gedcom(child.value)
             date = value or None
-            if value and not ok:
+            if value and not ok and label == "death":
+                # a DEAT with words for a date (Stillborn, Deceased, Bef. 1990) still says the person died
+                notes.append(f"Date as recorded: {value}")
+                date = "unknown"
+                issues.append(Issue("W-DATE-UNPARSED", f"{owner}: {label} date {value!r} kept as a note; the death is dated unknown"))
+            elif value and not ok:
                 issues.append(Issue("W-DATE-UNPARSED", f"{owner}: {label} date {value!r} kept as text"))
             if child.children:
                 leftovers.append(child)

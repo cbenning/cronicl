@@ -219,8 +219,8 @@ The rules that keep it simple:
 | Key | Shape | Notes |
 |---|---|---|
 | `name` | mapping | `given`, `surname`; optional `prefix`, `suffix`, `nickname`, `also` (a list of other names, such as a married name; searchable and shown on the page) |
-| `sex` | `male`, `female`, `unknown`, `other` | absent means unknown |
-| `birth`, `death` | dated fact | a person with `death` is deceased; `death: unknown` means dead, date not known |
+| `sex` | `male`, `female`, `unknown`, `other` (any case) | absent means unknown |
+| `birth`, `death` | dated fact | a person with a `death` that has a date, `unknown` or a place is deceased; `death: unknown` means dead, date not known. A `death` that is not a date (`no`, `~`) or has only a note does not count (it is reported) |
 | `parents` | list of at most two ids | birth parents |
 | `events` | list of mappings | `type` plus the dated-fact keys and `value` (for attributes such as an occupation) |
 | `portrait` | text | a file under `media/` |
@@ -229,7 +229,7 @@ The rules that keep it simple:
 | `bio` | text | the biography, as markdown; use a `|` block for paragraphs |
 | `x-...` | anything | your own keys, kept and never reported |
 
-Only the key is required; a person with no name is reported. `birth: 1820` is short for `birth: {date: 1820}`.
+Only the key is required; a person with no name is reported, unless they are someone's partner or parent (a nameless record is how you write an unknown partner). `birth: 1820` is short for `birth: {date: 1820}`.
 
 ### A couple record
 
@@ -319,7 +319,7 @@ Errors about the family file:
 | `E-NO-FAMILY` | there is no `family.yml` or `family/`; the message says to run `cronicl migrate` when `people/*.md` exists |
 | `E-RECORD-KEY` | a top-level key is neither a person id nor a couple key |
 | `E-RECORD-SHAPE` | a record is not a mapping; `name` is not a mapping; `parents` or `events` has the wrong shape; a list or mapping where text belongs |
-| `E-DUPLICATE-ID` | the same person, or the same couple in either order, twice (also across split files) |
+| `E-DUPLICATE-ID` | the same person, or the same couple in either order, twice (also across split files); the later record in one file wins, across files the first |
 | `E-COUPLE-SELF` | a couple key names one person twice |
 | `E-DANGLING-REF` | a parent, or half of a couple key, is not a person in the family |
 | `E-CYCLE`, `E-GENERATION-CONFLICT` | a person is their own ancestor; a person marrying their own ancestor or descendant, which the layout cannot draw |
@@ -339,6 +339,7 @@ Warnings, and the rest:
 | `W-NO-NAME`, `W-TOO-MANY-PARENTS`, `W-DUPLICATE-PARENT` | a person with no name who is not a partner or parent either; more than two parents; the same parent twice |
 | `E-INVALID-ID` | a person id over 64 characters |
 | `W-EVENT-NO-TYPE`, `W-IGNORED-FILE` | an event with no `type`; a `.yaml` file or folder inside `family/`, which is not read |
+| `W-DEATH-EMPTY`, `W-COUPLE-EVENT-TYPE` | a `death` with no date or place (it does not count); a couple event type that looks like a misspelling of `marriage`, `divorce`, ... |
 | `W-LIVING-AND-DEATH` | `living: true` and a `death` together; the person counts as living |
 | `W-BIRTH-AFTER-DEATH`, `W-CHILD-BEFORE-PARENT`, `W-CHILD-AFTER-PARENT-DEATH` | plain years that contradict each other |
 | `E-PRIVACY-MODE` | `privacy` is not a mapping, or `privacy.living` is not `full`, `placeholder` or `hidden` |
@@ -633,8 +634,8 @@ an existing file.
   back as `_BURI`, so it never becomes a second burial); lines that point at other records or belong to a family
   block are not written, and a warning counts them. `--no-extra` leaves them all out. Families, remarriages and
   sources keep their shape. What GEDCOM 5.5.1 has no tag for does not come back as itself: couple events such as
-  `civil-union` and `separation`, and your own event types such as `pilgrimage`, are written as `EVEN` lines with
-  a `TYPE`, and a re-import sets those aside in `archive/gedcom-extra.yml`. A `SOUR` with a `PAGE` becomes `cite`
+  `civil-union` and `separation`, a couple's other events such as `residence`, and your own event types such as
+  `pilgrimage`, are written as `EVEN` lines with a `TYPE`, and a re-import sets those aside in `archive/gedcom-extra.yml`. A `SOUR` with a `PAGE` becomes `cite`
   and the `PAGE` is kept with it in the same way.
 
 ## Map

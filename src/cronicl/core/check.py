@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from .dates import is_unknown, parse_date, parse_span
+from .dates import is_unknown, parse_date, parse_span, plain_form, runs_backwards
 from .familycheck import family_person_issues
 from .issues import Issue
 from .generations import generation_conflict
@@ -145,8 +145,10 @@ def _date_sanity(tree: Tree, relations, issues: list[Issue]) -> None:
     """Contradictions between plain dates: birth after death, a child before a parent or long after a parent's death."""
     for pid, person in sorted(tree.people.items()):
         born, died = _year(person.birth), _year(person.death)
-        if born is not None and died is not None and born > died:
-            issues.append(Issue("W-BIRTH-AFTER-DEATH", f"{pid}: born ({born}) after dying ({died})", person.location, _line_of(person, "death")))
+        born_plain = plain_form(person.birth.date) if _year(person.birth) is not None else None
+        died_plain = plain_form(person.death.date) if _year(person.death) is not None else None
+        if born is not None and died is not None and runs_backwards(born_plain, died_plain):
+            issues.append(Issue("W-BIRTH-AFTER-DEATH", f"{pid}: born ({born_plain}) after dying ({died_plain})", person.location, _line_of(person, "death")))
         if born is None:
             continue
         for parent_id in relations.parents.get(pid, []):
@@ -192,8 +194,7 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
     def couples_step() -> None:
         for cid, couple in sorted(relations.couples.items()):
             for entry in couple.partnerships:
-                start, end = parse_date(entry.start), parse_date(entry.end)
-                if start and end and (end.year, end.month or 0, end.day or 0) < (start.year, start.month or 0, start.day or 0):
+                if runs_backwards(plain_form(entry.start), plain_form(entry.end)):
                     issues.append(
                         Issue(
                             "W-END-BEFORE-START",

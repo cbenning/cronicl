@@ -5,9 +5,12 @@ exact line.
 """
 from __future__ import annotations
 
-from .dates import is_unknown, parse_date, parse_span, plain_form
+import difflib
+import re
+
+from .dates import is_unknown, parse_between, parse_date, parse_span, plain_form, runs_backwards
 from .issues import Issue
-from .textvalues import is_extension, parse_bool
+from .textvalues import is_extension, normal_type, parse_bool
 from .validate import suggest
 from .yamltext import Mapping, Sequence
 
@@ -20,6 +23,16 @@ COUPLE_KNOWN = {"events", "note"}
 SEX_WORDS = ("male", "female", "unknown", "other")
 COUPLE_ONLY = ("marriage", "divorce", "engagement", "civil-union", "partnership", "separation", "annulment", "end")
 ONCE_ONLY = ("burial", "cremation")
+_ALIASES = {"wedding": "marriage", "married": "marriage", "wed": "marriage", "marry": "marriage", "divorced": "divorce", "annulled": "annulment",
+            "separated": "separation", "engaged": "engagement", "union": "civil-union"}
+
+
+def type_guess(kind: str) -> str | None:
+    """The couple event type a near-miss most likely meant, or None when it looks like some other event."""
+    if kind in _ALIASES:
+        return _ALIASES[kind]
+    matches = difflib.get_close_matches(kind, COUPLE_ONLY, n=1, cutoff=0.75)
+    return matches[0] if matches else None
 
 
 def _hint(key: str, known) -> str:
@@ -74,11 +87,12 @@ def _date(text, label: str, line, owner: str, source: str, out: list[Issue], *, 
             return
         first, last = parse_span(text)
         a, b = plain_form(first), plain_form(last)
-        if a and b and b < a:
+        if a and b and runs_backwards(a, b):
             out.append(Issue("W-END-BEFORE-START", f"{owner}{label} ends ({last}) before it starts ({first})", source, line))
         return
     parsed = parse_date(text)
-    if parsed is not None and parsed.qualifier == "BET" and parsed.last_year is not None and parsed.last_year < parsed.year:
+    between = parse_between(text)
+    if between is not None and runs_backwards(*between):
         out.append(Issue("W-END-BEFORE-START", f"{owner}{label} runs backwards ({text!r}): the second date is before the first", source, line))
         return
     if parsed is None:
@@ -96,9 +110,12 @@ def _events(entries, owner: str, source: str, out: list[Issue], *, couple: bool)
         line = entries.lines[number - 1]
         _keys(entry, EVENT_KNOWN, f"events[{number}].", owner, source, out)
         _shape(entry, ("type", "date", "place", "value", "note", "cite"), f"events[{number}].", owner, source, out, lists_ok=("cite",))
-        kind = entry.get("type") if isinstance(entry.get("type"), str) else ""
-        kind = kind.strip()
+        kind = normal_type(entry.get("type"))
         label = kind or "event"
+        if couple and kind and kind not in COUPLE_ONLY:
+            guess = type_guess(kind)
+            if guess:
+                out.append(Issue("W-COUPLE-EVENT-TYPE", f"{owner}events[{number}] type {kind!r} is kept as written; did you mean {guess!r}?", source, line))
         if not kind:
             out.append(Issue("W-EVENT-NO-TYPE", f"{owner}events[{number}] has no type", source, line))
         spans_ok = not (couple and kind in ("marriage", "divorce"))
@@ -151,6 +168,8 @@ def family_person_issues(person) -> list[Issue]:
             hint = "use `death: unknown` for someone who has died" if parse_bool(living) is False else "write `living: true`, or leave it out"
             out.append(Issue("W-LIVING-FALSE", f"{owner}living {living.strip()!r}: {hint}", source, raw.lines.get("living")))
         death = raw.get("death")
+        if isinstance(death, Mapping) and not any(isinstance(death.get(k), str) and death.get(k).strip() for k in ("date", "place")):
+            out.append(Issue("W-DEATH-EMPTY", f"{owner}death has no date or place, so it does not count as a death; write `date: unknown` if they died", source, raw.lines.get("death")))
         if parse_bool(living) is True and ((isinstance(death, str) and death.strip()) or (isinstance(death, Mapping) and len(death))):
             out.append(Issue("W-LIVING-AND-DEATH", f"{owner}living: true and a death are both given; the person is treated as living", source, raw.lines.get("living")))
         parents = raw.get("parents")
