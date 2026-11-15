@@ -193,3 +193,20 @@ def test_insert_a_nested_mapping_and_a_list():
     assert reads(new)[GEORGE]["refs"] == {"gedcom": "@I1@"}
     new = set_value_any(BLOCK, (GEORGE, "parents"), ["a", "b"])
     assert "  parents: [a, b]" in new
+
+
+def test_rename_a_key_in_place():
+    from cronicl.core.recordedit import rename_key
+
+    text = "a:\n  birht: 1900  # typo\n  name: {given: A, surnmae: B}\n"
+    assert rename_key(text, ("a", "birht"), "birth") == "a:\n  birth: 1900  # typo\n  name: {given: A, surnmae: B}\n"
+    assert rename_key(text, ("a", "name", "surnmae"), "surname").count("surname: B") == 1
+
+
+def test_paths_at_line_lists_the_keys_and_items_that_start_there():
+    from cronicl.core.recordedit import paths_at_line
+
+    text = "a: {name: {given: A}, sex: male}\nb:\n  events:\n    - {type: x}\n"
+    assert ("a", "sex") in paths_at_line(text, 1) and ("a", "name", "given") in paths_at_line(text, 1)
+    assert ("b", "events", 0) in paths_at_line(text, 4)
+    assert paths_at_line(text, 3) == [("b", "events")]

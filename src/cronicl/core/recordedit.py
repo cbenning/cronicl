@@ -666,3 +666,41 @@ def replace_record(text: str, key: str, raw: str) -> str:
     nl = "\r\n" if "\r\n" in text else "\n"
     block = raw.replace("\r\n", "\n").rstrip("\n").replace("\n", nl) + nl
     return text[: span[0]] + block + text[span[1]:]
+
+
+# ---- locating and renaming ----------------------------------------------------------------------------------------
+def paths_at_line(text: str, line: int) -> list[tuple]:
+    """Every path whose key (or list item) starts on file line `line` (1-based), outermost first."""
+    bom, body = _split_bom(text)
+    found: list[tuple] = []
+
+    def visit(node, path):
+        if isinstance(node, yaml.MappingNode):
+            for key_node, value in node.value:
+                here = (*path, key_node.value)
+                if key_node.start_mark.line + 1 == line:
+                    found.append(here)
+                visit(value, here)
+        elif isinstance(node, yaml.SequenceNode):
+            for index, item in enumerate(node.value):
+                here = (*path, index)
+                if item.start_mark.line + 1 == line:
+                    found.append(here)
+                visit(item, here)
+
+    try:
+        root = _root(body)
+    except EditRefused:
+        return []
+    visit(root, ())
+    return found
+
+
+def rename_key(text: str, path: tuple, new: str) -> str:
+    """Give the key at `path` a new name (a misspelling fixed), in place."""
+    bom, body = _split_bom(text)
+    trail = _walk(_root(body), path)
+    if len(trail) != len(path) or trail[-1][0] is None:
+        raise EditRefused("that key is not in the record")
+    key_node = trail[-1][0]
+    return bom + body[: key_node.start_mark.index] + quote(new) + body[key_node.end_mark.index:]
