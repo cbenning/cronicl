@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 from ..core.issues import Issue
-from ..core.textvalues import is_extension, parse_int
+from ..core.textvalues import is_extension, parse_bool, parse_int
 from ..core.validate import _hint, _unknown  # noqa: F401
 from .galleries import gallery_issues
 from .links import valid_contact, valid_edit_url
 from .settings import privacy_settings
 
-SITE_KNOWN = {"title", "intro", "home", "edit_url", "contact", "schema_version", "privacy", "place_groups", "gallery"}
+SITE_KNOWN = {"title", "intro", "home", "edit_url", "contact", "schema_version", "privacy", "place_groups", "gallery", "noindex"}
 PRIVACY_KNOWN = {"living", "cutoff_years", "id_salt"}
 SITE_TEXT_KEYS = ("title", "intro", "home", "edit_url", "contact")
 
@@ -26,6 +26,8 @@ def site_issues(site: dict, people: dict) -> list[Issue]:
     for key in SITE_TEXT_KEYS:
         if key in site and _is_collection(site[key]):
             out.append(Issue("W-SITE-VALUE", f"{key} must be text; it is ignored", path))
+    if "noindex" in site and (_is_collection(site["noindex"]) or parse_bool(site["noindex"]) is None):
+        out.append(Issue("W-SITE-VALUE", "noindex must be true or false; it is treated as false", path))
     if "place_groups" in site:
         groups = site["place_groups"]
         if not isinstance(groups, dict):

@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{{ title }}</title>
+{% if noindex %}<meta name="robots" content="noindex, nofollow">
+{% endif %}<title>{{ title }}</title>
 <script>
 // The viewer used to live here, with its views in the hash. Send old links to the page that now owns each view.
 (function () {

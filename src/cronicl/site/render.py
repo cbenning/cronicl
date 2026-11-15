@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from urllib.parse import quote
@@ -28,7 +28,7 @@ from ..core.relations import Relations, build_relations
 from .settings import place_groups, privacy_settings, site_text
 from ..core.slug import fold_slug, folds_cleanly, slugify
 from .stats import site_stats
-from ..core.textvalues import cites_of
+from ..core.textvalues import cites_of, parse_bool
 from .timeline import build_timeline, event_text
 
 _PACKAGE = Path(__file__).parent
@@ -39,6 +39,7 @@ _markdown = MarkdownIt("commonmark", {"html": False})
 class BuildSummary:
     people: int
     files: int
+    notes: list[str] = field(default_factory=list)  # warnings about the output folder, printed by `build`
 
 
 def dumps(obj) -> str:
@@ -262,6 +263,33 @@ _GENERATED_DIRS = ("data", "p", "focus", "people", "places", "relate", "media", 
 _GENERATED_FILES = ("index.html", "tree.html", "layout.json", "index.json", "timeline.json", "viewer.js", "style.css", "site.js", "kin.js", "kin.json", "gallery.js")
 
 
+NOINDEX_MARK = "# written by cronicl (noindex: true)"
+NOINDEX_FILES = {
+    "robots.txt": NOINDEX_MARK + "\nUser-agent: *\nDisallow: /\n",
+    "_headers": NOINDEX_MARK + "\n/*\n  X-Robots-Tag: noindex, nofollow\n",
+}
+
+
+def noindex_on(site: dict) -> bool:
+    return isinstance(site, dict) and parse_bool(site.get("noindex")) is True
+
+
+def _write_noindex_files(out_dir: Path, on: bool) -> list[str]:
+    """Write (or, when off, remove) robots.txt and _headers -- only ever files that carry cronicl's own marker line."""
+    notes: list[str] = []
+    for name, body in NOINDEX_FILES.items():
+        target = out_dir / name
+        ours = target.is_file() and target.read_text(encoding="utf-8", errors="replace").startswith(NOINDEX_MARK)
+        if not on:
+            if ours:
+                target.unlink()
+        elif target.exists() and not ours:
+            notes.append(f"W-NOINDEX-FILE {name} in the output folder was not written by cronicl and is left alone; noindex needs its own contents there")
+        else:
+            _write(target, body)
+    return notes
+
+
 def _clear_generated(out_dir: Path) -> None:
     """Remove what a previous build wrote, so a person who became private cannot linger in the output."""
     for name in _GENERATED_DIRS:
@@ -372,6 +400,7 @@ def build_site(
     gallery = gallery_config(tree.site)
     env = _env()
     env.globals["gallery"] = gallery
+    env.globals["noindex"] = noindex_on(tree.site)
     put("layout.json", dumps(layout))
     put("index.json", dumps(index))
     put("kin.json", dumps(build_kin(visible, relations)))
@@ -453,4 +482,5 @@ def build_site(
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, target)
             written += 1
-    return BuildSummary(people=len(payloads), files=written)
+    notes = _write_noindex_files(out_dir, noindex_on(tree.site))
+    return BuildSummary(people=len(payloads), files=written, notes=notes)

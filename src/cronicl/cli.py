@@ -187,6 +187,8 @@ def cmd_build(args) -> int:
             print(f"error: --out {out} would overwrite the data folder {root / folder}; choose another folder", file=sys.stderr)
             return 2
     summary = build_site(tree, out, today=today, media_dir=root / "media")
+    for note in summary.notes:
+        print(f"WARNING {note}")
     print(f"built {summary.people} people, {summary.files} files into {out}")
     return 0
 
