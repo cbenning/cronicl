@@ -31,6 +31,6 @@ def test_core_does_not_import_site():
 
 def test_the_package_layout():
     names = sorted(p.name for p in PKG.iterdir() if p.name != "__pycache__")
-    assert names == ["__init__.py", "checks.py", "cli.py", "core", "site"]
+    assert names == ["__init__.py", "checks.py", "checktext.py", "cli.py", "core", "site"]
     assert (PKG / "core" / "__init__.py").exists() and (PKG / "site" / "__init__.py").exists()
     assert (PKG / "site" / "templates").is_dir() and (PKG / "site" / "viewer").is_dir()

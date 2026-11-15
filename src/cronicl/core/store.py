@@ -12,12 +12,19 @@ from .yamltext import load_text
 def load_site(data_dir: Path) -> tuple[dict, list[Issue]]:
     path = Path(data_dir) / "site.yml"
     if not path.exists():
-        return {}, [Issue("W-NO-SITE-YML", "site.yml not found; using defaults")]
-    unreadable = {"_unreadable": True}  # the owner's intent is unknown, so settings fail closed
+        return load_site_text(None)
     try:
         raw = path.read_text(encoding="utf-8")
     except (UnicodeDecodeError, OSError) as exc:
-        return unreadable, [Issue("E-BAD-SITE-YML", f"cannot read site.yml: {type(exc).__name__}", "site.yml")]
+        return {"_unreadable": True}, [Issue("E-BAD-SITE-YML", f"cannot read site.yml: {type(exc).__name__}", "site.yml")]
+    return load_site_text(raw)
+
+
+def load_site_text(raw: str | None) -> tuple[dict, list[Issue]]:
+    """site.yml from its text (None when there is no file)."""
+    if raw is None:
+        return {}, [Issue("W-NO-SITE-YML", "site.yml not found; using defaults")]
+    unreadable = {"_unreadable": True}  # the owner's intent is unknown, so settings fail closed
     result = load_text(raw)
     if result.error:
         return unreadable, [Issue("E-BAD-SITE-YML", f"cannot parse site.yml: {result.error}", "site.yml", result.error_line)]

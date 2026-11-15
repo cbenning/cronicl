@@ -262,13 +262,31 @@ def read_family(data_dir: Path) -> tuple[list[Person], list[Issue]]:
             if entry.is_dir() or (entry.suffix.casefold() in (".yml", ".yaml") and entry.suffix != ".yml"):
                 what = "a folder" if entry.is_dir() else f"a {entry.suffix} file"
                 reader.problem("W-IGNORED-FILE", f"family/{entry.name} is {what}; only .yml files directly in family/ are read", f"family/{entry.name}")
+    texts: dict[str, str] = {}
     for path in family_files(data_dir):
         source = path.relative_to(data_dir).as_posix()
         try:
-            raw = path.read_text(encoding="utf-8")
+            texts[source] = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError) as exc:
             reader.problem("E-BAD-FAMILY", f"cannot read {source}: {type(exc).__name__}", source)
-            continue
+    _read_texts(reader, texts)
+    return list(reader.people.values()), reader.issues
+
+
+def read_family_texts(files: dict[str, str], data_dir: Path = Path(".")) -> tuple[list[Person], list[Issue]]:
+    """The same as `read_family`, from the text of each file (`family.yml`, or `family/x.yml`) instead of from disk."""
+    reader = _Reader(Path(data_dir))
+    if "family.yml" in files and any(name.startswith("family/") for name in files):
+        reader.problem("E-BAD-FAMILY", "both family.yml and a family/ folder exist; keep one of them", "family.yml")
+        return [], reader.issues
+    _read_texts(reader, files)
+    return list(reader.people.values()), reader.issues
+
+
+def _read_texts(reader: "_Reader", texts: dict[str, str]) -> None:
+    seen_people: set[str] = set()
+    for source in sorted(texts):
+        raw = texts[source]
         result = load_text(raw)
         if result.error:
             reader.problem("E-BAD-FAMILY", f"cannot parse {source}: {result.error}", source, result.error_line)
@@ -305,4 +323,4 @@ def read_family(data_dir: Path) -> tuple[list[Person], list[Issue]]:
                     line,
                 )
     reader.attach_couples()
-    return list(reader.people.values()), reader.issues
+
