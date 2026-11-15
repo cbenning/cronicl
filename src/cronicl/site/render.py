@@ -18,7 +18,7 @@ from .galleries import gallery_config
 from .home import home_person
 from .kin import build_kin
 from .layout import compute_layout
-from .lineage import ancestor_tree, count_descendants, descendant_outline
+from .lineage import ancestor_outline, count_people, descendant_outline
 from .links import page_links
 from ..core.media import ALLOWED, resolve
 from ..core.model import Event, Tree
@@ -478,11 +478,12 @@ def build_site(
     for pid, payload in payloads.items():
         put(f"data/people/{pid}.json", dumps(payload))
         outline = descendant_outline(visible, relations, pid)
+        ancestors = ancestor_outline(visible, relations, pid)
         put(
             f"p/{pid}/index.html",
             person_template.render(
-                title=title, person=views[pid][0], sources=views[pid][1], ancestors=ancestor_tree(visible, relations, pid),
-                descendants=outline, descendant_count=count_descendants(outline),
+                title=title, person=views[pid][0], sources=views[pid][1], ancestors=ancestors, ancestor_count=count_people(ancestors),
+                descendants=outline, descendant_count=count_people(outline),
                 links=(
                     page_links(tree.site, pid, payload["name"], tree.people[pid].source, tree.people[pid].line)
                     if pid in tree.people

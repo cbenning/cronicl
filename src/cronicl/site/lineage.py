@@ -14,22 +14,26 @@ def _node(tree: Tree, pid: str) -> dict:
     }
 
 
-def ancestor_tree(tree: Tree, relations: Relations, pid: str, generations: int = 4) -> dict | None:
-    """The person and their recorded ancestors, at most `generations` levels deep; None when no parent is recorded.
+MAX_GENERATIONS = 12  # a safety stop for very deep (or very tangled) files; real trees end long before
 
-    Only people who are recorded are drawn, and a person who is their own ancestor (a data error) ends the branch.
+
+def ancestor_outline(tree: Tree, relations: Relations, pid: str, generations: int = MAX_GENERATIONS) -> list[dict]:
+    """The person's parents, their parents and so on, in the same shape as `descendant_outline` (nested under "children").
+
+    Only people who are recorded appear, and a person who is their own ancestor (a data error) ends the branch.
     """
-    if not relations.parents.get(pid):
-        return None
 
-    def build(current: str, level: int, path: frozenset[str]) -> dict:
-        node = _node(tree, current)
-        node["parents"] = []
-        if level < generations:
-            for parent in relations.parents.get(current, []):
-                if parent not in path and parent in tree.people:
-                    node["parents"].append(build(parent, level + 1, path | {current}))
-        return node
+    def build(current: str, level: int, path: frozenset[str]) -> list[dict]:
+        out = []
+        if level > generations:
+            return out
+        for parent in relations.parents.get(current, []):
+            if parent in path or parent == current or parent not in tree.people:
+                continue
+            node = _node(tree, parent)
+            node["children"] = build(parent, level + 1, path | {current})
+            out.append(node)
+        return out
 
     return build(pid, 1, frozenset())
 
@@ -59,5 +63,5 @@ def descendant_outline(tree: Tree, relations: Relations, pid: str) -> list[dict]
     return build(pid, frozenset())
 
 
-def count_descendants(outline: list[dict]) -> int:
-    return sum(1 + count_descendants(node["children"]) for node in outline)
+def count_people(outline: list[dict]) -> int:
+    return sum(1 + count_people(node["children"]) for node in outline)

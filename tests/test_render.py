@@ -386,13 +386,24 @@ def test_person_page_structure(tmp_path, make_tree):
 
 def test_person_page_pedigree_and_outline(tmp_path, make_tree):
     amy = page_of(tmp_path, make_tree, "smith-amy")
-    ped = amy[amy.index('class="pedigree"'):]
-    assert 'href="../smith-john/"' in ped and "<summary>Ancestors</summary>" in ped
-    assert 'class="outline"' not in amy
+    ped = amy[amy.index('class="lineage-section"'):]
+    assert 'href="../smith-john/"' in ped and "<summary>Ancestors (" in ped
     john = page_of(tmp_path / "j", make_tree, "smith-john")
-    assert "<summary>Descendants (2)</summary>" in john and 'class="pedigree"' not in john
+    assert "<summary>Descendants (2)</summary>" in john and "Ancestors" not in john
 
 
+def test_ancestors_and_descendants_share_one_look(tmp_path, make_tree):
+    chain = ["a", "b", "c", "d", "e", "f", "g"]  # a is the oldest, g the youngest
+    build_site(make_tree([p(x, x.upper(), "Z", parents=[chain[i - 1]] if i else []) for i, x in enumerate(chain)]), tmp_path, today=TODAY)
+    for page, who, label in (("g", "ancestors", "Ancestors (6)"), ("a", "descendants", "Descendants (6)")):
+        html = (tmp_path / f"p/{page}/index.html").read_text(encoding="utf-8")
+        section = html[html.index('class="lineage-section"'):]
+        assert f"<summary>{label}</summary>" in section and 'class="lineage"' in section
+        assert "pedigree" not in html and 'class="outline"' not in html and 'class="ped' not in html
+        # three generations show; everyone from the third generation down is closed
+        assert section.count("<details open>") == 2  # the first two levels
+        assert section.count("<details>") == 3
+        assert section.count('class="chip"') == 6
 def test_a_bare_person_page_has_no_empty_parts(tmp_path, make_tree):
     build_site(make_tree([p("a", "Ann", None)]), tmp_path, today=TODAY)
     page = (tmp_path / "p/a/index.html").read_text(encoding="utf-8")

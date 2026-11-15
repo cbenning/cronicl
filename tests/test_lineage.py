@@ -1,4 +1,4 @@
-from cronicl.site.lineage import ancestor_tree, count_descendants, descendant_outline
+from cronicl.site.lineage import ancestor_outline, count_people, descendant_outline
 from cronicl.core.model import Event
 from cronicl.core.relations import build_relations
 
@@ -16,16 +16,19 @@ def people():
     ]
 
 
-def ids(node):
-    return {node["id"]: [ids(x) for x in node["parents"]]}
+def ids(nodes):
+    return [{n["id"]: ids(n["children"])} for n in nodes]
 
 
-def test_ancestor_tree_is_four_generations_and_draws_only_what_is_recorded(make_tree):
+def test_ancestor_outline_has_the_same_shape_as_the_descendant_outline(make_tree):
     tree = make_tree(people())
     rel = build_relations(tree)
-    assert ids(ancestor_tree(tree, rel, "me")) == {"me": [{"p": [{"g": [{"gg": []}]}]}, {"q": []}]}
-    assert ids(ancestor_tree(tree, rel, "k1")) == {"k1": [{"me": [{"p": [{"g": []}]}, {"q": []}]}]}  # gg is a fifth generation
-    assert ancestor_tree(tree, rel, "gg") is None
+    assert ids(ancestor_outline(tree, rel, "me")) == [{"p": [{"g": [{"gg": []}]}]}, {"q": []}]
+    assert ids(ancestor_outline(tree, rel, "k1")) == [{"me": [{"p": [{"g": [{"gg": []}]}]}, {"q": []}]}]  # no fourth-generation cut
+    assert ancestor_outline(tree, rel, "gg") == []
+    node = ancestor_outline(tree, rel, "me")[0]
+    assert node["name"] == "P" and set(node) == {"id", "name", "years", "children"}
+    assert count_people(ancestor_outline(tree, rel, "me")) == 4
 
 
 def test_descendant_outline_orders_by_birth_and_counts(make_tree):
@@ -33,11 +36,11 @@ def test_descendant_outline_orders_by_birth_and_counts(make_tree):
     rel = build_relations(tree)
     outline = descendant_outline(tree, rel, "me")
     assert [(n["id"], [c["id"] for c in n["children"]]) for n in outline] == [("k1", ["gk"]), ("k2", [])]
-    assert count_descendants(outline) == 3 and descendant_outline(tree, rel, "gk") == []
+    assert count_people(outline) == 3 and descendant_outline(tree, rel, "gk") == []
     assert outline[0]["years"] == "b. 1985" and outline[0]["name"] == "Jay"
 
 
 def test_lineage_builders_survive_a_cycle(make_tree):
     tree = make_tree([{"id": "x", "given": "X", "parents": ["y"]}, {"id": "y", "given": "Y", "parents": ["x"]}])
     rel = build_relations(tree)
-    assert ancestor_tree(tree, rel, "x")["id"] == "x" and isinstance(descendant_outline(tree, rel, "x"), list)
+    assert [n["id"] for n in ancestor_outline(tree, rel, "x")] == ["y"] and isinstance(descendant_outline(tree, rel, "x"), list)

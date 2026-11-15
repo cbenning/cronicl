@@ -6,11 +6,8 @@
   {% for part in rel.partnerships or [] %}{% if part.text %}<span class="partnership">{{ part.text }}</span>{% endif %}{% endfor %}
 </a>
 {%- endmacro %}
-{% macro ped(node) -%}
-<li>{{ chip(node) }}{% if node.parents %}<ol>{% for up in node.parents %}{{ ped(up) }}{% endfor %}</ol>{% endif %}</li>
-{%- endmacro %}
-{% macro outline(nodes) -%}
-<ul>{% for node in nodes %}<li><a href="../{{ node.id }}/">{{ node.name }}</a>{% if node.years %} <span class="years">{{ node.years }}</span>{% endif %}{% if node.children %}{{ outline(node.children) }}{% endif %}</li>{% endfor %}</ul>
+{% macro lineage(nodes, depth=1) -%}
+<ul class="lineage">{% for node in nodes %}<li>{% if node.children %}<details{% if depth < 3 %} open{% endif %}><summary>{{ chip(node) }}</summary>{{ lineage(node.children, depth + 1) }}</details>{% else %}{{ chip(node) }}{% endif %}</li>{% endfor %}</ul>
 {%- endmacro %}
 <!doctype html>
 <html lang="en">
@@ -100,15 +97,15 @@
   </section>
   {% endif %}
   {% if ancestors %}
-  <details class="pedigree" open>
-    <summary>Ancestors</summary>
-    <div class="ped-scroll"><ol class="ped">{% for up in ancestors.parents %}{{ ped(up) }}{% endfor %}</ol></div>
+  <details class="lineage-section" open>
+    <summary>Ancestors ({{ ancestor_count }})</summary>
+    {{ lineage(ancestors) }}
   </details>
   {% endif %}
   {% if descendants %}
-  <details class="outline">
+  <details class="lineage-section" open>
     <summary>Descendants ({{ descendant_count }})</summary>
-    {{ outline(descendants) }}
+    {{ lineage(descendants) }}
   </details>
   {% endif %}
   {% if links %}
