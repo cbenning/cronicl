@@ -287,3 +287,15 @@ def test_a_place_with_inner_spaces_still_gets_its_coordinates(tmp_path, write_fa
 def test_cli_reports_a_missing_output_folder(tmp_path, write_family, capsys):
     write_family(tmp_path, "a:\n  name: {given: A}\n")
     assert main(["export-gedcom", "--dir", str(tmp_path), "--out", str(tmp_path / "no" / "such" / "x.ged")]) == 2
+
+
+def test_a_long_set_aside_line_is_split_and_reads_back_whole(tmp_path, write_family):
+    from cronicl.core.gedcom import import_nodes, parse_nodes
+
+    write_family(tmp_path, "a:\n  name: {given: A}\n")
+    tree, _ = load_tree(tmp_path)
+    long = "word " * 150
+    text, _ = export_gedcom(tree, today=TODAY, extra={"a": f"1 _MYTAG {long.strip()}\n2 NOTE {long.strip()}"})
+    assert problems(text) == [] and "CONC" in text
+    again = import_nodes(parse_nodes(text)[0]).people[0]
+    assert long.strip() in again.gedcom_extra.replace("\n", " ")

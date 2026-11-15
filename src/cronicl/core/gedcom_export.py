@@ -287,7 +287,10 @@ class _Export:
                 blocks.append([])
             if not blocks:
                 continue
-            blocks[-1].append(f"{level} {tag}" + (f" {value.replace('@', '@@')}" if value else ""))
+            text = value.replace("@", "@@")
+            blocks[-1].append(f"{level} {tag}" + (f" {text[:_CHUNK]}" if text else ""))
+            for start in range(_CHUNK, len(text), _CHUNK):
+                blocks[-1].append(f"{level + 1} CONC {text[start:start + _CHUNK]}")
         if dropped_family:
             self.issues.append(Issue("W-GEDCOM-EXTRA-FAM", f"{pid}: lines about a family in archive/gedcom-extra.yml are not exported"))
         if dropped_pointer:
