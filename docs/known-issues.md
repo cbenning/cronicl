@@ -1,0 +1,48 @@
+# Known issues
+
+Small defects that were found, judged not worth blocking a release, and left unfixed on purpose. Each entry says what
+happens, what it costs the owner, and where the code is. Fix one by writing a test that fails first.
+
+## GEDCOM export and import
+
+### `CONC` lines split at a fixed 200 characters
+
+`export-gedcom` continues a long value with `CONC` lines of exactly 200 characters, even when that cuts through the
+middle of a word or just before a space. The GEDCOM 5.5.1 rule is that a reader must join `CONC` pieces with nothing
+between them, so a correct reader restores the text exactly. Some old programs trim a leading space on a `CONC` line
+and would lose that space. The cost is a missing space in a very long note in such a program. Code:
+`_CHUNK` and `_Export.line` in `src/cronicl/core/gedcom_export.py`.
+
+### `NPFX` / `NSFX` without `GIVN` doubles the prefix on import
+
+A name like `1 NAME Dr. John /Smith/ Jr.` with `2 NPFX Dr.` and `2 NSFX Jr.` but no `2 GIVN` imports with the given
+name `Dr. John` and the prefix `Dr.`, so the person is shown as "Dr. Dr. John Smith Jr.". The suffix is not doubled.
+Files from programs that always write `GIVN` are not affected. Code: `_parse_name` in `src/cronicl/core/gedcom.py`.
+
+### A second `NAME` with `TYPE married` loses its type and surname part
+
+The importer keeps a second `NAME` as a plain "also known as" entry. Its `TYPE married` and the split into given name
+and surname are dropped, and export writes it back as an `aka` name. The text of the name is kept, so search still
+finds it; only the "married name" label is lost. Code: `_other_name` in `src/cronicl/core/gedcom.py`.
+
+### Note text shaped like `@word@` is read as a pointer on import
+
+A note that really contains text such as `@home@` is exported with the `@` doubled (`@@home@@`), which is correct, but
+a file written by another program that leaves it single is read as a pointer to a record and the text is lost. The
+GEDCOM rule says a literal `@` must be doubled, so files that follow it are not affected. Code: `_LINE` in
+`src/cronicl/core/gedcom.py`.
+
+### A `value` on an event that takes none is dropped without a warning
+
+Events such as `burial` or `baptism` have no value in GEDCOM. If an owner writes a `value:` on one in `family.yml`,
+export leaves it out and does not say so. Occupation, residence and the other value-carrying events are not affected.
+Code: the `takes_value` branch in `src/cronicl/core/gedcom_export.py`.
+
+## noindex
+
+### `check` never warns `W-NOINDEX-FILE`
+
+When `noindex: true` is set and the output folder already holds a `robots.txt` or `_headers` that cronicl did not
+write, `build` leaves the file alone and prints `W-NOINDEX-FILE`. `check` cannot print it because it never looks at
+the output folder. The owner learns it only from `build`. Code: `_write_noindex_files` in
+`src/cronicl/site/render.py`.
