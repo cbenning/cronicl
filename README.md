@@ -1,7 +1,12 @@
-# cronicl
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/cronicl-wordmark-dark.svg">
+    <img src="assets/cronicl-wordmark.svg" alt="cronicl" width="360">
+  </picture>
+</p>
 
 Keep a family tree in one hand-edited YAML file and generate a static, pan-and-zoom website from it.
-GEDCOM is supported as a one-way import.
+GEDCOM files can be imported and exported.
 
 Status: v0.1. The file format is specified in `docs/superpowers/specs/2026-11-14-family-file-design.md`; a JSON
 Schema (`cronicl schema`) and a conformance suite (`tests/conformance/`) travel with it, so another tool can read
