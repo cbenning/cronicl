@@ -47,6 +47,9 @@ class FinderScreen(Screen):
         self.query_one("#query", Input).focus()
         self.refresh_rows()
 
+    def refresh_content(self) -> None:
+        self.refresh_rows()
+
     # ---- content --------------------------------------------------------------------------------------------------
     def refresh_rows(self) -> None:
         family = self.app.family

@@ -8,6 +8,7 @@ from textual.app import App
 from ..core.family import has_family
 from ..core.store import load_tree
 from .model import Family
+from .session import Session
 
 
 class CroniclApp(App):
@@ -16,7 +17,7 @@ class CroniclApp(App):
     def __init__(self, data_dir: Path) -> None:
         super().__init__()
         self.data_dir = Path(data_dir)
-        self.family: Family | None = None
+        self.session: Session | None = None
 
     def on_mount(self) -> None:
         self.open_home()
@@ -39,8 +40,29 @@ class CroniclApp(App):
         if blocking or legacy_only:
             self.push_screen(ProblemScreen(blocking or issues, old_layout=legacy_only))
             return
-        self.family = Family.load(self.data_dir)
+        self.session = Session(self.data_dir)
+        self.session.on_change = self.refresh_screens
         self.push_screen(FinderScreen())
+
+    @property
+    def family(self) -> Family | None:
+        return self.session.family if self.session else None
+
+    def refresh_screens(self) -> None:
+        """Tell every open screen the family changed (an edit was staged, discarded or written)."""
+        for screen in self.screen_stack:
+            refresh = getattr(screen, "refresh_content", None)
+            if refresh and screen.is_attached:
+                refresh()
+
+    def review_changes(self, then) -> None:
+        """Show the diff of everything staged and call `then` with: nothing, written, back, discarded or reloaded."""
+        from .screens.diff import DiffScreen
+
+        if not self.session.changed:
+            then("nothing")
+            return
+        self.push_screen(DiffScreen(self.session), then)
 
     # ---- navigation the screens call; later tasks give them bodies --------------------------------------------------
     def open_person(self, pid: str) -> None:

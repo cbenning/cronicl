@@ -56,6 +56,14 @@ class PersonScreen(Screen):
         self.rebuild()
         self.query_one("#record", OptionList).focus()
 
+    def refresh_content(self) -> None:
+        widget = self.query_one("#record", OptionList)
+        keep = None
+        if widget.highlighted is not None and widget.option_count:
+            keep = widget.get_option_at_index(widget.highlighted).id
+        if self.pid in self.app.family.tree.people:
+            self.rebuild(keep=keep)
+
     # ---- building the list ----------------------------------------------------------------------------------------
     @property
     def family(self):
