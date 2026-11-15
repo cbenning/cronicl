@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => {
 
 async function main() {
   let targets;
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 200; i++) { // a cold Chrome on a busy runner can take several seconds
     try { targets = await getJSON(`http://127.0.0.1:${port}/json`); break; } catch { await sleep(100); }
   }
   if (!targets) throw new Error('Chrome did not start: ' + chrome);
@@ -275,8 +275,8 @@ async function main() {
   const nat = await ev(`(() => { const box = document.getElementById('timeline-rows'); const svg = document.getElementById('timeline-svg'); const fire = (init) => { const e = new WheelEvent('wheel', Object.assign({ bubbles: true, cancelable: true }, init)); box.dispatchEvent(e); return e.defaultPrevented; }; return { overflow: getComputedStyle(box).overflowY, scrollable: box.scrollHeight > box.clientHeight, svgH: svg.getBoundingClientRect().height, rows: window.croniclViewer ? 0 : 0, plainPrevented: fire({ deltaY: 60 }), ctrlPrevented: fire({ deltaY: 60, ctrlKey: true }), shiftPrevented: fire({ deltaY: 60, shiftKey: true }) }; })()`);
   check('the rows scroll natively: a plain wheel is left to the browser, zoom and sideways are ours', nat.overflow === 'auto' && nat.scrollable && !nat.plainPrevented && nat.ctrlPrevented && nat.shiftPrevented, JSON.stringify(nat));
   await ev(`document.getElementById('timeline-rows').scrollTop = 100000`);
-  await sleep(300);
-  const last = await ev(`(() => { const box = document.getElementById('timeline-rows'); const rows = [...document.querySelectorAll('.span-row')]; const b = box.getBoundingClientRect(); return { drawn: rows.length, visible: rows.some((r) => { const q = r.getBoundingClientRect(); return q.bottom > b.top && q.top < b.bottom; }) }; })()`);
+  let last;
+  for (let i = 0; i < 30; i++) { await sleep(100); last = await ev(`(() => { const box = document.getElementById('timeline-rows'); const rows = [...document.querySelectorAll('.span-row')]; const b = box.getBoundingClientRect(); return { drawn: rows.length, visible: rows.some((r) => { const q = r.getBoundingClientRect(); return q.bottom > b.top && q.top < b.bottom; }) }; })()`); if (last.visible) break; } // rows are redrawn on the next animation frame
   check('scrolling to the bottom draws the last rows', last.visible, JSON.stringify(last));
   await send('Emulation.setDeviceMetricsOverride', { width: 1400, height: 820, deviceScaleFactor: 1, mobile: false });
 

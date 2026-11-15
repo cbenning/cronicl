@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => {
 
 async function main() {
   let targets;
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 200; i++) { // a cold Chrome on a busy runner can take several seconds
     try { targets = await getJSON(`http://127.0.0.1:${port}/json`); break; } catch { await sleep(100); }
   }
   if (!targets) throw new Error('Chrome did not start: ' + chrome);

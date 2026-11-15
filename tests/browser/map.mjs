@@ -20,7 +20,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} 
 
 async function main() {
   let targets;
-  for (let i = 0; i < 50; i++) { try { targets = await getJSON(`http://127.0.0.1:${port}/json`); break; } catch { await sleep(100); } }
+  // a cold Chrome on a busy runner can take several seconds
+  for (let i = 0; i < 200; i++) { try { targets = await getJSON(`http://127.0.0.1:${port}/json`); break; } catch { await sleep(100); } }
   if (!targets) throw new Error('Chrome did not start: ' + chrome);
   const page = targets.find((t) => t.type === 'page');
   const ws = new WebSocket(page.webSocketDebuggerUrl);
