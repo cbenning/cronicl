@@ -30,7 +30,7 @@ class FinderScreen(Screen):
         Binding("pageup", "move(-8)", "Page up", show=False),
         Binding("escape", "clear", "Clear"),
         Binding("ctrl+n", "new_person", "New person"),
-        Binding("ctrl+w", "warnings", "Warnings"),
+        Binding("f2", "warnings", "Warnings"),
         Binding("f1", "help", "Help"),
         Binding("ctrl+q", "app.quit", "Quit"),
     ]

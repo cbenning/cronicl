@@ -95,9 +95,10 @@ def _options(text: str, issue: Issue) -> list[FixOption]:
             return []
         record = path[0]
         data = record_data(text, record)
-        died = (
-            set_value(text, (record, "death"), "unknown") if isinstance(data.get("death"), str) else set_value(text, (record, "death", "date"), "unknown")
-        )
+        if isinstance(data.get("death"), str):  # written fresh, so a quoted 'no' does not leave 'unknown' in quotes
+            died = set_value(remove(text, (record, "death")), (record, "death"), "unknown")
+        else:
+            died = set_value(text, (record, "death", "date"), "unknown")
         return [
             _one(issue, text, remove(text, (record, "death")), "they are alive: remove the death line", default=True),
             _one(issue, text, died, "they died, date not known: write unknown"),

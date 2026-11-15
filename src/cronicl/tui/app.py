@@ -65,11 +65,11 @@ class CroniclApp(App):
         self.push_screen(DiffScreen(self.session), then)
 
     # ---- navigation the screens call; later tasks give them bodies --------------------------------------------------
-    def open_person(self, pid: str) -> None:
+    def open_person(self, pid: str, jump=None) -> None:
         from .screens.person import PersonScreen
 
         if self.family and pid in self.family.tree.people:
-            self.push_screen(PersonScreen(pid))
+            self.push_screen(PersonScreen(pid, jump=jump))
 
     def new_person(self) -> None:
         """Ctrl+N in the finder: create a person (asking which file when the family is a folder) and open them."""
@@ -121,7 +121,9 @@ class CroniclApp(App):
             self.exit()
 
     def open_warnings(self) -> None:
-        self.notify("Warnings screen comes later")
+        from .screens.warnings import WarningsScreen
+
+        self.push_screen(WarningsScreen())
 
     def open_help(self) -> None:
         self.notify("Help comes later")

@@ -46,13 +46,15 @@ class PersonScreen(Screen):
         Binding("a", "palette", "Add field"),
         Binding("d", "delete", "Delete line"),
         Binding("ctrl+e", "raw", "Raw YAML"),
+        Binding("w", "warnings", "Warnings"),
         Binding("o", "open_partner", "Open partner"),
         Binding("ctrl+q", "app.quit", "Quit"),
     ]
 
-    def __init__(self, pid: str, nested: bool = False) -> None:
+    def __init__(self, pid: str, nested: bool = False, jump=None) -> None:
         super().__init__()
         self.pid = pid
+        self.jump = jump  # an issue to put the cursor on when the screen opens
         self.nested = nested  # opened from another person's edit: Esc goes back without the diff
         self.expanded: set[str] = set()
         self.targets: dict[str, tuple] = {}
@@ -66,6 +68,8 @@ class PersonScreen(Screen):
     def on_mount(self) -> None:
         self.rebuild()
         self.query_one("#record", OptionList).focus()
+        if self.jump is not None:
+            self._jump_to(self.jump)
 
     def refresh_content(self) -> None:
         widget = self.query_one("#record", OptionList)
@@ -250,9 +254,12 @@ class PersonScreen(Screen):
         widget = self.query_one("#record", OptionList)
         for i in range(widget.option_count):
             target = self.targets.get(widget.get_option_at_index(i).id)
-            if target and target[0] in ("row", "couple_row") and issue in target[-1].problems:
+            if target and target[0] in ("row", "couple_row") and any((p.code, p.line) == (issue.code, issue.line) for p in target[-1].problems):
                 widget.highlighted = i
                 return
+
+    def action_warnings(self) -> None:
+        self.app.open_warnings()
 
     def action_open_partner(self) -> None:
         target = self._target()

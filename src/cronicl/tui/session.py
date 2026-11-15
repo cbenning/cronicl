@@ -68,6 +68,14 @@ class Session:
         self.staged[name] = text
         self._rebuild()
 
+    def snapshot(self) -> dict[str, str]:
+        return dict(self.staged)
+
+    def restore(self, snapshot: dict[str, str]) -> None:
+        """Put the staged texts back as they were when `snapshot` was taken."""
+        self.staged = dict(snapshot)
+        self._rebuild()
+
     def discard(self) -> None:
         self.staged = dict(self.loaded)
         self._rebuild()
