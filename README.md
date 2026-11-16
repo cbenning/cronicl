@@ -23,14 +23,22 @@ Edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and pub
 - 🌳 **A static website.** Pan-and-zoom tree, timeline, person pages, places and kinship. Host it anywhere.
 - 🔒 **Privacy controls.** Show, mask or hide living people before you publish.
 
+## Screenshots
+
+<h3 align="center">The website</h3>
+
 <p align="center">
-  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/site-tree.png" alt="The generated site: a pan-and-zoom family tree with one person selected, their line coloured by generation, and a side panel" width="860">
+  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/site-tree.png" alt="The generated site: a pan-and-zoom family tree with one person selected, their line coloured by generation, and a side panel" width="440">
+  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/site-person.png" alt="A generated person page with a portrait, life summary, family and timeline" width="440">
 </p>
+<p align="center"><sub>The pan-and-zoom tree with a person selected, and that person's own page.</sub></p>
+
+<h3 align="center">The terminal editor</h3>
+
 <p align="center">
-  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/tui-person.png" alt="The terminal editor open on one person, with a partner's marriage record expanded" width="420">
-  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/site-person.png" alt="A generated person page with a portrait, life summary, family and timeline" width="420">
+  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/tui-person.png" alt="The terminal editor open on one person, with a partner's marriage record expanded" width="640">
 </p>
-<p align="center"><sub>The site, the terminal editor and a person page, all from a made-up family.</sub></p>
+<p align="center"><sub>One person's record in <code>cronicl</code>, with a partner's marriage details expanded. Both screenshots use a made-up family.</sub></p>
 
 Status: 1.0. The file format is specified in [`SPEC.md`](https://github.com/cbenning/cronicl/blob/main/SPEC.md); a JSON
 Schema (`cronicl schema`) and a conformance suite (`tests/conformance/`) travel with it, so another tool can read
