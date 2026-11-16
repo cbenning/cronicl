@@ -1,13 +1,13 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/cronicl-wordmark-dark.svg">
-    <img src="assets/cronicl-wordmark.svg" alt="cronicl" width="360">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/cronicl-wordmark-dark.svg">
+    <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/cronicl-wordmark.svg" alt="cronicl" width="360">
   </picture>
 </p>
 
 <p align="center">
   <a href="https://github.com/cbenning/cronicl/actions/workflows/ci.yml"><img src="https://github.com/cbenning/cronicl/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/cbenning/cronicl" alt="MIT license"></a>
+  <a href="https://github.com/cbenning/cronicl/blob/main/LICENSE"><img src="https://img.shields.io/github/license/cbenning/cronicl" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10 and newer">
 </p>
 
@@ -24,31 +24,39 @@ Edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and pub
 - 🔒 **Privacy controls.** Show, mask or hide living people before you publish.
 
 <p align="center">
-  <img src="assets/screenshots/site-tree.png" alt="The generated site: a pan-and-zoom family tree with one person selected, their line coloured by generation, and a side panel" width="860">
+  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/site-tree.png" alt="The generated site: a pan-and-zoom family tree with one person selected, their line coloured by generation, and a side panel" width="860">
 </p>
 <p align="center">
-  <img src="assets/screenshots/tui-person.png" alt="The terminal editor open on one person, with a partner's marriage record expanded" width="420">
-  <img src="assets/screenshots/site-person.png" alt="A generated person page with a portrait, life summary, family and timeline" width="420">
+  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/tui-person.png" alt="The terminal editor open on one person, with a partner's marriage record expanded" width="420">
+  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/site-person.png" alt="A generated person page with a portrait, life summary, family and timeline" width="420">
 </p>
 <p align="center"><sub>The site, the terminal editor and a person page, all from a made-up family.</sub></p>
 
-Status: v0.1. The file format is specified in [`SPEC.md`](SPEC.md); a JSON
+Status: v0.2. The file format is specified in [`SPEC.md`](https://github.com/cbenning/cronicl/blob/main/SPEC.md); a JSON
 Schema (`cronicl schema`) and a conformance suite (`tests/conformance/`) travel with it, so another tool can read
 and write the same file.
+
+## Install
+
+```bash
+uv tool install cronicl      # or: pipx install cronicl, or pip install cronicl
+```
+
+Python 3.10 or newer. To work on cronicl itself, clone the repository and run `uv sync`, then put `uv run` in front
+of the commands below.
 
 ## Quick start
 
 ```bash
-uv sync
 export CRONICL_DIR=~/my-family            # or pass --dir / -C on every command
-uv run cronicl init                       # creates site.yml, family.yml, media/, archive/
-uv run cronicl import-gedcom tree.ged     # preview: counts and warnings
-uv run cronicl import-gedcom tree.ged -a  # write family.yml
-uv run cronicl                            # the TUI: find, edit, add people, fix warnings
-uv run cronicl check
-uv run cronicl search ashby              # find ids
-uv run cronicl show ashby-greta         # one person, with the line each record lives on
-uv run cronicl serve                      # http://127.0.0.1:8000/
+cronicl init                       # creates site.yml, family.yml, media/, archive/
+cronicl import-gedcom tree.ged     # preview: counts and warnings
+cronicl import-gedcom tree.ged -a  # write family.yml
+cronicl                            # the TUI: find, edit, add people, fix warnings
+cronicl check
+cronicl search ashby              # find ids
+cronicl show ashby-greta         # one person, with the line each record lives on
+cronicl serve                      # http://127.0.0.1:8000/
 ```
 
 ## The TUI
@@ -486,7 +494,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install git+https://<where-your-copy-lives>   # see the note below
+      - run: pip install cronicl
       - run: cronicl build --out public
       - uses: actions/upload-pages-artifact@v4
         with:
@@ -504,10 +512,7 @@ jobs:
 
 Every push to `main` rebuilds and publishes the site. With `edit_url` pointing at the repository (see
 [Publishing](#publishing)), a relative can use "Edit this page" on GitHub, and the change goes live by itself.
-The action versions above were current when this was written; use the current major versions. The `pip install`
-line is the one part that depends on where you keep cronicl. Do not run `pip install cronicl`: that name on PyPI
-belongs to an unrelated project. Install from the repository where your copy lives until cronicl is published
-under its own distribution name.
+The action versions above were current when this was written; use the current major versions.
 
 **A GitHub Pages site is public, even when its repository is private.** Only organisations on GitHub Enterprise
 Cloud can restrict a Pages site to people with access to the repository. Plan accordingly: redact living people,
@@ -524,7 +529,7 @@ Point any web server at that folder. The files are static; there is nothing to c
 
 ### Netlify, Cloudflare Pages, Vercel and similar
 
-Connect the repository, set the build command to `pip install git+https://<where-your-copy-lives> && cronicl build --out public` and the
+Connect the repository, set the build command to `pip install cronicl && cronicl build --out public` and the
 publish directory to `public`.
 
 ## Password protection
@@ -728,7 +733,7 @@ The family file stands on kingraph (a family as one small hand-written YAML file
 plain fields under their id), GEDCOM (the record stream, event vocabulary and date keywords), GeneWeb's `.gw` format
 (a couple as two ids joined by a plus sign), GENEALOGIX (one schema-checked YAML file keyed by id) and plain-text
 accounting (a hand-edited file, a strict checker, generated views). The format itself is specified in
-[`SPEC.md`](SPEC.md).
+[`SPEC.md`](https://github.com/cbenning/cronicl/blob/main/SPEC.md).
 
 ## Development
 
@@ -740,3 +745,7 @@ uv run pytest
 The suite includes a click-through test that drives a built site in headless Chrome. It is skipped when `node`
 or a browser is missing; point `CRONICL_CHROME` at a Chrome/Chromium/`chrome-headless-shell` binary to choose
 one.
+
+## Acknowledgements
+
+Thanks to [Opteryx](https://opteryx.app) for the `cronicl` package name on PyPI. See [`NOTICES.md`](https://github.com/cbenning/cronicl/blob/main/NOTICES.md).

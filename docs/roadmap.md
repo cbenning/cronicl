@@ -17,7 +17,6 @@ Small known defects are in `docs/known-issues.md`.
    - 1.5 `W-HOME-REDACTED` for a `home:` person who will be redacted
    - 1.6 Non-Latin surnames grouped on the People page
    - 1.7 Timeline pans to the selected person's bar
-2. Distribution name: pick the PyPI name (blocked on the owner of `cronicl` there; the name is in `pyproject.toml` and the README install lines)
 3. Deploy docs: GitHub Pages public-repo warning; Cloudflare Pages recipe
 4. Gallery fetch: send `credentials: 'same-origin'` on the gallery request
 5. Map and citation follow-ups
@@ -157,12 +156,6 @@ changed or suggested beyond naming the pair. Comparisons are within the same las
 Names of functions and files, how the watcher is structured and tested (inject the poll interval so tests
 finish quickly), the exact banner markup and style, how the timeline code expresses the pan, and whether to
 extract the build step from `cmd_build` into a function both `build` and `serve` call.
-
-## 2. Distribution name
-
-The PyPI name `cronicl` is taken. The owner has been contacted (no reply recorded). Until it is settled the README
-says not to run `pip install cronicl`. Needs: an answer from the owner, or a new name, then a search-and-replace in
-`pyproject.toml` and the README install lines.
 
 ## 3. Deploy docs
 

@@ -1,14 +1,29 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cronicl"  # PyPI name taken: choose a distribution name before publishing
-version = "0.1.0"
+name = "cronicl"
+version = "0.2.0"
 description = "Your family tree as plain text you own: edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and publish it as a website"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE", "NOTICES.md"]
+keywords = ["genealogy", "family-tree", "gedcom", "yaml", "static-site-generator", "tui"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Sociology :: Genealogy",
+    "Topic :: Internet :: WWW/HTTP :: Site Management",
+]
 dependencies = [
     "PyYAML>=6.0",
     "Jinja2>=3.1",
@@ -20,7 +35,11 @@ dependencies = [
 dev = ["pytest>=8.0"]
 
 [project.urls]
+Homepage = "https://github.com/cbenning/cronicl"
+Documentation = "https://github.com/cbenning/cronicl#readme"
 Repository = "https://github.com/cbenning/cronicl"
+Issues = "https://github.com/cbenning/cronicl/issues"
+Changelog = "https://github.com/cbenning/cronicl/blob/main/CHANGELOG.md"
 
 [project.scripts]
 cronicl = "cronicl.cli:main"
@@ -30,3 +49,6 @@ packages = ["src/cronicl"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/assets/screenshots", "/.github"]
