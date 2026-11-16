@@ -12,7 +12,8 @@
 </p>
 
 <p align="center"><b>Your family tree, kept as plain text you own.</b><br>
-Edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and publish it as a website.</p>
+Edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and publish it as a website.<br>
+<a href="https://cbenning.github.io/cronicl/"><b>Try the live demo</b></a></p>
 
 - 📝 **Plain text.** One YAML file you can edit by hand, diff and keep in git.
 - 📖 **A documented format.** A spec, JSON Schema and test suite, so other tools can read it too.
@@ -31,14 +32,14 @@ Edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and pub
   <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/site-tree.png" alt="The generated site: a pan-and-zoom family tree with one person selected, their line coloured by generation, and a side panel" width="440">
   <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/site-person.png" alt="A generated person page with a portrait, life summary, family and timeline" width="440">
 </p>
-<p align="center"><sub>The pan-and-zoom tree with a person selected, and that person's own page.</sub></p>
+<p align="center"><sub>The pan-and-zoom tree with a person selected, and that person's own page. <a href="https://cbenning.github.io/cronicl/">Explore the live demo</a>.</sub></p>
 
 <h3 align="center">The terminal editor</h3>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/tui-person.png" alt="The terminal editor open on one person, with a partner's marriage record expanded" width="640">
+  <img src="https://raw.githubusercontent.com/cbenning/cronicl/main/assets/screenshots/tui-demo.gif" alt="A recording of the terminal editor: finding a person by typing, opening a partner's marriage record, changing a date, and reviewing the diff before anything is written" width="720">
 </p>
-<p align="center"><sub>One person's record in <code>cronicl</code>, with a partner's marriage details expanded. Both screenshots use a made-up family.</sub></p>
+<p align="center"><sub>Find a person, look at a partner's record, change a date, and review the diff before anything is written. Both demos use a made-up family.</sub></p>
 
 Status: 1.0. The file format is specified in [`SPEC.md`](https://github.com/cbenning/cronicl/blob/main/SPEC.md); a JSON
 Schema (`cronicl schema`) and a conformance suite (`tests/conformance/`) travel with it, so another tool can read
