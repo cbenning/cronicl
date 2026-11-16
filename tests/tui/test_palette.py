@@ -251,3 +251,46 @@ def test_the_missing_parts_of_the_event_under_the_cursor_can_be_added(tmp_path):
     listed, text = drive(tmp_path, script)
     assert any("this event: note" in e for e in listed) and not any("this event: date" in e for e in listed)
     assert "note: Winter wedding" in text.split("byron-george + milbanke-annabella")[1]
+
+
+def test_a_birth_place_can_be_added_without_a_birth_date(tmp_path):
+    folder(tmp_path, family=FAMILY + "\nplace-only:\n  name: {given: Place, surname: Only}\n")
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "place-only")
+        await pilot.press("a")
+        await pilot.pause()
+        listed = option_texts(app, "#fields")
+        await type_text(pilot, "birth.place")
+        await pilot.press("enter")
+        await pilot.pause()
+        await type_text(pilot, "Leeds, England")
+        await pilot.press("enter")
+        await pilot.pause()
+        return listed, staged(app)
+
+    listed, text = drive(tmp_path, script)
+    labels = [e.split()[0] for e in listed if e.split()]
+    assert "birth" in labels and "birth.place" in labels and "death.place" in labels
+    record = text.split("place-only:")[1]
+    assert 'birth: {place: "Leeds, England"}' in record and "date" not in record
+
+
+def test_a_death_place_alone_is_fine_too(tmp_path):
+    folder(tmp_path, family=FAMILY + "\nplace-only:\n  name: {given: Place, surname: Only}\n")
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "place-only")
+        await pilot.press("a")
+        await pilot.pause()
+        await type_text(pilot, "death.place")
+        await pilot.press("enter")
+        await pilot.pause()
+        await type_text(pilot, "Hull")
+        await pilot.press("enter")
+        await pilot.pause()
+        return staged(app), [i.code for i in app.session.family.issues]
+
+    text, codes = drive(tmp_path, script)
+    assert "death: {place: Hull}" in text.split("place-only:")[1]
+    assert "W-DEATH-EMPTY" not in codes

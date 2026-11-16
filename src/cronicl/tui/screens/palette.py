@@ -36,12 +36,6 @@ def build_entries(kind: str, present: set[tuple], parent_count: int, event_index
         for sub in ("date", "place", "value", "note", "cite"):
             if sub not in (event_has or set()):
                 out.append(Entry(f"this event: {sub}", FIELDS[f"events[].{sub}"].description, ("event_field", event_index, sub)))
-    if kind == "person":
-        for name in ("birth", "death"):
-            if (name,) in present:
-                for sub in ("date", "place", "note", "cite"):
-                    if (name, sub) not in present:
-                        out.append(Entry(f"{name}.{sub}", FIELDS[f"{name}.{sub}"].description, ("field", FIELDS[f"{name}.{sub}"])))
     for field in fields_for(kind):
         steps = tuple(field.path.split("."))
         if field.path == "events":
@@ -52,6 +46,14 @@ def build_entries(kind: str, present: set[tuple], parent_count: int, event_index
         elif field.once and steps in present:
             continue
         out.append(Entry(field.path, field.description, ("field", field)))
+    if kind == "person":
+        for name in ("birth", "death"):
+            # the parts of a birth or death can be added in any order: a place alone is a valid fact
+            have = (name,) in present
+            for sub in ("date", "place", "note", "cite"):
+                if (name, sub) in present or (sub == "date" and not have):
+                    continue  # (the bare "birth" / "death" entry below already adds the date)
+                out.append(Entry(f"{name}.{sub}", FIELDS[f"{name}.{sub}"].description, ("field", FIELDS[f"{name}.{sub}"])))
     for slug, note in (COUPLE_EVENT_TYPES if kind == "couple" else EVENT_TYPES).items():
         out.append(Entry(f"event: {slug}", note, ("event", slug)))
     if kind == "person":
