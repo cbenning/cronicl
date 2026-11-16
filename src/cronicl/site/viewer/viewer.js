@@ -541,7 +541,8 @@
       panel.textContent = '';
       tree.refresh();
       timeline.refresh();
-      if (state.view === 'tree' && parseRoute(location.hash, PAGE).id) go('tree', null);
+      // deselecting leaves a person's line for the whole tree, and drops a selected person from a tree address
+      if (state.view === 'focus' || (state.view === 'tree' && parseRoute(location.hash, PAGE).id)) go('tree', null);
     }
 
     // The kinship line in the panel: how this person relates to the viewer ("Your grandmother").

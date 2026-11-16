@@ -185,7 +185,10 @@ async function main() {
   check('selecting inside the focus highlights', (await ev(`document.querySelectorAll('.edge.hi').length`)) >= 1);
   await click('#panel .close');
   await sleep(200);
-  check('closing the panel keeps the focus', (await ev(`location.hash`)) === '#focus/smith-amy' && (await ev(`!document.getElementById('focus-bar').hidden`)));
+  check('deselecting in a focused tree returns to the whole tree', (await ev(`location.hash.replace('#', '')`)) === '' && (await ev(`document.getElementById('focus-bar').hidden`)) === true && (await ev(`document.querySelectorAll('.node').length`)) > 5);
+  check('"Everyone" is current again, not "This person\'s line"', (await ev(`document.querySelector('#modes a[data-mode="all"]').getAttribute('aria-current')`)) === 'page' && (await ev(`document.querySelector('#modes a[data-mode="line"]').hasAttribute('aria-current')`)) === false);
+  await goto('#/focus/smith-amy');
+  await sleep(500);
   await ev(`(() => { const s = document.getElementById('search'); s.value = 'tom'; s.dispatchEvent(new Event('input')); })()`);
   await sleep(200);
   await ev(`document.querySelector('#results button').click()`);
