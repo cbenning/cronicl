@@ -85,6 +85,7 @@ chosen for the shortest total connector length instead of counted from the top. 
 
 ## The TUI
 
+- **A second partner is listed under "Children".** On a person's screen the partners and children are drawn couple by couple, but the "Partners" heading is written once. With two partners, the first couple's children come before the second partner, so the second partner's line sits under the "Children" heading. Nothing is lost and Enter and `o` still work on it. Code: the family block in `src/cronicl/tui/screens/person.py`.
 - **Esc in the long-text editor or the raw pane drops what you typed without asking.** The diff step protects the file, but text typed into a box and cancelled is gone.
 - **A date warning other than a death has no one-key fix.** `W-DATE-UNPARSED` on a birth or event date is only a jump to the line; open the field with Enter to retype it.
 - **A file that ends with a YAML document-end marker (`...`).** New records are appended after the marker and the result does not parse; the TUI refuses the edit (the text is checked before it is staged) instead of writing it.
