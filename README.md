@@ -48,16 +48,19 @@ of the commands below.
 ## Quick start
 
 ```bash
-export CRONICL_DIR=~/my-family            # or pass --dir / -C on every command
+mkdir ~/my-family && cd ~/my-family
 cronicl init                       # creates site.yml, family.yml, media/, archive/
 cronicl import-gedcom tree.ged     # preview: counts and warnings
 cronicl import-gedcom tree.ged -a  # write family.yml
 cronicl                            # the TUI: find, edit, add people, fix warnings
 cronicl check
-cronicl search ashby              # find ids
-cronicl show ashby-greta         # one person, with the line each record lives on
+cronicl search ashby               # find ids
+cronicl show ashby-greta           # one person, with the line each record lives on
 cronicl serve                      # http://127.0.0.1:8000/
 ```
+
+Commands work on the folder you are in. To run them from somewhere else, pass `--dir DIR` (or `-C DIR`), or set
+`CRONICL_DIR`.
 
 ## The TUI
 
