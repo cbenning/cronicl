@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0rc1 (release candidate)
+## 1.0.0
 
 The first release of cronicl as a family-tree tool. (Version 0.1.0 on PyPI was an unrelated project that used the
 name before; it is yanked, and this release follows it.)
