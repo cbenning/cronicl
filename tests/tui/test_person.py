@@ -116,3 +116,66 @@ def test_a_row_with_a_problem_is_marked(tmp_path):
 
     rows = drive(tmp_path, script)
     assert any("sex: M" in r and "⚠" in r for r in rows)
+
+
+SOLO = FAMILY + """
+solo-parent:
+  name: {given: Solo, surname: Parent}
+
+kid-one:
+  name: {given: Kid, surname: One}
+  parents: [solo-parent]
+
+kid-two:
+  name: {given: Kay, surname: Two}
+  parents: [solo-parent]
+"""
+
+
+def test_a_single_parent_sees_their_children_on_their_own_screen(tmp_path):
+    folder(tmp_path, family=SOLO)
+
+    async def script(pilot, app):
+        app.open_person("solo-parent")
+        await pilot.pause()
+        parent = "\n".join(option_texts(app))
+        app.open_person("kid-one")
+        await pilot.pause()
+        return parent, "\n".join(option_texts(app))
+
+    parent, kid = drive(tmp_path, script)
+    assert "Children" in parent and "Kid One" in parent and "Kay Two" in parent
+    assert "Partners" not in parent  # a lone parent has no partner line
+    assert "Solo Parent" in kid and "Kay Two" in kid  # the siblings through the one parent
+
+
+def test_a_child_added_in_the_tui_shows_under_a_parent_created_in_the_tui(tmp_path):
+    folder(tmp_path)
+
+    async def script(pilot, app):
+        from test_editors import type_text
+
+        await pilot.press("ctrl+n")
+        await pilot.pause()
+        await type_text(pilot, "Pat")
+        await pilot.press("tab")
+        await type_text(pilot, "Parent")
+        await pilot.press("enter")  # creates Pat Parent and opens them
+        await pilot.pause()
+        await pilot.press("a")
+        await pilot.pause()
+        await type_text(pilot, "child")
+        await pilot.press("enter")
+        await pilot.pause()
+        await type_text(pilot, "zzzzqq")
+        await pilot.press("enter")  # New person…
+        await pilot.pause()
+        await type_text(pilot, "Kim")
+        await pilot.press("enter")  # creates Kim and opens them nested
+        await pilot.pause()
+        await pilot.press("escape")  # back to Pat, no diff
+        await pilot.pause()
+        return head(app), "\n".join(option_texts(app))
+
+    header, rows = drive(tmp_path, script)
+    assert "Pat Parent" in header and "Children" in rows and "Kim" in rows

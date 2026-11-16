@@ -144,25 +144,24 @@ class PersonScreen(Screen):
         for cid in relations.couples_of.get(self.pid, []):
             couple = relations.couples[cid]
             partner = next((p for p in couple.partners if p != self.pid), None)
-            if partner is None:
-                continue
-            if "Partners" not in [str(o.prompt) for o in options if o.disabled]:
-                add(Text("Partners", style="bold"), None, True)
-            mark = "▾" if partner in self.expanded else "▸"
-            summary = family.couple_summary(self.pid, partner)
-            line = Text(no_wrap=True)
-            line.append(f"  {mark} {family.name_of(partner)}", style="bold")
-            line.append(f"  {summary}" if summary else "", style="dim")
-            add(fit(line, room(self.app)), ("partner", partner))
-            if partner in self.expanded:
-                found = family.couple_key_text(self.pid, partner)
-                if found:
-                    key, source = found
-                    couple_view = build(self._file_text(source), key, issues, family.name_of)
-                    for row in couple_view.rows:
-                        add(row_text(row, 2, room(self.app)), ("couple_row", partner, row), disabled=row.comment_only)
-                else:
-                    add(Text("      (no couple record yet)", style="dim italic"), None, True)
+            if partner is not None:  # a lone parent's children have no partner line
+                if "Partners" not in [str(o.prompt) for o in options if o.disabled]:
+                    add(Text("Partners", style="bold"), None, True)
+                mark = "▾" if partner in self.expanded else "▸"
+                summary = family.couple_summary(self.pid, partner)
+                line = Text(no_wrap=True)
+                line.append(f"  {mark} {family.name_of(partner)}", style="bold")
+                line.append(f"  {summary}" if summary else "", style="dim")
+                add(fit(line, room(self.app)), ("partner", partner))
+                if partner in self.expanded:
+                    found = family.couple_key_text(self.pid, partner)
+                    if found:
+                        key, source = found
+                        couple_view = build(self._file_text(source), key, issues, family.name_of)
+                        for row in couple_view.rows:
+                            add(row_text(row, 2, room(self.app)), ("couple_row", partner, row), disabled=row.comment_only)
+                    else:
+                        add(Text("      (no couple record yet)", style="dim italic"), None, True)
             kids = relations.kids.get(cid, [])
             for kid in kids:
                 if "Children" not in [str(o.prompt) for o in options if o.disabled]:
