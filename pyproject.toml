@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cronicl"  # PyPI name taken: choose a distribution name before publishing
 version = "0.1.0"
-description = "A family tree as plain YAML, with a terminal editor, validation, GEDCOM import and export, and a static site generator"
+description = "Your family tree as plain text you own: edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and publish it as a website"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

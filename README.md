@@ -7,26 +7,21 @@
 
 <p align="center">
   <a href="https://github.com/cbenning/cronicl/actions/workflows/ci.yml"><img src="https://github.com/cbenning/cronicl/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/cbenning/cronicl" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10 and newer">
 </p>
 
-A family tree kept as plain text, with the tools to look after it: a documented file format, validation, a
-terminal editor, GEDCOM import and export, and a generator that turns the tree into a static website.
+<p align="center"><b>Your family tree, kept as plain text you own.</b><br>
+Edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and publish it as a website.</p>
 
-- **Plain-text storage.** The whole tree lives in one `family.yml` (or a `family/` folder of files): people and
-  couples as YAML you can edit by hand, diff and keep in git.
-- **A documented format.** [`SPEC.md`](SPEC.md), a JSON Schema and a conformance suite let other tools read and write
-  the same file.
-- **Validation.** `cronicl check` reports errors and warnings with the file and line: broken references, ancestry
-  loops, impossible dates and more. `--strict` and `--format json` make it fit for CI.
-- **A terminal editor.** `cronicl` opens a full-screen [TUI](#the-tui) to find people, edit records, add partners and
-  children, and fix warnings. It shows a diff before writing and keeps your comments, order and formatting.
-- **Command-line tools.** Search, show one person, list gaps in the data, add people and rename ids from scripts.
-- **GEDCOM in and out.** Import a GEDCOM file once, export GEDCOM 5.5.1 whenever you need it, and
-  [migrate](#migrating-from-peoplemd) the older one-file-per-person layout.
-- **A static site generator.** A pan-and-zoom tree, one person's line of ancestors and descendants, a timeline,
-  printable person pages, people and places lists, kinship ("your great-grandmother"), citations and an optional
-  map, as plain files you can host anywhere.
-- **Privacy controls.** Living people can be shown, replaced by a placeholder or left out before you publish.
+- 📝 **Plain text.** One YAML file you can edit by hand, diff and keep in git.
+- 📖 **A documented format.** A spec, JSON Schema and test suite, so other tools can read it too.
+- ✅ **Validation.** `cronicl check` finds broken links, loops and impossible dates, with file and line.
+- ⌨️ **A terminal editor.** Find, edit and fix people in a [TUI](#the-tui) that shows a diff before it writes.
+- 🔧 **Command-line tools.** Search, show, add, rename and spot gaps from scripts.
+- 🔄 **GEDCOM in and out.** Import once, export whenever, and [migrate](#migrating-from-peoplemd) old layouts.
+- 🌳 **A static website.** Pan-and-zoom tree, timeline, person pages, places and kinship. Host it anywhere.
+- 🔒 **Privacy controls.** Show, mask or hide living people before you publish.
 
 <p align="center">
   <img src="assets/screenshots/site-tree.png" alt="The generated site: a pan-and-zoom family tree with one person selected, their line coloured by generation, and a side panel" width="860">
