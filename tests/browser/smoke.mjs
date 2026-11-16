@@ -350,6 +350,7 @@ async function main() {
   check('a focused tree marks nodes with relatives it leaves out', /^\+\d+$/.test(badge || ''), badge);
   check('the focus node and a selected node share one accent', (await ev(`(() => { const f = getComputedStyle(document.querySelector('.node.focus rect')).stroke; document.querySelector('.node:not(.focus)').dispatchEvent(new MouseEvent('click', { bubbles: true })); return f === getComputedStyle(document.querySelector('.node.selected rect')).stroke; })()`)) === true);
   check('the legend counts generations in words', /generations? (up|down)/.test(await ev(`document.getElementById('legend').textContent`)));
+  check('the legend ends sit on one line with space between them', (await ev(`(() => { const s = [...document.querySelectorAll('#legend .legend-ends span')]; const r = s.map((e) => e.getBoundingClientRect()); return s.length > 1 && r.every((b, i) => b.height < 24 && (i === 0 || b.left - r[i - 1].right >= 8)); })()`)) === true);
 
   check('no script errors', errors.length === 0, errors.join(' | '));
 

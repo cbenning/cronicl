@@ -173,8 +173,8 @@ main { flex: 1; display: flex; min-height: 0; }
 .legend-modes { display: flex; gap: var(--space-1); margin-bottom: var(--space-2); pointer-events: auto; }
 .legend-modes button { padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: .8rem; cursor: pointer; }
 .legend-modes button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
-.legend-ramp { width: 220px; height: 8px; border-radius: 4px; background: linear-gradient(in oklab to right, var(--lin-old), var(--lin-mid), var(--lin-new)); }
-.legend-ends { display: flex; justify-content: space-between; margin-top: var(--space-1); font-size: .75rem; color: var(--muted); }
+.legend-ramp { min-width: 220px; height: 8px; border-radius: 4px; background: linear-gradient(in oklab to right, var(--lin-old), var(--lin-mid), var(--lin-new)); }
+.legend-ends { display: flex; justify-content: space-between; gap: var(--space-3); white-space: nowrap; margin-top: var(--space-1); font-size: .75rem; color: var(--muted); }
 .group-label { fill: var(--muted); font-weight: 600; letter-spacing: .04em; }
 
 /* Phone: the side panel becomes a bottom sheet and the header wraps. */
