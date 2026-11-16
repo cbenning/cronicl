@@ -72,21 +72,6 @@ def test_e_opens_the_editor_at_the_error_line_then_reloads(tmp_path, monkeypatch
     assert calls and calls[0][0] == "myeditor" and calls[0][1].startswith("+") and calls[0][2].endswith("family.yml")
 
 
-def test_the_old_layout_offers_migration(tmp_path, legacy_folder):
-    async def script(pilot, app):
-        shown = texts(app)
-        await pilot.press("m")
-        await pilot.pause()
-        asked = screen_name(app)
-        await pilot.press("y")
-        await pilot.pause()
-        return screen_name(app), shown + "|" + asked
-
-    name, shown = drive(legacy_folder, script)
-    assert "m converts" in shown and shown.endswith("|Confirm") and name == "FinderScreen"
-    assert (legacy_folder / "family.yml").is_file()
-
-
 def test_a_folder_with_only_site_yml_can_start_a_family(tmp_path):
     folder(tmp_path, family=None)
 

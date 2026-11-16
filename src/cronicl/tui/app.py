@@ -34,14 +34,12 @@ class CroniclApp(App):
         while len(self.screen_stack) > 1:
             self.pop_screen()
         tree, issues = load_tree(self.data_dir)
-        old = (self.data_dir / "people").is_dir() and any((self.data_dir / "people").glob("*.md"))
-        if not has_family(self.data_dir) and not old:
+        if not has_family(self.data_dir):
             self.push_screen(StartScreen())
             return
         blocking = [i for i in issues if i.code in ("E-BAD-FAMILY", "E-NO-FAMILY")]
-        legacy_only = old and not has_family(self.data_dir)
-        if blocking or legacy_only:
-            self.push_screen(ProblemScreen(blocking or issues, old_layout=legacy_only))
+        if blocking:
+            self.push_screen(ProblemScreen(blocking))
             return
         self.session = Session(self.data_dir)
         self.session.on_change = self.refresh_screens

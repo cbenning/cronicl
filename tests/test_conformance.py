@@ -120,7 +120,7 @@ def test_the_schema_command_prints_the_family_schema(capsys):
     assert json.loads(capsys.readouterr().out) == json.loads(json.dumps(FAMILY_SCHEMA))
 
 
-def test_init_and_migrate_write_the_schema_and_the_editor_hint(tmp_path, write):
+def test_init_writes_the_schema_and_the_editor_hint(tmp_path, write):
     from cronicl.cli import main
 
     fresh = tmp_path / "fresh"
@@ -130,10 +130,3 @@ def test_init_and_migrate_write_the_schema_and_the_editor_hint(tmp_path, write):
     from cronicl.checks import check_all
 
     assert [i for i in check_all(*load_tree(fresh)) if i.severity in ("error", "warning")] == []
-
-    old = tmp_path / "old"
-    write(old, "site.yml", "title: T\nschema_version: 2\n")
-    write(old, "people/a.md", "---\nid: a\nname: A One\n---\n")
-    assert main(["migrate", "--dir", str(old), "--apply", "--allow-dirty"]) == 0
-    assert (old / "family.schema.json").exists()
-    assert (old / "family.yml").read_text(encoding="utf-8").splitlines()[0] == "# yaml-language-server: $schema=family.schema.json"

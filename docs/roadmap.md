@@ -194,7 +194,6 @@ Minor findings from the family-file review that were deferred. Each needs its ow
 - Wrong-shaped values are not always reported.
 - Some issues have no line number.
 - `family/` folder quirks.
-- The `migrate` refusal message gives no hint.
 - Some validation codes are undocumented.
 - Stale strings and dead code.
 - Test gaps.

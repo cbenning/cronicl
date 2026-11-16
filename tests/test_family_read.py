@@ -228,14 +228,6 @@ def test_both_family_yml_and_a_family_folder_is_an_error(tmp_path, write_family)
     assert "E-BAD-FAMILY" in codes(issues)
 
 
-def test_an_old_layout_folder_says_to_migrate(tmp_path, write):
-    write(tmp_path, "people/a.md", "---\nid: a\nname: A\n---\n")
-    tree, issues = load_tree(tmp_path)
-    assert not tree.people
-    (missing,) = [i for i in issues if i.code == "E-NO-FAMILY"]
-    assert "cronicl migrate" in missing.message
-
-
 def test_the_comma_trap_loads_without_crashing(tmp_path, write_family):
     tree, _ = load(tmp_path, write_family, "a:\n  name: {given: A}\n  birth: {date: 1850, place: London, England}\n")
     assert tree.people["a"].birth.place == "London"

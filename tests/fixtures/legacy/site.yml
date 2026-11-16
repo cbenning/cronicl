@@ -1,6 +1,0 @@
-title: Family Tree
-schema_version: 2
-privacy:
-  living: full          # full (default: nothing hidden) | placeholder | hidden -- redaction is opt-in
-  cutoff_years: 100
-  id_salt: b2b5f112b9e94c39

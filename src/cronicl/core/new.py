@@ -33,7 +33,7 @@ def plan_new_family(
     if not (given or surname):
         raise EditError("give --given or --surname")
     if not has_family(data_dir):
-        raise EditError(f"{data_dir} has no family.yml; run cronicl init (or cronicl migrate)")
+        raise EditError(f"{data_dir} has no family.yml; run cronicl init")
     tree, _ = load_tree(data_dir)
     listed = [*parents, *partners]
     unknown = sorted({pid for pid in listed if pid not in tree.people})

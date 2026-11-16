@@ -31,8 +31,8 @@ split however they like. Having both `family.yml` and `family/` is an error. All
 a record's id MUST be unique across them. Only the `.yml` files directly in `family/` are read; a `.yaml` file or a
 subfolder there is not read and is reported, so that a branch is never lost without a word.
 
-`family.yml` carries no version marker. The format version is the `schema_version` in `site.yml`: `3` means this
-format (`1` and `2` are the older one-file-per-person layouts, which cronicl converts with `cronicl migrate`).
+`family.yml` carries no version marker. The format version is the `schema_version` in `site.yml`: `3` is the only
+value in use.
 
 ## 3. Reading the file
 

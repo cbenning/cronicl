@@ -80,16 +80,6 @@ def texts(app):
     return "\n".join(parts)
 
 
-@pytest.fixture
-def legacy_folder(tmp_path):
-    import shutil
-    from pathlib import Path
-
-    target = tmp_path / "old"
-    shutil.copytree(Path(__file__).resolve().parents[1] / "fixtures" / "legacy", target)
-    return target
-
-
 def option_texts(app, selector="#record"):
     from textual.widgets import OptionList
 

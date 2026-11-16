@@ -22,24 +22,19 @@ def editor_command() -> str:
 class ProblemScreen(Screen):
     BINDINGS = [
         Binding("e", "edit", "Open in editor"),
-        Binding("m", "migrate", "Migrate old layout"),
         Binding("r", "reload", "Reload"),
         Binding("q", "app.quit", "Quit"),
     ]
 
-    def __init__(self, issues, old_layout: bool = False) -> None:
+    def __init__(self, issues) -> None:
         super().__init__()
         self.issues = [i for i in issues if i.severity == "error"] or list(issues)
-        self.old_layout = old_layout
 
     def compose(self) -> ComposeResult:
         yield Label("This family cannot be loaded yet", id="problem-title")
         rows = [Option(f"{i.path or ''}{':' + str(i.line) if i.line else ''}  {i.message}", id=str(n)) for n, i in enumerate(self.issues)]
         yield OptionList(*rows, id="problems")
-        hint = "e opens the file at the error, r reloads"
-        if self.old_layout:
-            hint += ", m converts the old people/ folder"
-        yield Label(hint, classes="hint")
+        yield Label("e opens the file at the error, r reloads", classes="hint")
         yield Footer()
 
     def _selected(self):
@@ -55,24 +50,6 @@ class ProblemScreen(Screen):
         with self.app.suspend():
             subprocess.run([*shlex.split(editor_command()), f"+{issue.line or 1}", str(path)])
         self.app.open_home()
-
-    def action_migrate(self) -> None:
-        if not self.old_layout:
-            return
-        from ...cli import cmd_migrate
-        from .modals import Confirm, Message
-
-        def decided(yes) -> None:
-            if not yes:
-                return
-            code, text = bridge.call(cmd_migrate, dir=str(self.app.data_dir), apply=True, allow_dirty=False)
-            if code != 0:
-                self.app.push_screen(Message(text, "Migration failed"))
-                return
-            self.app.open_home()
-
-        code, preview = bridge.call(cmd_migrate, dir=str(self.app.data_dir), apply=False, allow_dirty=False)
-        self.app.push_screen(Confirm(preview or "Convert the old people/ folder to family.yml?", "Convert", "Migrate the old layout?"), decided)
 
     def action_reload(self) -> None:
         self.app.open_home()

@@ -6,7 +6,6 @@ import http.server
 import json
 import os
 import secrets
-import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -15,7 +14,6 @@ from .checks import check_all
 from .core.edit import EditError
 from .core.familyedit import plan_mark, plan_rename
 from .core.inplace import InplaceError
-from .core.migrate import MigrateRefused, apply_migration, plan_migration
 from .core.gaps import find_gaps
 from .core.gedcom import GedcomError, ImportRefused, decode_gedcom, import_nodes, parse_nodes, write_import_family
 from .core.generations import LayoutError
@@ -70,19 +68,6 @@ def _print_issues(issues, fmt: str) -> None:
     for issue in issues:
         where = f"{issue.path}:{issue.line}" if issue.path and issue.line else (issue.path or "-")
         print(f"{issue.severity.upper():7} {issue.code} {where}: {issue.message}")
-
-
-def _git_dirty(path: Path) -> bool | None:
-    try:
-        inside = subprocess.run(
-            ["git", "-C", str(path), "rev-parse", "--is-inside-work-tree"], capture_output=True, text=True
-        )
-    except FileNotFoundError:
-        return None
-    if inside.returncode != 0:
-        return None
-    status = subprocess.run(["git", "-C", str(path), "status", "--porcelain"], capture_output=True, text=True)
-    return bool(status.stdout.strip())
 
 
 FAMILY_YML = """\
@@ -236,28 +221,6 @@ def _cmd_edit_family(args) -> int:
             path.write_bytes(text.encode("utf-8"))
     elif any(changed for _, _, changed, _ in results):
         print("dry run; re-run with --apply (-a) to write these changes")
-    return 0
-
-
-def cmd_migrate(args) -> int:
-    root = Path(args.dir)
-    try:
-        plan = plan_migration(root)
-    except MigrateRefused as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
-    print(f"{plan.people} people, {plan.couples} couple records, {plan.events} events -> family.yml")
-    for note in plan.notes:
-        print(f"NOTE {note}")
-    print("the old people/ folder moves to archive/people-md/; site.yml gets schema_version: 3")
-    if not args.apply:
-        print("dry run; re-run with --apply (-a) to write these changes")
-        return 0
-    if _git_dirty(root) and not args.allow_dirty:
-        print("error: git working tree has uncommitted changes; commit them or use --allow-dirty", file=sys.stderr)
-        return 2
-    apply_migration(root, plan)
-    print(f"migrated {plan.people} people into family.yml")
     return 0
 
 
@@ -432,11 +395,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.add_argument("--strict", action="store_true", help="exit 1 on warnings too")
     p.set_defaults(func=cmd_check)
-
-    p = sub.add_parser("migrate", parents=[common], help="convert an old people/*.md folder to family.yml (preview unless --apply)")
-    p.add_argument("--allow-dirty", action="store_true", help="run even if the git tree has uncommitted changes")
-    _add_apply(p)
-    p.set_defaults(func=cmd_migrate)
 
     p = sub.add_parser("rename", parents=[common], help="change a person's id everywhere it is used (preview unless --apply)")
     p.add_argument("old", help="the current id")

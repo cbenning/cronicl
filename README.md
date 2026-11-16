@@ -19,7 +19,7 @@ Edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and pub
 - ✅ **Validation.** `cronicl check` finds broken links, loops and impossible dates, with file and line.
 - ⌨️ **A terminal editor.** Find, edit and fix people in a [TUI](#the-tui) that shows a diff before it writes.
 - 🔧 **Command-line tools.** Search, show, add, rename and spot gaps from scripts.
-- 🔄 **GEDCOM in and out.** Import once, export whenever, and [migrate](#migrating-from-peoplemd) old layouts.
+- 🔄 **GEDCOM in and out.** Import once, export whenever you like.
 - 🌳 **A static website.** Pan-and-zoom tree, timeline, person pages, places and kinship. Host it anywhere.
 - 🔒 **Privacy controls.** Show, mask or hide living people before you publish.
 
@@ -50,9 +50,6 @@ uv run cronicl search ashby              # find ids
 uv run cronicl show ashby-greta         # one person, with the line each record lives on
 uv run cronicl serve                      # http://127.0.0.1:8000/
 ```
-
-Coming from the old `people/*.md` layout? `cronicl migrate` previews the conversion and `cronicl migrate -a`
-writes it (see [Migrating](#migrating-from-peoplemd)).
 
 ## The TUI
 
@@ -101,7 +98,6 @@ lines and the order of records stay as you left them.
 | `edit mark-living ID... [-a]` | Write `living: true` for the named people. |
 | `import-gedcom FILE [-a]` | One-time GEDCOM import into `family.yml`; archives the original file. |
 | `export-gedcom [--out FILE] [--include-living] [--no-extra] [--ignore-errors]` | Write the family as a GEDCOM 5.5.1 file ([details](#gedcom-export)). Never changes your data; like `build`, it stops (exit 1) if `check` finds errors, unless `--ignore-errors`. |
-| `migrate [-a] [--allow-dirty]` | Convert an old `people/*.md` folder to `family.yml`. |
 | `build [--out OUT] [--ignore-errors]` | Run `check`, then generate the static site (default `OUT` is `<dir>/out`). |
 | `serve [--out OUT] [--port N] [--ignore-errors]` | Build and serve locally. |
 | `schema` | Print the JSON Schema for `family.yml` (for editors and agents). Needs no folder. |
@@ -191,7 +187,7 @@ deselects).
 site.yml            title, intro, home, schema_version: 3, privacy settings
 family.yml          every person and couple (or a family/ folder of .yml files in the same format)
 media/              portrait images named by `portrait:` in a record
-archive/            original .ged files, unmodified; material set aside by import and migration
+archive/            original .ged files, unmodified; material set aside by import
 ```
 
 When one file becomes unwieldy, make a folder `family/` of any number of `.yml` files instead (one per branch,
@@ -342,13 +338,6 @@ Every value is read as text exactly as typed: `NO` is `NO`, `1066` is `1066`. Tw
 An editor with YAML support underlines unknown keys and bad values as you type: `init` writes
 `family.schema.json` and the first line of `family.yml` points at it.
 
-### Migrating from people/*.md
-
-Older versions kept one markdown file per person. `cronicl migrate` shows what it would do (counts, and notes
-about anything that cannot be carried across exactly); `cronicl migrate -a` writes `family.yml`, moves `people/`
-to `archive/people-md/`, and sets `schema_version: 3`. It refuses while the old data has errors or the git tree
-has uncommitted changes (`--allow-dirty` overrides the latter).
-
 ## Validation
 
 `cronicl check` (also `cronicl validate`) reads everything you edit and reports what it cannot use, with the file,
@@ -364,7 +353,7 @@ Errors about the family file:
 | Code | Meaning |
 |---|---|
 | `E-BAD-FAMILY` | `family.yml` cannot be parsed, is not a mapping, uses a merge key, or both `family.yml` and `family/` exist |
-| `E-NO-FAMILY` | there is no `family.yml` or `family/`; the message says to run `cronicl migrate` when `people/*.md` exists |
+| `E-NO-FAMILY` | there is no `family.yml` or `family/`; the message says to run `cronicl init` |
 | `E-RECORD-KEY` | a top-level key is neither a person id nor a couple key |
 | `E-RECORD-SHAPE` | a record is not a mapping; `name` is not a mapping; `parents` or `events` has the wrong shape; a list or mapping where text belongs |
 | `E-DUPLICATE-ID` | the same person, or the same couple in either order, twice (also across split files); the later record in one file wins, across files the first |

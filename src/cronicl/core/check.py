@@ -25,7 +25,7 @@ def _check_date(value: str | None, label: str, person: Person, out: list[Issue])
 
 
 def _data_dir(person: Person):
-    """The data folder a person was read from (family.yml sits in it; legacy files sit one folder down)."""
+    """The data folder a person was read from (family.yml sits in it)."""
     depth = len(Path(person.source).parts) if person.source else 2
     return person.path.parents[depth - 1]
 

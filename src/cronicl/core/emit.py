@@ -214,7 +214,7 @@ def family(people: list[tuple[str, dict]], couples: list[tuple[str, str, dict]],
 
 
 def spec_from_person(p) -> dict:
-    """The emit spec of a model `Person` (as the legacy reader and the GEDCOM importer produce it)."""
+    """The emit spec of a model `Person` (as the GEDCOM importer produces it)."""
 
     def vital(event, empty_means_unknown=False):
         if event is None:

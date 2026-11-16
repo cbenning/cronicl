@@ -37,21 +37,18 @@ def load_site_text(raw: str | None) -> tuple[dict, list[Issue]]:
         Issue("W-DUPLICATE-KEY", f"duplicate key {key!r}; the later value is used", "site.yml", line) for key, line in result.duplicates
     ]
     version = data.get("schema_version")
-    if version is not None and not (isinstance(version, str) and version.strip() in ("1", "2", "3")):
+    if version is not None and not (isinstance(version, str) and version.strip() in ("3",)):
         issues.append(Issue("E-SCHEMA-VERSION", f"unsupported schema_version {version!r}", "site.yml"))
     return data, issues
 
 
 def load_tree(data_dir: Path) -> tuple[Tree, list[Issue]]:
-    """The whole data folder: site settings and the family. An old people/*.md folder is an error that says to migrate."""
+    """The whole data folder: site settings and the family. A folder with no family file is an error that says how to start one."""
     data_dir = Path(data_dir)
     site, issues = load_site(data_dir)
     tree = Tree(site=site)
     if not has_family(data_dir):
-        old = (data_dir / "people").is_dir() and any((data_dir / "people").glob("*.md"))
-        if old:
-            hint = "; this folder is in the old layout: run `cronicl migrate`"
-        elif (data_dir / "family.yaml").exists():
+        if (data_dir / "family.yaml").exists():
             hint = "; found family.yaml: rename it to family.yml"
         else:
             hint = "; run `cronicl init` to start one"

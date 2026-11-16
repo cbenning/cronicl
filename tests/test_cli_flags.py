@@ -99,9 +99,7 @@ def test_force_is_split_into_allow_dirty_and_ignore_errors(tmp_path, write):
     write(tmp_path, "family.yml", "a:\n  name: {given: A}\n  parents: [ghost]\n")
     assert main(["build", "--dir", str(tmp_path), "--out", str(tmp_path / "o1")]) == 1
     assert main(["build", "--dir", str(tmp_path), "--out", str(tmp_path / "o2"), "--ignore-errors"]) == 0
-    for argv in (["build", "--dir", str(tmp_path), "--force"], ["migrate", "--dir", str(tmp_path), "--force"]):
-        with pytest.raises(SystemExit):
-            main(argv)
-    with pytest.raises(SystemExit):  # --allow-dirty belongs to migrate only
+    with pytest.raises(SystemExit):
+        main(["build", "--dir", str(tmp_path), "--force"])
+    with pytest.raises(SystemExit):  # --allow-dirty is not a flag of rename
         main(["rename", "a", "b", "--dir", str(tmp_path), "--allow-dirty"])
-    assert main(["migrate", "--dir", str(tmp_path), "--allow-dirty"]) in (0, 2)

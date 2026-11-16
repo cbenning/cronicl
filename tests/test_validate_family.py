@@ -126,11 +126,6 @@ def test_text_output_and_json_include_the_line(tmp_path, write_family, capsys):
     assert any(item["line"] == 3 and item["code"] == "W-UNKNOWN-KEY" for item in json.loads(capsys.readouterr().out))
 
 
-def test_legacy_only_rules_do_not_fire_for_a_family_file(tmp_path, write_family):
-    issues = run(tmp_path, write_family, CLEAN)
-    assert not [i for i in issues if i.code in ("W-FILENAME-DRIFT", "W-PARTNERSHIP-CONFLICT")]
-
-
 def test_a_portrait_is_checked_against_media_next_to_family_yml(tmp_path, write_family):
     issues = run(tmp_path, write_family, "a:\n  name: {given: A}\n  portrait: missing.png\n")
     assert found(issues, "W-PORTRAIT-MISSING") == [("family.yml", 1)] or found(issues, "W-PORTRAIT-MISSING") == [("family.yml", 3)]
