@@ -28,6 +28,15 @@ terminal editor, GEDCOM import and export, and a generator that turns the tree i
   map, as plain files you can host anywhere.
 - **Privacy controls.** Living people can be shown, replaced by a placeholder or left out before you publish.
 
+<p align="center">
+  <img src="assets/screenshots/site-tree.png" alt="The generated site: a pan-and-zoom family tree with one person selected, their line coloured by generation, and a side panel" width="860">
+</p>
+<p align="center">
+  <img src="assets/screenshots/tui-person.png" alt="The terminal editor open on one person, with a partner's marriage record expanded" width="420">
+  <img src="assets/screenshots/site-person.png" alt="A generated person page with a portrait, life summary, family and timeline" width="420">
+</p>
+<p align="center"><sub>The site, the terminal editor and a person page, all from a made-up family.</sub></p>
+
 Status: v0.1. The file format is specified in [`SPEC.md`](SPEC.md); a JSON
 Schema (`cronicl schema`) and a conformance suite (`tests/conformance/`) travel with it, so another tool can read
 and write the same file.
