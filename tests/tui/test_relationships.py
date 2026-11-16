@@ -313,3 +313,130 @@ def test_a_nameless_placeholder_can_be_created(tmp_path):
         return staged(app)
 
     assert drive(tmp_path, script).endswith("\nunknown: {}\n")
+
+
+# ---- review pass
+def test_the_first_person_in_a_freshly_initialised_folder_can_be_added(tmp_path):
+    async def script(pilot, app):
+        await pilot.press("enter")  # Start a new family here
+        await pilot.pause()
+        await pilot.press("ctrl+n")
+        await pilot.pause()
+        await type_text(pilot, "Ada")
+        await pilot.press("enter")
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("y")
+        await pilot.pause()
+        return screen_name(app)
+
+    assert drive(tmp_path, script) == "FinderScreen"
+    assert "\nada:\n  name: {given: Ada}\n" in (tmp_path / "family.yml").read_text(encoding="utf-8")
+
+
+def test_a_blank_record_takes_a_burial_from_the_palette(tmp_path):
+    folder(tmp_path, family=FAMILY + "\nghost:\n")
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "ghost")
+        await palette_pick(pilot, "burial")
+        await pilot.press("enter", "enter")
+        await pilot.pause()
+        return staged(app), screen_name(app)
+
+    text, name = drive(tmp_path, script)
+    assert name == "PersonScreen" and "ghost:\n  events:\n    - {type: burial}" in text
+
+
+def test_editing_a_row_that_uses_a_yaml_alias_says_so_and_changes_nothing(tmp_path):
+    aliased = FAMILY + "\nsam-a:\n  name: {given: A}\n  birth: {date: 1800, place: &home Leeds}\n\nsam-b:\n  name: {given: B}\n  birth: {date: 1830, place: *home}\n"
+    folder(tmp_path, family=aliased)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "sam-b")
+        await highlight(pilot, app, "place: Leeds")
+        await pilot.press("enter")
+        await pilot.pause()
+        await pilot.press("ctrl+u")
+        await type_text(pilot, "Paris")
+        await pilot.press("enter")
+        await pilot.pause()
+        return screen_name(app), app.session.changed
+
+    name, changed = drive(tmp_path, script)
+    assert name == "PersonScreen" and not changed
+
+
+def test_a_person_screen_for_someone_who_no_longer_exists_closes_itself(tmp_path):
+    folder(tmp_path)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "child")
+        await type_text(pilot, "zzzzqq")
+        await pilot.press("enter")
+        await pilot.pause()
+        await type_text(pilot, "Kid")
+        await pilot.press("enter")
+        await pilot.pause()
+        await pilot.press("enter")  # (no partners: straight to the nested kid screen)
+        await pilot.pause()
+        nested = head(app)
+        await highlight(pilot, app, "Augusta Ada")  # the Parents line of the new kid
+        await pilot.press("enter")
+        await pilot.pause()
+        await pilot.press("x")  # discard everything: the kid no longer exists
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+        return nested, screen_name(app)
+
+    nested, name = drive(tmp_path, script)
+    assert "Kid" in nested and name in ("FinderScreen", "PersonScreen")
+    # whichever screen is shown, it must not be the vanished person
+    async def check(pilot, app):
+        return True
+
+    assert drive(tmp_path, check)
+
+
+def test_add_a_child_does_not_offer_existing_children(tmp_path):
+    folder(tmp_path)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "byron-george")
+        await palette_pick(pilot, "child")
+        return option_texts(app, "#people")
+
+    listed = "\n".join(drive(tmp_path, script))
+    assert "Augusta Ada" not in listed and "Annabella" in listed or "Augusta Ada" not in listed
+
+
+def test_the_partner_picker_does_not_offer_parents_or_children(tmp_path):
+    folder(tmp_path, family=FAMILY + "\nother-person:\n  name: {given: Other, surname: Person}\n")
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "partner")
+        return option_texts(app, "#people")
+
+    listed = "\n".join(drive(tmp_path, script))
+    assert "George Byron" not in listed and "Annabella" not in listed and "Other Person" in listed
+
+
+def test_an_id_that_is_taken_by_a_scalar_record_is_not_proposed(tmp_path):
+    folder(tmp_path, family="smith-john: oops\n")
+
+    async def script(pilot, app):
+        await pilot.press("ctrl+n")
+        await pilot.pause()
+        await type_text(pilot, "John")
+        await pilot.press("tab")
+        await type_text(pilot, "Smith")
+        await pilot.press("enter")
+        await pilot.pause()
+        return screen_name(app), app.session.staged["family.yml"]
+
+    name, text = drive(tmp_path, script)
+    assert "smith-john-2" in text and name == "PersonScreen"

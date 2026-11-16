@@ -70,3 +70,12 @@ exporting again is not a round trip for them.
 When a marriage such as an uncle and a niece makes the strict layout impossible, the tree views stop keeping sibling
 groups on one row for the whole connected family, not only for the groups involved. Nothing overlaps and nothing is
 lost, but unrelated siblings can end up on different rows. Code: `_generations` in `src/cronicl/core/generations.py`.
+
+## The TUI
+
+- **Esc in the long-text editor or the raw pane drops what you typed without asking.** The diff step protects the file, but text typed into a box and cancelled is gone.
+- **A date warning other than a death has no one-key fix.** `W-DATE-UNPARSED` on a birth or event date is only a jump to the line; open the field with Enter to retype it.
+- **A file that ends with a YAML document-end marker (`...`).** New records are appended after the marker and the result does not parse; the TUI refuses the edit (the text is checked before it is staged) instead of writing it.
+- **Two records with the same key.** The editor changes the first one while the reader uses the later one; the checker already reports `E-DUPLICATE-ID`, so fix that first.
+- **Records with YAML anchors or aliases cannot be edited field by field.** The TUI says so and offers the raw pane (Ctrl+E), which edits the record as text.
+- **At about 3000 people** each edit rebuilds and rechecks the whole family (about 0.7 s on a laptop); it is usable but not instant.

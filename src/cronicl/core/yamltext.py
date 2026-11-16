@@ -10,6 +10,7 @@ What it gives that plain YAML loaders do not:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 import yaml
 
@@ -44,7 +45,10 @@ class LoadResult:
     error_line: int | None = None
 
 
-class _Loader(yaml.BaseLoader):
+_LOADER = getattr(yaml, "CBaseLoader", yaml.BaseLoader)  # libyaml when it is there
+
+
+class _Loader(_LOADER):
     def __init__(self, stream):
         super().__init__(stream)
         self.duplicates: list = []
@@ -111,13 +115,18 @@ def load_text(raw: str) -> LoadResult:
     return result
 
 
+_COMPOSE_LOADER = getattr(yaml, "CBaseLoader", yaml.BaseLoader)  # libyaml when it is there: several times faster, same marks
+
+
+@lru_cache(maxsize=8)
 def locate(raw: str):
     """The parsed node graph, with exact positions (`start_mark.index` / `end_mark.index`) for in-place edits.
 
-    Returns None when the text cannot be read.
+    Returns None when the text cannot be read (or holds no document: an empty file or only comments). The result is
+    cached for the same text and must not be changed.
     """
-    text = raw.lstrip("﻿")
+    text = raw.lstrip("\ufeff")
     try:
-        return yaml.compose(text, Loader=yaml.BaseLoader)
+        return yaml.compose(text, Loader=_COMPOSE_LOADER)
     except (yaml.YAMLError, RecursionError, ValueError, TypeError):
         return None

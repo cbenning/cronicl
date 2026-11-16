@@ -68,7 +68,15 @@ def _options(text: str, issue: Issue) -> list[FixOption]:
         if not match:
             return []
         path = _pick(text, issue.line, steps=_steps(match.group(1)))
-        return [_one(issue, text, rename_key(text, path, match.group(2)), f"rename it to {match.group(2)}")] if path else []
+        if not path:
+            return []
+        renamed = rename_key(text, path, match.group(2))
+        if match.group(2) == "death":  # renaming to death would mark someone deceased: ask, and the default changes nothing
+            return [
+                FixOption("leave it as it is for now", {}, True),
+                _one(issue, text, renamed, "it is their death: rename it to death (they will count as deceased)"),
+            ]
+        return [_one(issue, text, renamed, f"rename it to {match.group(2)}")]
     if code == "W-DUPLICATE-PARENT":
         path = _pick(text, issue.line, last="parents", length=2)
         if not path:

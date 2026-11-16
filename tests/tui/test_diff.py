@@ -97,3 +97,19 @@ def test_a_file_changed_on_disk_is_refused_with_a_message_and_r_reloads(tmp_path
     message, disk, results, changed = drive(tmp_path, script)
     assert "changed on disk" in message and disk.endswith("# elsewhere\n")
     assert results == ["reloaded"] and not changed
+
+
+def test_a_write_failure_shows_a_message_and_keeps_the_staged_change(tmp_path, monkeypatch):
+    folder(tmp_path)
+
+    async def script(pilot, app):
+        stage_change(app)
+        monkeypatch.setattr("cronicl.tui.session.os.replace", lambda *a, **k: (_ for _ in ()).throw(PermissionError("read-only")))
+        app.review_changes(lambda r: None)
+        await pilot.pause()
+        await pilot.press("y")
+        await pilot.pause()
+        return screen_name(app), texts(app), app.session.changed
+
+    name, shown, changed = drive(tmp_path, script)
+    assert name == "DiffScreen" and "Could not write" in shown and changed

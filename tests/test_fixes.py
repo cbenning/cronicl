@@ -105,3 +105,21 @@ def test_other_warnings_have_no_automatic_fix():
     tree, _ = load_tree_from_texts(SITE, {"family.yml": text})
     issue = [i for i in issues(text) if i.code == "W-DATE-UNPARSED"][0]
     assert fix_options(tree, {"family.yml": text}, issue) == []
+
+
+def test_renaming_a_typo_to_death_asks_and_the_default_leaves_the_person_alone():
+    text = "a:\n  name: {given: A}\n  birth: 1990\n  deth: 2020\n"
+    issue, options = options_for(text, "W-UNKNOWN-KEY")
+    assert len(options) == 2 and options[0].default and not options[1].default
+    tree, _ = load_tree_from_texts(SITE, {"family.yml": text})
+    kept = options[0].files.get("family.yml", text)
+    tree, _ = load_tree_from_texts(SITE, {"family.yml": kept})
+    assert is_living(tree.people["a"], TODAY) is True
+    renamed = options[1].files["family.yml"]
+    tree, _ = load_tree_from_texts(SITE, {"family.yml": renamed})
+    assert is_living(tree.people["a"], TODAY) is False
+
+
+def test_other_typo_renames_still_have_a_single_fix():
+    _, options = options_for("a:\n  name: {given: A}\n  birht: 1900\n", "W-UNKNOWN-KEY")
+    assert len(options) == 1

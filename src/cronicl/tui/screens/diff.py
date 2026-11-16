@@ -56,6 +56,9 @@ class DiffScreen(Screen[str]):
         except Unreadable as exc:
             self.query_one("#diff-message", Label).update(f"[b red]{exc}[/] Nothing was written. Esc keeps editing.")
             return
+        except (OSError, UnicodeDecodeError) as exc:
+            self.query_one("#diff-message", Label).update(f"[b red]Could not write: {exc}.[/] Your changes are still staged. Esc keeps editing.")
+            return
         self.dismiss("written")
 
     def action_back(self) -> None:
@@ -67,5 +70,9 @@ class DiffScreen(Screen[str]):
 
     def action_reload(self) -> None:
         if self.stale:
-            self.session.reload()
+            try:
+                self.session.reload()
+            except (OSError, UnicodeDecodeError) as exc:
+                self.query_one("#diff-message", Label).update(f"[b red]Could not reload: {exc}.[/]")
+                return
             self.dismiss("reloaded")

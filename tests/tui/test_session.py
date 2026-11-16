@@ -96,11 +96,11 @@ def test_the_family_and_its_issues_follow_the_staged_text(tmp_path):
     assert [i.code for i in session.family.issues if i.code == "W-BAD-SEX"] == ["W-BAD-SEX"]
 
 
-def test_unreadable_staged_text_is_refused_and_nothing_is_written(tmp_path):
+def test_unreadable_text_is_refused_when_staged_so_it_can_never_be_written(tmp_path):
     session = session_for(tmp_path)
-    session.stage("family.yml", "a: [unclosed\n")
     with pytest.raises(Unreadable):
-        session.commit()
+        session.stage("family.yml", "a: [unclosed\n")
+    assert not session.changed
     assert (tmp_path / "family.yml").read_text(encoding="utf-8") == FAMILY
 
 
@@ -125,3 +125,48 @@ def test_file_mode_is_kept(tmp_path):
     session.stage("family.yml", set_value(session.staged["family.yml"], ("lovelace-ada", "sex"), "other"))
     session.commit()
     assert (os.stat(tmp_path / "family.yml").st_mode & 0o777) == 0o640
+
+
+def test_staging_text_that_does_not_parse_is_refused_and_leaves_the_stage_alone(tmp_path):
+    session = session_for(tmp_path)
+    with pytest.raises(Unreadable):
+        session.stage("family.yml", "a: [unclosed\n")
+    assert session.staged["family.yml"] == FAMILY and not session.changed
+
+
+def test_a_symlinked_family_file_is_written_through_and_the_link_stays(tmp_path):
+    (tmp_path / "real").mkdir()
+    (tmp_path / "real" / "family.yml").write_text(FAMILY, encoding="utf-8")
+    (tmp_path / "data").mkdir()
+    os.symlink(tmp_path / "real" / "family.yml", tmp_path / "data" / "family.yml")
+    (tmp_path / "data" / "site.yml").write_text(SITE, encoding="utf-8")
+    session = Session(tmp_path / "data")
+    session.stage("family.yml", set_value(session.staged["family.yml"], ("lovelace-ada", "sex"), "other"))
+    session.commit()
+    assert (tmp_path / "data" / "family.yml").is_symlink()
+    assert "sex: other" in (tmp_path / "real" / "family.yml").read_text(encoding="utf-8")
+
+
+def test_a_partial_multi_file_write_does_not_make_the_written_file_look_stale(tmp_path, monkeypatch):
+    (tmp_path / "site.yml").write_text(SITE, encoding="utf-8")
+    (tmp_path / "family").mkdir()
+    (tmp_path / "family" / "one.yml").write_text("a: {name: {given: A}}\n", encoding="utf-8")
+    (tmp_path / "family" / "two.yml").write_text("b: {name: {given: B}}\n", encoding="utf-8")
+    session = Session(tmp_path)
+    session.stage("family/one.yml", set_value(session.staged["family/one.yml"], ("a", "sex"), "male"))
+    session.stage("family/two.yml", set_value(session.staged["family/two.yml"], ("b", "sex"), "male"))
+    real = os.replace
+    calls = []
+
+    def flaky(src, dst):
+        calls.append(dst)
+        if len(calls) == 2:
+            raise PermissionError("read-only")
+        return real(src, dst)
+
+    monkeypatch.setattr("cronicl.tui.session.os.replace", flaky)
+    with pytest.raises(PermissionError):
+        session.commit()
+    monkeypatch.setattr("cronicl.tui.session.os.replace", real)
+    session.commit()  # the retry writes only the second file and does not call the first one changed on disk
+    assert "sex: male" in (tmp_path / "family" / "two.yml").read_text(encoding="utf-8")

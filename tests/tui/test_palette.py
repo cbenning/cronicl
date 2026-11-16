@@ -24,8 +24,11 @@ def test_the_palette_lists_only_fields_the_record_does_not_have(tmp_path):
     joined = "\n".join(entries)
     assert name == "PaletteScreen"
     assert "nickname" in joined and "bio" in joined and "portrait" in joined and "event: residence" in joined and "partner" in joined and "child" in joined
-    for present in ("name · given", "name.given", "sex ", "parents", "death", "birth "):
-        assert not any(e.strip().startswith(present) for e in entries), present
+    labels = [e.split()[0] for e in entries if e.split()]
+    for present in ("name.given", "name.surname", "sex", "parents", "death", "birth"):
+        assert present not in labels, present
+    assert "birth.place" not in labels  # Ada already has one; the parts she lacks (note, source) are offered
+    assert "birth.note" in labels
 
 
 def test_typing_narrows_the_palette_and_a_text_field_is_added_in_place(tmp_path):
@@ -202,3 +205,49 @@ def test_the_raw_pane_edits_one_record_and_refuses_broken_yaml(tmp_path):
     assert shown.startswith("milbanke-annabella:") and "given: Annabella" in shown
     assert still_open[0] == "RawScreen" and "cannot" in still_open[1].lower()
     assert after == "PersonScreen" and "given: Anne," in text and "sex: female" not in text.split("milbanke-annabella:")[1].split("\n\n")[0]
+
+
+# ---- review pass: parts of birth, death and events can be added after the fact
+def test_a_place_can_be_added_to_a_bare_birth_date(tmp_path):
+    folder(tmp_path)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "milbanke-annabella")
+        await pilot.press("a")
+        await pilot.pause()
+        listed = option_texts(app, "#fields")
+        await type_text(pilot, "birth.place")
+        await pilot.press("enter")
+        await pilot.pause()
+        await type_text(pilot, "Elemore Hall")
+        await pilot.press("enter")
+        await pilot.pause()
+        return listed, staged(app)
+
+    listed, text = drive(tmp_path, script)
+    assert any(e.startswith("birth.place") for e in listed)
+    assert "birth: {date: 1792-05-17, place: Elemore Hall}" in text
+
+
+def test_the_missing_parts_of_the_event_under_the_cursor_can_be_added(tmp_path):
+    folder(tmp_path)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "byron-george")
+        await highlight(pilot, app, "Annabella Milbanke")
+        await pilot.press("enter")  # expand the couple
+        await highlight(pilot, app, "type: marriage")
+        await pilot.press("a")
+        await pilot.pause()
+        listed = option_texts(app, "#fields")
+        await type_text(pilot, "this event note")
+        await pilot.press("enter")
+        await pilot.pause()
+        await type_text(pilot, "Winter wedding")
+        await pilot.press("ctrl+s")
+        await pilot.pause()
+        return listed, staged(app)
+
+    listed, text = drive(tmp_path, script)
+    assert any("this event: note" in e for e in listed) and not any("this event: date" in e for e in listed)
+    assert "note: Winter wedding" in text.split("byron-george + milbanke-annabella")[1]

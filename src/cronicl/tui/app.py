@@ -97,11 +97,12 @@ class CroniclApp(App):
             if spec is not None:
                 then(spec)
 
-        self.push_screen(NewPersonScreen(set(self.session.family.tree.people)), made)
+        self.push_screen(NewPersonScreen(self.session.family.taken_ids()), made)
 
     def stage_person(self, source: str, spec: dict, parents: list[str] | None = None) -> str:
         """Stage the new person's record at the end of `source`; return their id."""
-        from ..core.recordedit import add_person_record
+        from ..core.recordedit import EditRefused, add_person_record
+        from .session import Unreadable
 
         data: dict = {}
         name = {k: spec[k] for k in ("given", "surname") if spec[k]}
@@ -109,12 +110,21 @@ class CroniclApp(App):
             data["name"] = name
         if parents:
             data["parents"] = list(parents)
-        self.session.stage(source, add_person_record(self.session.staged[source], spec["id"], data))
+        try:
+            self.session.stage(source, add_person_record(self.session.staged[source], spec["id"], data))
+        except (EditRefused, Unreadable) as exc:
+            self.notify(str(exc), severity="error")
+            return None
         return spec["id"]
 
     def create_person(self, source: str, parents: list[str] | None, then) -> None:
         """Ask for a name, stage the new record in `source` (with `parents`), and call `then(new id)`."""
-        self.ask_person(lambda spec: then(self.stage_person(source, spec, parents)))
+        def made(spec) -> None:
+            new_id = self.stage_person(source, spec, parents)
+            if new_id:
+                then(new_id)
+
+        self.ask_person(made)
 
     def action_help(self) -> None:
         self.open_help()

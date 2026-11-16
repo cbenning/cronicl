@@ -13,7 +13,7 @@ from ..core.issues import Issue
 from ..core.living import is_living
 from ..core.model import Tree
 from ..core.relations import Relations, build_relations
-from ..core.recordedit import _find_couple
+from ..core.recordedit import _find_couple, _is_blank_document, _root
 from ..core.search import search_people
 from ..core.textvalues import parse_int
 
@@ -182,6 +182,19 @@ class Family:
         if not folder.is_dir():
             return []
         return sorted(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file() and not p.name.startswith("."))
+
+    def taken_ids(self) -> set[str]:
+        """Every key already used as a record in the files, including records that are not people (a stray `a: oops`)."""
+        taken = set(self.tree.people)
+        for text in self.files.values():
+            body = text.lstrip("\ufeff")
+            if not body.strip() or _is_blank_document(body):
+                continue
+            try:
+                taken.update(k.value for k, _ in _root(body).value)
+            except Exception:  # noqa: BLE001 - an unreadable file adds nothing; staging refuses it anyway
+                pass
+        return taken
 
     def living_count(self) -> int:
         return sum(1 for p in self.tree.people.values() if is_living(p, self.today, self.cutoff))

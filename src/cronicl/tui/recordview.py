@@ -23,6 +23,7 @@ class Row:
     comment: str | None = None  # the `# ...` after the value on the same line
     comment_only: bool = False  # a whole-line comment inside the record
     extra: str = ""  # a person's name beside an id, for example
+    raw: str = ""  # the value exactly as written (the display collapses whitespace)
     problems: list[Issue] = field(default_factory=list)
 
 
@@ -77,7 +78,9 @@ def build(text: str, key: str, issues: list[Issue], name_of) -> RecordView:
                     visit(v, here, depth + 1, k.value)
                 else:
                     value = _scalar_text(v)
-                    rows.append(Row(k.value, value, here, depth, line, "text", _trailing_comment(lines, v)))
+                    row = Row(k.value, value, here, depth, line, "text", _trailing_comment(lines, v))
+                    row.raw = v.value.rstrip("\n") if getattr(v, "style", None) in ("|", ">") else v.value
+                    rows.append(row)
         elif isinstance(node, yaml.SequenceNode):
             for index, item in enumerate(node.value):
                 here = (*path, index)
@@ -88,7 +91,7 @@ def build(text: str, key: str, issues: list[Issue], name_of) -> RecordView:
                 else:
                     value = _scalar_text(item)
                     extra = name_of(value) if parent_key == "parents" else ""
-                    rows.append(Row("-", value, here, depth, line, "text", _trailing_comment(lines, item), extra=extra))
+                    rows.append(Row("-", value, here, depth, line, "text", _trailing_comment(lines, item), extra=extra, raw=item.value))
 
     if isinstance(value_node, yaml.MappingNode):
         visit(value_node, (key,), 0)

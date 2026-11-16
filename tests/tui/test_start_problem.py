@@ -77,8 +77,39 @@ def test_the_old_layout_offers_migration(tmp_path, legacy_folder):
         shown = texts(app)
         await pilot.press("m")
         await pilot.pause()
-        return screen_name(app), shown
+        asked = screen_name(app)
+        await pilot.press("y")
+        await pilot.pause()
+        return screen_name(app), shown + "|" + asked
 
     name, shown = drive(legacy_folder, script)
-    assert "m converts" in shown and name == "FinderScreen"
+    assert "m converts" in shown and shown.endswith("|Confirm") and name == "FinderScreen"
     assert (legacy_folder / "family.yml").is_file()
+
+
+def test_a_folder_with_only_site_yml_can_start_a_family(tmp_path):
+    folder(tmp_path, family=None)
+
+    async def script(pilot, app):
+        first = screen_name(app)
+        await pilot.press("enter")
+        await pilot.pause()
+        return first, screen_name(app)
+
+    assert drive(tmp_path, script) == ("StartScreen", "FinderScreen")
+    assert (tmp_path / "family.yml").is_file()
+
+
+def test_an_editor_with_arguments_is_split(tmp_path, monkeypatch):
+    folder(tmp_path, family="a:\n  name: [unclosed\n")
+    calls = []
+    monkeypatch.setattr("cronicl.tui.screens.problem.subprocess.run", lambda cmd, **k: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0))
+    monkeypatch.setattr("cronicl.tui.app.CroniclApp.suspend", lambda self: contextlib.nullcontext())
+    monkeypatch.setenv("EDITOR", "code -w")
+
+    async def script(pilot, app):
+        await pilot.press("e")
+        await pilot.pause()
+
+    drive(tmp_path, script)
+    assert calls[0][:2] == ["code", "-w"]

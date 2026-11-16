@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+from ..core.yamltext import load_text
 from .model import Family, read_disk
 
 
@@ -65,6 +66,10 @@ class Session:
         return any(self.staged.get(name) != text for name, text in self.loaded.items()) or any(name not in self.loaded for name in self.staged)
 
     def stage(self, name: str, text: str) -> None:
+        """Stage new text for a file. Text that is not YAML a family can be read from is refused, and nothing changes."""
+        result = load_text(text)
+        if result.error:
+            raise Unreadable(f"that edit would leave {name} unreadable ({result.error}); nothing was changed")
         self.staged[name] = text
         self._rebuild()
 
@@ -109,11 +114,17 @@ class Session:
         if stale:
             raise DiskChanged(stale)
         for name in names:
-            self._write(self.data_dir / name, self.staged[name])
+            path = self.data_dir / name
+            self._write(path, self.staged[name])
+            self.loaded[name] = self.staged[name]  # a failure further on must not call this file changed on disk
+            self.stamps[name] = _stamp(path)
         self.reload()
 
     @staticmethod
     def _write(path: Path, text: str) -> None:
+        path = Path(os.path.realpath(path))  # a symlinked file is written through; the link stays
+        if path.exists() and not os.access(path, os.W_OK):
+            raise PermissionError(f"{path.name} is read-only")
         path.parent.mkdir(parents=True, exist_ok=True)
         fd, temp = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
         try:

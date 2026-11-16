@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -52,21 +53,26 @@ class ProblemScreen(Screen):
             return
         path = Path(self.app.data_dir) / issue.path
         with self.app.suspend():
-            subprocess.run([editor_command(), f"+{issue.line or 1}", str(path)])
+            subprocess.run([*shlex.split(editor_command()), f"+{issue.line or 1}", str(path)])
         self.app.open_home()
 
     def action_migrate(self) -> None:
         if not self.old_layout:
             return
         from ...cli import cmd_migrate
+        from .modals import Confirm, Message
 
-        code, text = bridge.call(cmd_migrate, dir=str(self.app.data_dir), apply=True, allow_dirty=True)
-        if code != 0:
-            from .modals import Message
+        def decided(yes) -> None:
+            if not yes:
+                return
+            code, text = bridge.call(cmd_migrate, dir=str(self.app.data_dir), apply=True, allow_dirty=False)
+            if code != 0:
+                self.app.push_screen(Message(text, "Migration failed"))
+                return
+            self.app.open_home()
 
-            self.app.push_screen(Message(text, "Migration failed"))
-            return
-        self.app.open_home()
+        code, preview = bridge.call(cmd_migrate, dir=str(self.app.data_dir), apply=False, allow_dirty=False)
+        self.app.push_screen(Confirm(preview or "Convert the old people/ folder to family.yml?", "Convert", "Migrate the old layout?"), decided)
 
     def action_reload(self) -> None:
         self.app.open_home()

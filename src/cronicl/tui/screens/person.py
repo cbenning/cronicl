@@ -9,6 +9,7 @@ from textual.widgets import Footer, OptionList, Static
 from textual.widgets.option_list import Option
 
 from ...core.catalog import FIELDS
+from ..session import Unreadable
 from ...core.recordedit import EditRefused, add_couple_event, add_couple_record, couple_key, list_add, record_data, remove, set_value
 from ..recordview import Row, build
 from ..widgets import fit, room
@@ -77,13 +78,25 @@ class PersonScreen(Screen):
         if self.is_mounted:
             self.refresh_content()
 
+    def on_screen_resume(self) -> None:
+        if self.app.family is not None and self.pid not in self.app.family.tree.people:
+            self.app.call_after_refresh(self._vanish)
+
+    def _vanish(self) -> None:
+        """This person no longer exists (their staged record was discarded or the file changed): close the screen."""
+        if self is self.app.screen:
+            self.app.pop_screen()
+
     def refresh_content(self) -> None:
         widget = self.query_one("#record", OptionList)
+        if self.pid not in self.app.family.tree.people:
+            if self is self.app.screen:
+                self.app.call_after_refresh(self._vanish)
+            return
         keep = None
         if widget.highlighted is not None and widget.option_count:
             keep = widget.get_option_at_index(widget.highlighted).id
-        if self.pid in self.app.family.tree.people:
-            self.rebuild(keep=keep)
+        self.rebuild(keep=keep)
 
     # ---- building the list ----------------------------------------------------------------------------------------
     @property
@@ -228,7 +241,7 @@ class PersonScreen(Screen):
         source = self._source_of(target)
         if source is None:
             return
-        screen = editor_for(self.app, record_key, row.path, row.value)
+        screen = editor_for(self.app, record_key, row.path, row.raw or row.value)
         if screen is None:
             self.app.notify("That line is edited with Ctrl+E (the raw record)", severity="warning")
             return
@@ -246,15 +259,8 @@ class PersonScreen(Screen):
         if value == PeoplePicker.NEW:
             self._new_parent(lambda pid: self._stage(source, lambda t: set_value(t, row.path, pid), row.path))
             return
-        session = self.app.session
-        text = session.staged[source]
-        try:
-            new = remove(text, row.path) if value == "" else set_value(text, row.path, value)
-        except EditRefused as exc:
-            self.app.notify(str(exc), severity="error")
-            return
-        self.keep_path = row.path
-        session.stage(source, new)
+        build = (lambda t: remove(t, row.path)) if value == "" else (lambda t: set_value(t, row.path, value))
+        self._stage(source, build, row.path)
 
     def _jump_to(self, issue) -> None:
         widget = self.query_one("#record", OptionList)
@@ -301,11 +307,14 @@ class PersonScreen(Screen):
     def _stage(self, source: str, build, keep_path: tuple | None = None) -> bool:
         try:
             new = build(self.app.session.staged[source])
-        except EditRefused as exc:
+            if new == self.app.session.staged[source]:
+                return True  # nothing would change
+            self.keep_path = keep_path
+            self.app.session.stage(source, new)
+        except (EditRefused, Unreadable) as exc:
+            self.keep_path = None
             self.app.notify(str(exc), severity="error")
             return False
-        self.keep_path = keep_path
-        self.app.session.stage(source, new)
         return True
 
     # ---- the field palette -------------------------------------------------------------------------------------------
@@ -322,8 +331,18 @@ class PersonScreen(Screen):
             present.add((name,))
             if isinstance(value, dict):
                 present.update((name, sub) for sub in value)
+        for name in ("birth", "death"):
+            if isinstance(data.get(name), str):
+                present.add((name, "date"))  # a bare date is the date part
         parent_count = len(data.get("parents") or [])
-        entries = build_entries(kind, present, parent_count)
+        event_index = event_has = None
+        target = self._target()
+        if target and target[0] in ("row", "couple_row") and len(target[-1].path) >= 3 and target[-1].path[1] == "events" and isinstance(target[-1].path[2], int):
+            event_index = target[-1].path[2]
+            events = data.get("events") or []
+            if event_index < len(events) and isinstance(events[event_index], dict):
+                event_has = set(events[event_index])
+        entries = build_entries(kind, present, parent_count, event_index, event_has)
         title = f"Add to {self.family.name_of(self.pid)}" if kind == "person" else f"Add to the couple {self.family.name_of(self.pid)} + {self.family.name_of(partner)}"
         self.app.push_screen(PaletteScreen(title, entries), lambda action: self._palette_chosen(action, (kind, partner, key, source)))
 
@@ -336,6 +355,9 @@ class PersonScreen(Screen):
             self._add_field(action[1], key, source)
         elif name == "event":
             self._add_event(action[1], context)
+        elif name == "event_field":
+            index, sub = action[1], action[2]
+            self._ask_event_fields(key, source, index, [sub])
         elif name == "custom":
             self.app.push_screen(Prompt("Name of your field (it starts with x-)", placeholder="x-nickname"), lambda k: self._custom_key(k, key, source))
         elif name == "partner":
@@ -453,7 +475,9 @@ class PersonScreen(Screen):
 
     def _add_partner(self) -> None:
         family = self.family
-        exclude = {self.pid} | {p for cid in family.relations.couples_of.get(self.pid, []) for p in family.relations.couples[cid].partners}
+        relations = family.relations
+        children = {k for cid in relations.couples_of.get(self.pid, []) for k in relations.kids.get(cid, [])}
+        exclude = {self.pid} | set(relations.parents.get(self.pid, [])) | children | {p for cid in relations.couples_of.get(self.pid, []) for p in relations.couples[cid].partners}
 
         def picked(value) -> None:
             if value is None:
@@ -479,7 +503,9 @@ class PersonScreen(Screen):
 
     def _add_child(self) -> None:
         family = self.family
-        exclude = {self.pid} | ancestors(family, self.pid)
+        relations = family.relations
+        children = {k for cid in relations.couples_of.get(self.pid, []) for k in relations.kids.get(cid, [])}
+        exclude = {self.pid} | ancestors(family, self.pid) | children
 
         def picked(value) -> None:
             if value is None:

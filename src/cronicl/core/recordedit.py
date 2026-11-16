@@ -33,21 +33,56 @@ class EditRefused(Exception):
 
 
 # ---- reading ------------------------------------------------------------------------------------------------------
+_BODY_OF: dict[int, str] = {}  # root node id -> its text, so `_walk` can check for aliases
+
+
 def _root(body: str):
     node = locate(body)
     if node is None or not isinstance(node, yaml.MappingNode):
         raise EditRefused("the file cannot be read as a mapping of records, so it cannot be edited")
+    _BODY_OF[id(node)] = body
+    if len(_BODY_OF) > 32:
+        _BODY_OF.pop(next(iter(_BODY_OF)))
     return node
+
+
+def _is_blank_document(body: str) -> bool:
+    """True for an empty file or one that holds only comments (what `cronicl init` writes)."""
+    result = load_text(body)
+    return result.error is None and isinstance(result.data, Mapping) and not result.data
 
 
 def _key_text(node) -> str:
     return node.value
 
 
-def _find_record(root, key: str):
+ALIAS_MESSAGE = "this record uses a YAML anchor or alias (& or *), which the editor does not change; edit it as text with Ctrl+E"
+
+
+def _check_plain(node, body: str, seen: set, parent=None) -> None:
+    """Refuse a record with aliases or anchors: editing through them would change another record."""
+    if id(node) in seen:
+        raise EditRefused(ALIAS_MESSAGE)
+    seen.add(id(node))
+    if parent is not None and not (parent.start_mark.index <= node.start_mark.index and node.end_mark.index <= parent.end_mark.index):
+        raise EditRefused(ALIAS_MESSAGE)
+    if body[node.start_mark.index:node.start_mark.index + 1] == "&":
+        raise EditRefused(ALIAS_MESSAGE)
+    if isinstance(node, yaml.MappingNode):
+        for k, v in node.value:
+            _check_plain(k, body, seen, node)
+            _check_plain(v, body, seen, node)
+    elif isinstance(node, yaml.SequenceNode):
+        for v in node.value:
+            _check_plain(v, body, seen, node)
+
+
+def _find_record(root, key: str, *, body: str | None = None):
     wanted = _norm_key(key)
     for key_node, value_node in root.value:
         if _norm_key(key_node.value) == wanted:
+            if body is not None:
+                _check_plain(value_node, body, set())
             return key_node, value_node
     raise EditRefused(f"there is no record {key!r}")
 
@@ -72,7 +107,7 @@ def _step(node, step):
 
 def _walk(root, path):
     """Walk `path`; return the list of (key_node, value_node) per step as far as it exists."""
-    key_node, value_node = _find_record(root, path[0])
+    key_node, value_node = _find_record(root, path[0], body=_BODY_OF.get(id(root)))
     trail = [(key_node, value_node)]
     for step in path[1:]:
         found = _step(trail[-1][1], step)
@@ -246,8 +281,18 @@ def _set_value(text: str, path: tuple, value: str) -> str:
         indent = key_node.start_mark.column if key_node is not None else None
         start, end = _scalar_span(body, node)
         new = _render_scalar(node, value, flow=flow, key_indent=indent, nl=nl)
+        if "\n" in new and node.style not in ("|", ">"):
+            line_end = body.find("\n", end)
+            line_end = len(body) if line_end == -1 else line_end
+            tail = body[end:line_end].rstrip("\r")
+            if tail.strip().startswith("#"):  # the comment stays a comment: it moves up beside the `|`
+                first, _, rest = new.partition(nl)
+                new = first + "  " + tail.strip() + (nl + rest if rest else "")
+                end = end + len(tail)
         return bom + body[:start] + new + body[end:]
     missing = path[len(trail):]
+    if any(isinstance(step, int) for step in missing):
+        raise EditRefused("there is no such list item")
     parent_key, parent = trail[-1]
     if isinstance(parent, yaml.MappingNode):
         data: object = value
@@ -408,7 +453,10 @@ def set_value_any(text: str, path: tuple, value) -> str:
     trail = _walk(root, path[:-1])
     if len(trail) != len(path) - 1:
         raise EditRefused("that part of the record is not there")
-    if _step(trail[-1][1], path[-1]) is not None:
+    parent = trail[-1][1]
+    if isinstance(parent, yaml.ScalarNode) and parent.value == "" and parent.start_mark.index == parent.end_mark.index and trail[-1][0] is not None:
+        return bom + _fill_blank(body, trail, {path[-1]: value}, _newline(body))  # `ghost:` with nothing under it
+    if _step(parent, path[-1]) is not None:
         raise EditRefused(f"{path[-1]!r} is already there")
     try:
         return bom + _insert_into(body, root, trail, path[:-1], path[-1], value, _newline(body))
@@ -589,11 +637,14 @@ def couple_key(a: str, b: str) -> str:
 
 
 def _find_couple(text: str, a: str, b: str):
+    """The couple's key (normalised, so it finds `'b  +  a'` too) when the file has a record for them, else None."""
     bom, body = _split_bom(text)
+    if not body.strip() or _is_blank_document(body):
+        return None
     wanted = couple_key(a, b)
     for key_node, _ in _root(body).value:
         if _norm_key(key_node.value) == wanted:
-            return body[key_node.start_mark.index:key_node.end_mark.index]
+            return wanted
     return None
 
 
@@ -615,11 +666,10 @@ def add_person_record(text: str, key: str, data: dict) -> str:
 
 
 def _has_key(body: str, key: str) -> bool:
-    try:
-        root = _root(body) if body.strip() else None
-    except EditRefused:
-        raise
-    return bool(root) and any(_norm_key(k.value) == _norm_key(key) for k, _ in root.value)
+    if not body.strip() or _is_blank_document(body):
+        return False
+    root = _root(body)
+    return any(_norm_key(k.value) == _norm_key(key) for k, _ in root.value)
 
 
 def add_couple_record(text: str, a: str, b: str, events=(), note: str | None = None) -> str:

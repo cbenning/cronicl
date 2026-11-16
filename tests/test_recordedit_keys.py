@@ -210,3 +210,79 @@ def test_paths_at_line_lists_the_keys_and_items_that_start_there():
     assert ("a", "sex") in paths_at_line(text, 1) and ("a", "name", "given") in paths_at_line(text, 1)
     assert ("b", "events", 0) in paths_at_line(text, 4)
     assert paths_at_line(text, 3) == [("b", "events")]
+
+
+# ---- review pass: shapes that used to crash or edit the wrong record
+ALIASED = """\
+a-one:
+  name: {given: One}
+  birth: {date: 1800, place: &home "Leeds, England"}
+
+b-two:
+  name: {given: Two}
+  birth: {date: 1830, place: *home}
+  events:
+    - {type: residence, place: *home}
+"""
+
+
+def test_a_file_with_only_comments_takes_a_new_record():
+    from cronicl.core.recordedit import add_person_record
+
+    text = "# family.yml: the whole family\n#\n# a-person:\n#   name: {given: A}\n"
+    new = add_person_record(text, "ada", {"name": {"given": "Ada"}})
+    assert new.startswith(text) and new.endswith("\nada:\n  name: {given: Ada}\n")
+    assert load_text(new).data["ada"]["name"]["given"] == "Ada"
+
+
+def test_a_value_that_is_an_alias_or_an_anchor_is_refused_not_edited_through():
+    for path in (("b-two", "birth", "place"), ("a-one", "birth", "place"), ("b-two", "events", 0, "place")):
+        with pytest.raises(EditRefused) as err:
+            set_value(ALIASED, path, "Paris")
+        assert "alias" in str(err.value).lower() or "anchor" in str(err.value).lower()
+    with pytest.raises(EditRefused):
+        remove(ALIASED, ("b-two", "birth", "place"))
+    with pytest.raises(EditRefused):  # the whole record is refused, not only the aliased value
+        set_value(ALIASED, ("b-two", "name", "given"), "Twin")
+    # records without aliases in the same file edit normally, and the raw pane (text) still works
+    plain = ALIASED + "\nc-three:\n  name: {given: C}\n"
+    assert "given: Cee" in set_value(plain, ("c-three", "name", "given"), "Cee")
+    from cronicl.core.recordedit import replace_record
+
+    assert "given: Twin" in replace_record(ALIASED, "b-two", "b-two:\n  name: {given: Twin}\n")
+
+
+def test_a_blank_record_takes_a_list_item_and_a_nested_value():
+    from cronicl.core.recordedit import list_add
+
+    text = "ghost:\n\nnext:\n  name: {given: N}\n"
+    new = list_add(text, ("ghost", "parents"), "p")
+    assert new == "ghost:\n  parents: [p]\n\nnext:\n  name: {given: N}\n"
+    new = list_add(text, ("ghost", "events"), {"type": "burial"})
+    assert load_text(new).data["ghost"]["events"][0]["type"] == "burial" and "next:" in new
+
+
+def test_a_multiline_value_keeps_the_trailing_comment_as_a_comment():
+    text = "a:\n  name: {given: A}\n  bio: Short  # todo\n  sex: male\n"
+    new = set_value(text, ("a", "bio"), "Line one.\nLine two.")
+    data = load_text(new).data["a"]
+    assert data["bio"].strip() == "Line one.\nLine two." and "todo" not in data["bio"]
+    assert "# todo" in new and data["sex"] == "male"
+
+
+def test_setting_a_part_of_an_event_that_is_not_there_is_refused():
+    with pytest.raises(EditRefused):
+        set_value("p:\n  name: {given: P}\n", ("p", "events", 0, "note"), "x")
+
+
+def test_a_quoted_couple_key_is_found():
+    from cronicl.core.recordedit import add_couple_event
+
+    text = "c-three: {}\nd-four: {}\n'c-three  +  d-four': {}\n"
+    assert "type: marriage" in add_couple_event(text, "d-four", "c-three", {"type": "marriage"})
+
+
+def test_locate_is_cached_for_the_same_text():
+    from cronicl.core.yamltext import locate
+
+    assert locate(BLOCK) is locate(BLOCK)

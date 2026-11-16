@@ -11,7 +11,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Input, Label, OptionList
 from textual.widgets.option_list import Option
 
-from ...core.catalog import COUPLE_EVENT_TYPES, EVENT_TYPES, Field, fields_for
+from ...core.catalog import COUPLE_EVENT_TYPES, EVENT_TYPES, FIELDS, Field, fields_for
 from ...core.search import _match, tokenize
 from ..widgets import dialog_room, fit
 
@@ -25,9 +25,23 @@ class Entry:
     action: tuple  # ("field", Field) | ("event", slug) | ("partner",) | ("child",) | ("custom",)
 
 
-def build_entries(kind: str, present: set[tuple], parent_count: int) -> list[Entry]:
-    """What can be added to a `person` or `couple` record that has the fields `present` (path steps below the key)."""
+def build_entries(kind: str, present: set[tuple], parent_count: int, event_index: int | None = None, event_has: set[str] | None = None) -> list[Entry]:
+    """What can be added to a `person` or `couple` record that has the fields `present` (path steps below the key).
+
+    With `event_index` (the cursor is inside that event, which has the keys `event_has`) the missing parts of the event
+    come first; and once a person has `birth` or `death`, its place, note and source can be added.
+    """
     out: list[Entry] = []
+    if event_index is not None:
+        for sub in ("date", "place", "value", "note", "cite"):
+            if sub not in (event_has or set()):
+                out.append(Entry(f"this event: {sub}", FIELDS[f"events[].{sub}"].description, ("event_field", event_index, sub)))
+    if kind == "person":
+        for name in ("birth", "death"):
+            if (name,) in present:
+                for sub in ("date", "place", "note", "cite"):
+                    if (name, sub) not in present:
+                        out.append(Entry(f"{name}.{sub}", FIELDS[f"{name}.{sub}"].description, ("field", FIELDS[f"{name}.{sub}"])))
     for field in fields_for(kind):
         steps = tuple(field.path.split("."))
         if field.path == "events":

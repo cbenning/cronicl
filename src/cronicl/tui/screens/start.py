@@ -31,9 +31,7 @@ class StartScreen(Screen):
         if choice == "quit":
             self.app.exit()
         elif choice == "init":
-            from ...cli import cmd_init
-
-            code, text = bridge.call(cmd_init, dir=str(self.app.data_dir))
+            code, text = bridge.init_family(self.app.data_dir)
             if code != 0:
                 self.app.push_screen(Message(text, "Could not start a family"))
             else:
