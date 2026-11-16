@@ -420,6 +420,9 @@ async function main() {
   check('the page hero shows the portrait in the avatar box', (await ev(`(() => { const i = document.querySelector('.hero img.avatar'); const b = i && i.getBoundingClientRect(); return !!i && i.naturalWidth > 0 && b.width === 112 && b.height === 112; })()`)) === true);
   await send('Page.navigate', { url: base + '/tree/#ellsworth-maude' }); await sleep(1500);
   check('the panel and the tree node show the portrait', (await ev(`!!document.querySelector('#panel img.avatar') && !!document.querySelector('.node[data-id="ellsworth-maude"] image') && !document.querySelector('.node[data-id="smith-bob"] image')`)) === true);
+  await ev(`window.__imgs = null; Promise.all([...document.querySelectorAll('#panel img.avatar'), ...document.querySelectorAll('.node image')].map((el) => new Promise((res) => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = el.href ? el.href.baseVal : el.src; }))).then((r) => { window.__imgs = r; })`);
+  await sleep(500);
+  check('the portraits in the panel and on the tree load from the tree page', (await ev(`window.__imgs && window.__imgs.length >= 2 && window.__imgs.every(Boolean)`)) === true, await ev(`JSON.stringify(window.__imgs)`));
 
   await goto('#/timeline/ellsworth-maude');
   check('a dated fact is a tick on its own lifespan bar', (await ev(`(() => { const m = document.querySelector('.span-row[data-id="ellsworth-maude"] .mark.fact title'); return !!m && /worked as Teacher/.test(m.textContent) && document.querySelectorAll('.span-row[data-id="ellsworth-maude"] .mark.fact').length === 1; })()`)) === true);

@@ -602,7 +602,7 @@
           if (p.image) {
             var photo = document.createElement('img');
             photo.className = 'avatar avatar-sm';
-            photo.src = p.image.src;
+            photo.src = ROOT + p.image.src;
             photo.alt = p.image.alt;
             avatar.replaceWith(photo);
           } else {
@@ -755,7 +755,7 @@
           clip.appendChild(svgEl('circle', { cx: n.x + 28, cy: n.y + 32, r: 20 }));
           g.appendChild(clip);
           g.appendChild(svgEl('image', {
-            href: info.image, x: n.x + 8, y: n.y + 12, width: 40, height: 40,
+            href: ROOT + info.image, x: n.x + 8, y: n.y + 12, width: 40, height: 40,
             'clip-path': 'url(#clip-' + id + ')', preserveAspectRatio: 'xMidYMid slice'
           }));
         }
