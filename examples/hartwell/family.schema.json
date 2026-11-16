@@ -1,0 +1,519 @@
+{
+  "$defs": {
+    "couple": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "maxLength": 0,
+          "type": "string"
+        },
+        {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[xX][-_]": {}
+          },
+          "properties": {
+            "events": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "items": {
+                    "additionalProperties": false,
+                    "patternProperties": {
+                      "^[xX][-_]": {}
+                    },
+                    "properties": {
+                      "cite": {
+                        "oneOf": [
+                          {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          {
+                            "items": {
+                              "type": [
+                                "string",
+                                "number",
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "type": "array"
+                          }
+                        ]
+                      },
+                      "date": {
+                        "description": "YYYY[-MM[-DD]], ABT/BEF/AFT/BET .. AND .., FROM .. TO .., or unknown",
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "note": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "place": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "type": {
+                        "description": "a slug such as occupation, residence, burial; couples: marriage, divorce, ...",
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "note": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "person": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "maxLength": 0,
+          "type": "string"
+        },
+        {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[xX][-_]": {}
+          },
+          "properties": {
+            "bio": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "birth": {
+              "description": "a date, or a mapping with date, place, note and cite",
+              "oneOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^[xX][-_]": {}
+                  },
+                  "properties": {
+                    "cite": {
+                      "oneOf": [
+                        {
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        {
+                          "items": {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "date": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "place": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "death": {
+              "description": "a date, or a mapping with date, place, note and cite",
+              "oneOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^[xX][-_]": {}
+                  },
+                  "properties": {
+                    "cite": {
+                      "oneOf": [
+                        {
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        {
+                          "items": {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "date": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "place": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "events": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "items": {
+                    "additionalProperties": false,
+                    "patternProperties": {
+                      "^[xX][-_]": {}
+                    },
+                    "properties": {
+                      "cite": {
+                        "oneOf": [
+                          {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          {
+                            "items": {
+                              "type": [
+                                "string",
+                                "number",
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "type": "array"
+                          }
+                        ]
+                      },
+                      "date": {
+                        "description": "YYYY[-MM[-DD]], ABT/BEF/AFT/BET .. AND .., FROM .. TO .., or unknown",
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "note": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "place": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "type": {
+                        "description": "a slug such as occupation, residence, burial; couples: marriage, divorce, ...",
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "living": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "name": {
+              "additionalProperties": false,
+              "patternProperties": {
+                "^[xX][-_]": {}
+              },
+              "properties": {
+                "also": {
+                  "oneOf": [
+                    {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    {
+                      "items": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "given": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "nickname": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "prefix": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "suffix": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "surname": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                }
+              },
+              "type": "object"
+            },
+            "parents": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "items": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "maxItems": 2,
+                  "type": "array"
+                }
+              ]
+            },
+            "portrait": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "refs": {
+              "additionalProperties": false,
+              "patternProperties": {
+                "^[xX][-_]": {}
+              },
+              "properties": {
+                "gallery": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "gedcom": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                }
+              },
+              "type": "object"
+            },
+            "sex": {
+              "oneOf": [
+                {
+                  "description": "male, female, unknown or other, in any case",
+                  "pattern": "^([mM][aA][lL][eE]|[fF][eE][mM][aA][lL][eE]|[uU][nN][kK][nN][oO][wW][nN]|[oO][tT][hH][eE][rR])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Every top-level key is a person id, or two person ids joined by + (a couple).",
+  "patternProperties": {
+    "^(?=.{1,64}$)[a-z0-9]+(-[a-z0-9]+)*$": {
+      "$ref": "#/$defs/person"
+    },
+    "^\\s*[a-z0-9]+(-[a-z0-9]+)*\\s*\\+\\s*[a-z0-9]+(-[a-z0-9]+)*\\s*$": {
+      "$ref": "#/$defs/couple"
+    }
+  },
+  "title": "cronicl family.yml",
+  "type": "object"
+}

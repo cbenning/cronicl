@@ -1,0 +1,10 @@
+title: The Hartwell Family
+home: hartwell-edmund
+intro: >-
+  A made-up family, built with [cronicl](https://github.com/cbenning/cronicl). Open the Tree, select a person and try
+  "This person's line", the Timeline, and "How are we related?" on a person page. Everyone here is invented.
+schema_version: 3
+privacy:
+  living: full          # full (default: nothing hidden) | placeholder | hidden -- redaction is opt-in
+  cutoff_years: 100
+  id_salt: 75d3f3a725e206e3

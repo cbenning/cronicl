@@ -1,0 +1,227 @@
+# yaml-language-server: $schema=family.schema.json
+# A made-up family for screenshots and trying cronicl out. Every person, place and event here is invented.
+
+hartwell-edmund:
+  portrait: edmund.jpg
+  name: {given: Edmund Arthur, surname: Hartwell}
+  sex: male
+  birth: {date: 1871-03-14, place: "Leeds, England"}
+  death: {date: 1943-11-02, place: "Leeds, England"}
+  events:
+    - {type: occupation, value: Cloth merchant}
+  bio: |
+    Ran a small cloth warehouse near Kirkgate Market and served as a churchwarden for thirty years.
+
+brandt-clara:
+  portrait: clara.jpg
+  name: {given: Clara Maud, surname: Brandt}
+  sex: female
+  birth: {date: 1875-07-22, place: "Bradford, England"}
+  death: {date: 1951-02-09, place: "Leeds, England"}
+
+hartwell-edmund + brandt-clara:
+  events:
+    - {type: marriage, date: 1896-06-13, place: "Bradford, England"}
+
+hartwell-walter:
+  portrait: walter.jpg
+  name: {given: Walter James, surname: Hartwell}
+  sex: male
+  birth: {date: 1897-05-01, place: "Leeds, England"}
+  death: {date: 1968-09-30, place: "Harrogate, England"}
+  parents: [hartwell-edmund, brandt-clara]
+  events:
+    - {type: occupation, value: Schoolmaster}
+
+hartwell-ruth:
+  portrait: ruth.jpg
+  name: {given: Ruth Eleanor, surname: Hartwell}
+  sex: female
+  birth: {date: 1900-10-19, place: "Leeds, England"}
+  death: {date: 1988-04-12, place: "Edinburgh, Scotland"}
+  parents: [hartwell-edmund, brandt-clara]
+
+hartwell-george:
+  name: {given: George, surname: Hartwell}
+  sex: male
+  birth: {date: 1903-01-08, place: "Leeds, England"}
+  death: {date: 1917-12-20, place: "Leeds, England"}
+  parents: [hartwell-edmund, brandt-clara]
+
+pryce-edith:
+  name: {given: Edith Mary, surname: Pryce}
+  sex: female
+  birth: {date: 1899-02-27, place: "Cardiff, Wales"}
+  death: {date: 1975-08-05, place: "Harrogate, England"}
+
+hartwell-walter + pryce-edith:
+  events:
+    - {type: marriage, date: 1923-08-18, place: "Cardiff, Wales"}
+
+dalgleish-hugh:
+  name: {given: Hugh, surname: Dalgleish}
+  sex: male
+  birth: {date: 1896-11-03, place: "Edinburgh, Scotland"}
+  death: {date: 1962-06-17, place: "Edinburgh, Scotland"}
+
+hartwell-ruth + dalgleish-hugh:
+  events:
+    - {type: marriage, date: 1925-04-04, place: "Leeds, England"}
+
+hartwell-margaret:
+  portrait: margaret.jpg
+  name: {given: Margaret Edith, surname: Hartwell}
+  sex: female
+  birth: {date: 1925-03-21, place: "Harrogate, England"}
+  death: {date: 2009-01-15, place: "Turin, Italy"}
+  parents: [hartwell-walter, pryce-edith]
+
+hartwell-henry:
+  portrait: henry.jpg
+  name: {given: Henry Walter, surname: Hartwell}
+  sex: male
+  birth: {date: 1928-09-09, place: "Harrogate, England"}
+  death: {date: 2015-05-23, place: "York, England"}
+  parents: [hartwell-walter, pryce-edith]
+  events:
+    - {type: occupation, value: Civil engineer}
+
+hartwell-june:
+  name: {given: June Clara, surname: Hartwell}
+  sex: female
+  birth: {date: 1931-06-30, place: "Harrogate, England"}
+  death: {date: 2023-10-11, place: "Harrogate, England"}
+  parents: [hartwell-walter, pryce-edith]
+
+dalgleish-iain:
+  name: {given: Iain Hugh, surname: Dalgleish}
+  sex: male
+  birth: {date: 1927-02-14, place: "Edinburgh, Scotland"}
+  death: {date: 2001-07-28, place: "Glasgow, Scotland"}
+  parents: [hartwell-ruth, dalgleish-hugh]
+
+dalgleish-ann:
+  name: {given: Ann Ruth, surname: Dalgleish}
+  sex: female
+  birth: {date: 1930-12-01, place: "Edinburgh, Scotland"}
+  death: {date: 2020-03-19, place: "Edinburgh, Scotland"}
+  parents: [hartwell-ruth, dalgleish-hugh]
+
+castellano-marco:
+  name: {given: Marco, surname: Castellano}
+  sex: male
+  birth: {date: 1922-05-10, place: "Turin, Italy"}
+  death: {date: 1999-09-02, place: "Turin, Italy"}
+
+hartwell-margaret + castellano-marco:
+  events:
+    - {type: marriage, date: 1949-09-24, place: "Turin, Italy"}
+
+lindqvist-karin:
+  name: {given: Karin, surname: Lindqvist}
+  sex: female
+  birth: {date: 1930-04-06, place: "Gothenburg, Sweden"}
+  death: {date: 2018-11-30, place: "York, England"}
+
+mercer-joan:
+  name: {given: Joan, surname: Mercer}
+  sex: female
+  birth: {date: 1935-08-14, place: "York, England"}
+  death: {date: 2021-01-26, place: "York, England"}
+
+hartwell-henry + lindqvist-karin:
+  events:
+    - {type: marriage, date: 1955-07-02, place: "Gothenburg, Sweden"}
+    - {type: divorce, date: 1971}
+
+hartwell-henry + mercer-joan:
+  events:
+    - {type: marriage, date: 1974-05-18, place: "York, England"}
+
+novak-eva:
+  name: {given: Eva, surname: Novak}
+  sex: female
+  birth: {date: 1929-10-25, place: "Prague, Czechoslovakia"}
+  death: {date: 2012-06-08, place: "Glasgow, Scotland"}
+
+dalgleish-iain + novak-eva:
+  events:
+    - {type: marriage, date: 1953-08-15, place: "Edinburgh, Scotland"}
+
+castellano-lucia:
+  name: {given: Lucia Margherita, surname: Castellano}
+  sex: female
+  birth: {date: 1951-04-17, place: "Turin, Italy"}
+  parents: [hartwell-margaret, castellano-marco]
+
+castellano-paul:
+  name: {given: Paolo, surname: Castellano}
+  sex: male
+  birth: {date: 1954-11-29, place: "Turin, Italy"}
+  parents: [hartwell-margaret, castellano-marco]
+
+hartwell-erik:
+  name: {given: Erik Henry, surname: Hartwell}
+  sex: male
+  birth: {date: 1957-03-12, place: "Gothenburg, Sweden"}
+  parents: [hartwell-henry, lindqvist-karin]
+
+hartwell-sofia:
+  name: {given: Sofia Karin, surname: Hartwell}
+  sex: female
+  birth: {date: 1960-09-05, place: "York, England"}
+  parents: [hartwell-henry, lindqvist-karin]
+
+dalgleish-peter:
+  name: {given: Peter Iain, surname: Dalgleish}
+  sex: male
+  birth: {date: 1955-01-19, place: "Glasgow, Scotland"}
+  parents: [dalgleish-iain, novak-eva]
+
+dalgleish-helen:
+  name: {given: Helen Eva, surname: Dalgleish}
+  sex: female
+  birth: {date: 1958-06-23, place: "Glasgow, Scotland"}
+  parents: [dalgleish-iain, novak-eva]
+
+brooks-david:
+  name: {given: David, surname: Brooks}
+  sex: male
+  birth: {date: 1949-12-02, place: "Manchester, England"}
+
+castellano-lucia + brooks-david:
+  events:
+    - {type: marriage, date: 1977-06-11, place: "Turin, Italy"}
+
+patel-nisha:
+  name: {given: Nisha, surname: Patel}
+  sex: female
+  birth: {date: 1959-02-08, place: "Leicester, England"}
+
+hartwell-erik + patel-nisha:
+  events:
+    - {type: marriage, date: 1985-09-14, place: "Leicester, England"}
+
+brooks-anna:
+  name: {given: Anna Lucia, surname: Brooks}
+  sex: female
+  birth: {date: 1980-05-03, place: "Manchester, England"}
+  parents: [castellano-lucia, brooks-david]
+
+brooks-tom:
+  name: {given: Thomas David, surname: Brooks}
+  sex: male
+  birth: {date: 1983-10-21, place: "Manchester, England"}
+  parents: [castellano-lucia, brooks-david]
+
+hartwell-maya:
+  name: {given: Maya Nisha, surname: Hartwell}
+  sex: female
+  birth: {date: 1988-07-16, place: "Leicester, England"}
+  parents: [hartwell-erik, patel-nisha]
+
+hartwell-arjun:
+  name: {given: Arjun Erik, surname: Hartwell}
+  sex: male
+  birth: {date: 1991-12-09, place: "Leicester, England"}
+  parents: [hartwell-erik, patel-nisha]
