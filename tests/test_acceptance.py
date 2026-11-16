@@ -1,5 +1,6 @@
 """A site built after `migrate` shows what the site built before it showed (compared against the golden build)."""
 import json
+import re
 import shutil
 from datetime import date
 from pathlib import Path
@@ -23,6 +24,12 @@ INTENDED = {
     ("data/people", "moss-ellen"): {"death", "summary"},
     ("data/people", "smith-amy"): {"death", "summary"},
 }
+
+
+# The golden files hold the old code's tree layout. Where the boxes and connectors are drawn is the layout's own
+# business and has changed since (tests/test_layout.py covers it); the migration must still produce the same people,
+# couples and connections, so only the positions in the layout files are left out of the comparison.
+POSITIONS = re.compile(r"/(bounds/|(nodes|unions|labels)\[\d+\]/[xy]:|edges\[\d+\]/points)")
 
 
 def migrated_copy(tmp_path):
@@ -81,7 +88,10 @@ def test_the_migrated_site_matches_the_golden_build(tmp_path, mode):
             del new["aka"]  # a new payload field: "also known as", empty for everyone in the fixture
         folder, _, leaf = name.rpartition("/")
         allowed = INTENDED.get((folder, leaf[:-5]), set())
+        drawn = name == "layout.json" or folder == "focus"
         for line in diff_json(old, new):
+            if drawn and POSITIONS.match(line):
+                continue
             if not any(line.startswith("/" + key) for key in allowed):
                 problems.append(f"{name} {line}")
     assert problems == [], "\n".join(problems[:40])

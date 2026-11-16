@@ -71,6 +71,18 @@ When a marriage such as an uncle and a niece makes the strict layout impossible,
 groups on one row for the whole connected family, not only for the groups involved. Nothing overlaps and nothing is
 lost, but unrelated siblings can end up on different rows. Code: `_generations` in `src/cronicl/core/generations.py`.
 
+### Some connectors still cross, and a short branch can hang high above its children
+
+The order of each row comes from the average position of a block's parents and children; nothing counts crossings and
+swaps neighbours to remove them, and a married couple is placed between the two families it joins, so it can sit away
+from both sibling groups. A 156-person tree is left with about 15 crossings.
+
+A couple with no parents in the tree is moved down to the row above their children. A couple that has recorded
+parents is not: when their children sit several rows lower (one of them married into a longer line), the connector
+runs through the rows between, and the couple's own parents stay above them. Lowering that whole branch needs the rows
+chosen for the shortest total connector length instead of counted from the top. Code: `_layout_connected` and
+`_lower_founders` in `src/cronicl/site/layout.py`.
+
 ## The TUI
 
 - **Esc in the long-text editor or the raw pane drops what you typed without asking.** The diff step protects the file, but text typed into a box and cancelled is gone.

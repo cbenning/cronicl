@@ -130,19 +130,50 @@ def _family_labels(people, unions, parent_union) -> dict[str, str]:
     return {p: find(p) for p in people}
 
 
-def _pack(order: list[int], desired: dict[int, float | None], widths: dict[int, float]) -> dict[int, float]:
-    out: dict[int, float] = {}
-    cursor: float | None = None
+def _pack(order: list[int], wanted: dict[int, float], widths: dict[int, float]) -> dict[int, float]:
+    """Left edges for one row of blocks, in this order and at least BLOCK_GAP apart, each as near as it can be to
+    where it wants its centre (the least total squared distance).
+
+    Placing left to right and only ever pushing a block right would start a group of siblings at their parents and
+    run it off to one side; here neighbours that would overlap share the shortfall, so the group is centred.
+    """
+    tight: list[float] = []  # each block's left edge in a row packed from zero with the smallest gaps
+    cursor = 0.0
     for block in order:
-        want = desired.get(block)
-        left = None if want is None else want - widths[block] / 2
-        if cursor is None:
-            out[block] = left if left is not None else float(MARGIN)
-        else:
-            floor = cursor + BLOCK_GAP
-            out[block] = max(left, floor) if left is not None else floor
-        cursor = out[block] + widths[block]
+        tight.append(cursor)
+        cursor += widths[block] + BLOCK_GAP
+    # Measured from the tight row, keeping the order just means "never decreasing": neighbours that would cross are
+    # pooled and every block of a pool gets the pool's average.
+    pools: list[list[float]] = []  # [sum of the wishes, how many blocks]
+    for block, base in zip(order, tight):
+        pools.append([wanted[block] - widths[block] / 2 - base, 1])
+        while len(pools) > 1 and pools[-2][0] / pools[-2][1] > pools[-1][0] / pools[-1][1]:
+            total, count = pools.pop()
+            pools[-1][0] += total
+            pools[-1][1] += count
+    out: dict[int, float] = {}
+    index = 0
+    for total, count in pools:
+        for _ in range(int(count)):
+            out[order[index]] = total / count + tight[index]
+            index += 1
     return out
+
+
+def _lower_founders(gen: dict[str, int], blocks: list[list[str]], parent_union, couples_of, kids) -> None:
+    """Move each couple with no parents in the tree down to the row just above their nearest child.
+
+    Rows are counted from the top, so such a couple starts in the top row however far down their children are
+    (children move down when one of them marries into a longer line), with a connector running through every row
+    between. Nothing holds them up there, so they go down to their children.
+    """
+    for members in blocks:
+        if any(pid in parent_union for pid in members):
+            continue
+        below = [gen[kid] for pid in members for uid in couples_of.get(pid, []) for kid in kids[uid]]
+        if below and min(below) - 1 > gen[members[0]]:
+            for pid in members:
+                gen[pid] = min(below) - 1
 
 
 def _layout_connected(tree: Tree) -> dict:
@@ -161,6 +192,7 @@ def _layout_connected(tree: Tree) -> dict:
 
     gen = _generations(people, unions, kids)
     blocks = _blocks(people, unions)
+    _lower_founders(gen, blocks, parent_union, relations.couples_of, kids)
     block_of = {pid: i for i, members in enumerate(blocks) for pid in members}
     labels = _family_labels(people, unions, parent_union)
     widths = {i: len(m) * NODE_W + (len(m) - 1) * H_GAP for i, m in enumerate(blocks)}
@@ -174,7 +206,10 @@ def _layout_connected(tree: Tree) -> dict:
 
     xl: dict[int, float] = {}
     for g in sorted(rows):
-        xl.update(_pack(rows[g], {}, widths))
+        cursor = float(MARGIN)
+        for b in rows[g]:
+            xl[b] = cursor
+            cursor += widths[b] + BLOCK_GAP
 
     def center(pid: str) -> float:
         b = block_of[pid]
@@ -189,30 +224,24 @@ def _layout_connected(tree: Tree) -> dict:
 
     def down_sweep() -> None:
         for g in sorted(rows):
-            desired: dict[int, float | None] = {}
+            desired: dict[int, float] = {}
             for b in rows[g]:
                 xs = [junction_x(parent_union[p]) for p in blocks[b] if p in parent_union]
-                desired[b] = sum(xs) / len(xs) if xs else None
-            order = sorted(
-                rows[g],
-                key=lambda b: (desired[b] if desired[b] is not None else block_center(b), min(blocks[b])),
-            )
+                desired[b] = sum(xs) / len(xs) if xs else block_center(b)  # no parents here: stay over the children
+            order = sorted(rows[g], key=lambda b: (desired[b], min(blocks[b])))
             xl.update(_pack(order, desired, widths))
             rows[g] = order
 
     def up_sweep() -> None:
         for g in sorted(rows, reverse=True):
-            desired: dict[int, float | None] = {}
+            desired: dict[int, float] = {}
             for b in rows[g]:
                 xs: list[float] = []
                 for pid in blocks[b]:
                     for uid in relations.couples_of.get(pid, []):
                         xs.extend(center(k) for k in kids[uid])
-                desired[b] = sum(xs) / len(xs) if xs else None
-            order = sorted(
-                rows[g],
-                key=lambda b: (desired[b] if desired[b] is not None else block_center(b), min(blocks[b])),
-            )
+                desired[b] = sum(xs) / len(xs) if xs else block_center(b)  # no children: stay under the parents
+            order = sorted(rows[g], key=lambda b: (desired[b], min(blocks[b])))
             xl.update(_pack(order, desired, widths))
             rows[g] = order
 

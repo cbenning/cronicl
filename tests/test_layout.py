@@ -277,9 +277,10 @@ def segments_crossing_foreign_boxes(layout):
 def long_drop_tree(make_tree):
     """Siblings share a row, so when x marries into a deeper family his whole sibship drops two rows below
     their parents, beneath row 1 (which holds the spouse's side of the family)."""
-    people = [person("gp1"), person("gp2")]
+    people = [person("gpp"), person("gp1", parents=["gpp"]), person("gp2")]
     people += [person(f"k{i}", parents=["gp1", "gp2"]) for i in range(3)]
-    people += [person("sp1"), person("z", parents=["k0", "sp1"]), person("a"), person("b")]
+    # a has a recorded parent, so he stays in the row below her instead of moving down to his children
+    people += [person("sp1"), person("z", parents=["k0", "sp1"]), person("ga"), person("a", parents=["ga"]), person("b")]
     people += [person(f"c{i}", parents=["a", "b"]) for i in range(3)]
     people += [person("x", parents=["a", "b"], spouse=["z"])]
     return make_tree(people)
@@ -292,6 +293,69 @@ def test_long_drops_never_pass_behind_other_people(make_tree):
     assert gens["x"] > gens["a"] + 2 * NODE_H, "fixture should put x at least two rows below his parents"
     assert segments_crossing_foreign_boxes(layout) == []
     assert_invariants(tree, layout)
+
+
+def centre(layout, pid):
+    node = next(n for n in layout["nodes"] if n["id"] == pid)
+    return node["x"] + node["w"] / 2
+
+
+def junction(layout, uid):
+    return next(u["x"] for u in layout["unions"] if u["id"] == uid)
+
+
+def connector_crossings(layout):
+    """How many times a connector of one couple crosses a connector of another."""
+    flat, upright = set(), set()
+    for edge in layout["edges"]:
+        owner = edge["from"] if edge["kind"] == "child" else edge["to"]
+        for (x0, y0), (x1, y1) in zip(edge["points"], edge["points"][1:]):
+            if y0 == y1 and x0 != x1:
+                flat.add((min(x0, x1), max(x0, x1), y0, owner))
+            elif x0 == x1 and y0 != y1:
+                upright.add((x0, min(y0, y1), max(y0, y1), owner))
+    return sum(
+        1
+        for x, top, bottom, a in upright
+        for left, right, y, b in flat
+        if a != b and left < x < right and top < y < bottom
+    )
+
+
+def test_children_are_centred_under_their_parents(make_tree):
+    layout = compute_layout(nuclear(make_tree))
+    assert centre(layout, "d") == junction(layout, "a+b"), "the middle child of three sits straight below the couple"
+    assert junction(layout, "a+b") - centre(layout, "c") == centre(layout, "e") - junction(layout, "a+b")
+
+
+def married_in_tree(make_tree):
+    """a1+a2 have six children; the last marries x, whose parents p1+p2 have no one else in the tree."""
+    people = [person("a1"), person("a2"), person("p1"), person("p2")]
+    people += [person(f"k{i}", parents=["a1", "a2"]) for i in range(6)]
+    people += [person("x", parents=["p1", "p2"], spouse=["k5"])]
+    return make_tree(people)
+
+
+def test_parents_sit_over_their_child_not_packed_to_the_left(make_tree):
+    tree = married_in_tree(make_tree)
+    layout = compute_layout(tree)
+    assert_invariants(tree, layout)
+    assert abs(junction(layout, "p1+p2") - centre(layout, "x")) <= NODE_W, "x's parents belong above x"
+    assert connector_crossings(layout) == 0
+
+
+def test_a_couple_with_no_parents_in_the_tree_sits_in_the_row_just_above_their_children(make_tree):
+    # f1+f2's only child marries someone three generations down another line: they belong one row above her
+    people = [person("t1"), person("t2"), person("u", parents=["t1", "t2"]), person("u2")]
+    people += [person("v", parents=["u", "u2"]), person("f1"), person("f2"), person("w", parents=["f1", "f2"], spouse=["v"])]
+    tree = make_tree(people)
+    layout = compute_layout(tree)
+    assert_invariants(tree, layout)
+    rows = sorted({n["y"] for n in layout["nodes"]})
+    row = {n["id"]: rows.index(n["y"]) for n in layout["nodes"]}
+    assert row["w"] == row["v"] == 2
+    assert row["f1"] == row["f2"] == 1, "not left in the top row with a two-row line down to their child"
+    assert row["t1"] == 0
 
 
 def components_of(layout):
