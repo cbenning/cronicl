@@ -32,7 +32,7 @@ Edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and pub
 </p>
 <p align="center"><sub>The site, the terminal editor and a person page, all from a made-up family.</sub></p>
 
-Status: v0.2. The file format is specified in [`SPEC.md`](https://github.com/cbenning/cronicl/blob/main/SPEC.md); a JSON
+Status: 1.0 release candidate. The file format is specified in [`SPEC.md`](https://github.com/cbenning/cronicl/blob/main/SPEC.md); a JSON
 Schema (`cronicl schema`) and a conformance suite (`tests/conformance/`) travel with it, so another tool can read
 and write the same file.
 
