@@ -42,7 +42,8 @@ ModalScreen { align: center middle; background: $background 60%; }
 .dialog.tall OptionList { max-height: 100%; }
 .dialog TextArea { height: 12; }
 .dialog.wide.tall TextArea { height: 1fr; }
-.hint { color: $text-muted; margin-top: 1; }
+.hint { color: $text-muted; margin-top: 1; width: 100%; height: auto; }
 #reading { margin-bottom: 1; height: auto; }
+#examples { height: auto; margin-top: 0; }
 #raw-error, #new-error { height: auto; }
 #message-text, #confirm-text { margin-bottom: 1; }

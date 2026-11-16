@@ -183,3 +183,21 @@ def test_editors_fit_small_and_large_terminals(tmp_path, size):
 
     name, shown = drive(tmp_path, script, size)
     assert name == "DateEditor" and "birth" in shown.lower()
+
+
+def test_the_date_editor_shows_the_preferred_formats_with_examples(tmp_path):
+    folder(tmp_path)
+
+    async def script(pilot, app):
+        await open_ada(pilot, app, "date: 1815-12-10")
+        from textual.widgets import Input
+
+        shown = texts(app)
+        placeholder = app.screen.query_one("#value", Input).placeholder
+        await pilot.press("ctrl+u")
+        return shown, placeholder
+
+    shown, placeholder = drive(tmp_path, script)
+    for example in ("1850-03-15", "1850-03", "ABT 1850", "BEF 1920", "AFT 1880", "BET 1880 AND 1890", "FROM 1900 TO 1950", "unknown"):
+        assert example in shown, example
+    assert placeholder == "1850-03-15"

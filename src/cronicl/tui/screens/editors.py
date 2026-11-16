@@ -72,6 +72,12 @@ class LongTextEditor(_Base):
         self.dismiss(self.query_one("#area", TextArea).text.strip("\n"))
 
 
+DATE_EXAMPLES = (
+    "Year, month or day: 1850 · 1850-03 · 1850-03-15\n"
+    "Not sure: ABT 1850 · BEF 1920 · AFT 1880 · BET 1880 AND 1890\n"
+    "Lasting: FROM 1900 TO 1950 · or unknown if it happened but you do not know when"
+)
+
 _TEMPLATES = {"f2": ("ABT ", None), "f3": ("BEF ", None), "f4": ("AFT ", None), "f5": ("BET  AND ", 4), "f6": ("FROM  TO ", 5), "f7": ("unknown", None)}
 
 
@@ -81,8 +87,9 @@ class DateEditor(_Base):
     def compose(self) -> ComposeResult:
         with Vertical(classes="dialog"):
             yield Label(self.heading, classes="dialog-title")
-            yield Input(value=self.value, id="value")
+            yield Input(value=self.value, placeholder="1850-03-15", id="value")
             yield Label("", id="reading")
+            yield Label(DATE_EXAMPLES, id="examples", classes="hint")
             yield Label("F2 about · F3 before · F4 after · F5 between · F6 from-to · F7 unknown · Enter saves", classes="hint")
 
     def on_mount(self) -> None:
