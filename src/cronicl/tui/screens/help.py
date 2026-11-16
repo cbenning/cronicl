@@ -16,7 +16,7 @@ HELP = """\
 
 [b]On a person[/b]
   ↑ ↓           move through the record
-  Enter         edit the line, open a relative, or expand a partner's couple record
+  Enter         edit the line, open a relative, or expand a partner (its first row opens them)
   a             add a field, an event, a partner or a child (type to search)
   d             delete the line   o  open the partner
   Ctrl+E        edit this record as raw YAML

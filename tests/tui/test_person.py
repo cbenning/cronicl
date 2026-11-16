@@ -86,6 +86,26 @@ def test_a_partner_line_expands_the_couples_record_and_o_opens_the_partner(tmp_p
     assert "Annabella Milbanke" in opened
 
 
+def test_an_expanded_partner_has_an_open_row_that_goes_to_the_partner(tmp_path):
+    folder(tmp_path)
+
+    async def script(pilot, app):
+        app.open_person("byron-george")
+        await pilot.pause()
+        await highlight(pilot, app, "Annabella Milbanke")
+        await pilot.press("enter")
+        await pilot.pause()
+        rows = option_texts(app)
+        await highlight(pilot, app, "Open Annabella Milbanke")
+        await pilot.press("enter")
+        await pilot.pause()
+        return rows, head(app)
+
+    rows, opened = drive(tmp_path, script)
+    assert any("Open Annabella Milbanke" in row for row in rows)
+    assert "Annabella Milbanke" in opened
+
+
 def test_warnings_are_listed_and_enter_jumps_to_the_row(tmp_path):
     folder(tmp_path, family=WITH_PROBLEM)
 

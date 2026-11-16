@@ -154,6 +154,9 @@ class PersonScreen(Screen):
                 line.append(f"  {summary}" if summary else "", style="dim")
                 add(fit(line, room(self.app)), ("partner", partner))
                 if partner in self.expanded:
+                    go = Text(no_wrap=True)
+                    go.append(f"      Open {family.name_of(partner) or partner} \u203a", style="bold cyan")
+                    add(fit(go, room(self.app)), ("open", partner))
                     found = family.couple_key_text(self.pid, partner)
                     if found:
                         key, source = found
