@@ -620,9 +620,14 @@ use the options above.
 
 ### A gallery behind a login
 
-The photo gallery (see below) is a separate site with its own protection. A gallery that itself requires a login
-is not supported yet: the browser fetches its `people.json` without credentials, so the photos block stays hidden.
-A gallery that is public, or protected only by being hard to find, works as described.
+The photo gallery (see below) is a separate site. If it is served from the same address as the cronicl site (the
+same scheme, host and port, for example `https://family.example.com/` and `https://family.example.com/photos/`) and
+both sit behind one login such as HTTP Basic auth, the photos block works: the browser sends its login with the
+request for the gallery's `people.json`. Set `gallery.url` to the address visitors really use; a different host,
+port or scheme counts as another origin.
+
+A gallery on a different address than the site is fetched without credentials, so if that gallery requires a login
+the photos block stays hidden (the top-bar link still works). A gallery that is public works as described.
 
 ## Photo gallery
 

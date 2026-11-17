@@ -95,7 +95,8 @@
       var base = normalizeBase(config.url);
       if (!base) return Promise.resolve(null);
       return withTimeout(function (signal) {
-        var options = { credentials: 'omit' };
+        // 'same-origin' sends a login only to the page's own origin; a gallery on another origin gets no credentials.
+        var options = { credentials: 'same-origin' };
         if (signal) options.signal = signal;
         return Promise.resolve(deps.fetch(base + 'people.json', options)).then(function (response) {
           if (!response || !response.ok) throw new Error('bad status');
