@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1
+
+- Fix: a photo gallery served from the same address as the site, behind one login such as HTTP Basic auth, now shows
+  its photos block. The browser sends its login with the gallery request when the gallery is on the site's own
+  origin; a gallery on another address is still fetched without credentials. The README section "A gallery behind a
+  login" describes the setup.
+- Updated the locked Python dependencies and the GitHub Actions used by the workflows.
+
 ## 1.0.0
 
 The first release of cronicl as a family-tree tool. (Version 0.1.0 on PyPI was an unrelated project that used the
