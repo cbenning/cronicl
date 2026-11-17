@@ -86,7 +86,9 @@ test('load (fussel) returns absolute, confined links', async () => {
   const deps = Object.assign({ fetch: (url, opts) => { calls.push([url, opts]); return Promise.resolve(okResponse(manifest())); } }, noTimers);
   const s = await g.load({ type: 'fussel', url: BASE }, { key: 'jane-doe', explicit: false, name: 'Jane Doe' }, deps);
   assert.strictEqual(calls[0][0], BASE + 'people.json');
-  assert.strictEqual(calls[0][1].credentials, 'omit');
+  // 'same-origin', not 'omit': a gallery behind a login on the site's own origin needs the browser to send it.
+  // For a gallery on another origin the browser sends no credentials either way.
+  assert.strictEqual(calls[0][1].credentials, 'same-origin');
   assert.strictEqual(s.count, 12);
   assert.strictEqual(s.photos[0].thumbSrc, BASE + 'static/_gallery/p1.jpg');
   assert.strictEqual(s.seeAllHref, BASE + '#/collections/people/jane-doe');
