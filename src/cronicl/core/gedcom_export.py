@@ -23,7 +23,7 @@ _TAG_FOR_TYPE = {
     "emigration": ("EMIG", False), "naturalization": ("NATU", False), "residence": ("RESI", False),
     "occupation": ("OCCU", True), "education": ("EDUC", True), "religion": ("RELI", True),
     "nationality": ("NATI", True), "graduation": ("GRAD", False), "retirement": ("RETI", False),
-    "census": ("CENS", False), "will": ("WILL", False), "probate": ("PROB", False),
+    "census": ("CENS", False), "will": ("WILL", False), "probate": ("PROB", False), "adoption": ("ADOP", False),
 }
 _PARTNERSHIP_TYPES = ("marriage", "civil-union", "partnership", "engagement", "divorce", "annulment", "separation", "end")
 _MAPPED_TAGS = {"BIRT", "DEAT", "NAME", "NOTE", *(tag for tag, _ in _TAG_FOR_TYPE.values())}
@@ -166,7 +166,7 @@ class _Export:
         self.out.line(1, tag)
         self.fact_tail(2, date_text=date_text, place=event.place, note=note, cites=cites)
 
-    def life_event(self, e) -> None:
+    def life_event(self, e, adopted_into: str | None = None) -> None:
         date_text = _date_text(e.date) if e.date else _span(_date_text(e.start), _date_text(e.end))
         tag, takes_value = _TAG_FOR_TYPE.get(e.type, ("EVEN", True))
         payload = (e.value or "") if takes_value else ""
@@ -174,6 +174,8 @@ class _Export:
         if tag == "EVEN":
             self.out.line(2, "TYPE", e.type)
         self.fact_tail(2, date_text=date_text, place=e.place, note=e.note, cites=e.cite)
+        if tag == "ADOP" and adopted_into:
+            self.out.line(2, "FAMC", adopted_into, pointer=True)  # the family that adopted them, as the standard asks
 
     # ---- records -----------------------------------------------------------------------------------------------
     def collect_cites(self, people: list[Person], fam_entries: list, extras: list = ()) -> None:
@@ -210,16 +212,16 @@ class _Export:
         w.raw("1 GEDC\n2 VERS 5.5.1\n2 FORM LINEAGE-LINKED\n1 CHAR UTF-8\n1 SUBM @SUBM@")
         w.raw("0 @SUBM@ SUBM\n1 NAME cronicl")
 
-        famc: dict[str, str] = {}
+        famc: dict[str, list[tuple[str, bool]]] = {}  # child -> [(family, adopted)], the birth family first
         fams_of: dict[str, list[str]] = {}
         for fam in fams:
             for child in fam["children"]:
-                famc.setdefault(child, fam["xref"])
+                famc.setdefault(child, []).append((fam["xref"], child in fam["adopted"]))
             for pid in fam["partners"]:
                 fams_of.setdefault(pid, []).append(fam["xref"])
         by_id = {p.id: p for p in people}
         for pid in sorted(by_id, key=lambda i: (i in self.living, "" if i not in self.living else hashlib.sha256(i.encode()).hexdigest(), i)):
-            self.individual(by_id[pid], famc.get(pid), fams_of.get(pid, []))
+            self.individual(by_id[pid], sorted(famc.get(pid, []), key=lambda link: link[1]), fams_of.get(pid, []))
         for fam in fams:
             self.family(fam)
         for text, xref in sorted(self.sources.items(), key=lambda item: item[0]):
@@ -228,7 +230,7 @@ class _Export:
         w.raw("0 TRLR")
         return "\n".join(w.lines) + "\n"
 
-    def individual(self, person: Person, famc: str | None, fams: list[str]) -> None:
+    def individual(self, person: Person, famc: list[tuple[str, bool]], fams: list[str]) -> None:
         w = self.out
         xref = self.person_xref[person.id]
         w.line(0, "INDI", "", xref)
@@ -248,14 +250,19 @@ class _Export:
                 w.line(1, "SEX", {"M": "M", "F": "F"}.get(person.sex, "U"))
             self.vital("BIRT", person.birth)
             self.vital("DEAT", person.death if counts_as_death(person.death) else None, unknown_means_y=True)
+            adopted_into = next((xref_ for xref_, adopted in famc if adopted), None)
             for event in person.events:
-                self.life_event(event)
+                self.life_event(event, adopted_into)
             if person.body:
                 w.line(1, "NOTE", person.body)
             if person.id in self.extra:
                 w.raw(self.person_extra(person.id))
-        if famc:
-            w.line(1, "FAMC", famc, pointer=True)
+        for xref_, adopted in famc:
+            w.line(1, "FAMC", xref_, pointer=True)
+            if adopted:
+                w.line(2, "PEDI", "adopted")
+            elif any(other for _, other in famc):
+                w.line(2, "PEDI", "birth")  # said outright only where a second family would make the default unclear
         for ref in fams:
             w.line(1, "FAMS", ref, pointer=True)
 
@@ -314,11 +321,17 @@ class _Export:
                 if other in people and other != pid:
                     entries.setdefault(tuple(sorted((pid, other))), [])
         kids: dict[tuple, list[str]] = {}
+        adopted: dict[tuple, set[str]] = {}
         for pid in sorted(people):
             parents = tuple(sorted(x for x in people[pid].parents if x in people))[:2]
             if parents:
                 kids.setdefault(parents, []).append(pid)
                 entries.setdefault(parents, [])
+            adopters = tuple(sorted(x for x in people[pid].adoptive_parents if x in people))[:2]
+            if adopters and adopters != parents:
+                kids.setdefault(adopters, []).append(pid)
+                adopted.setdefault(adopters, set()).add(pid)
+                entries.setdefault(adopters, [])
         fams: list[dict] = []
         number = 0
         for key in sorted(entries):
@@ -333,6 +346,7 @@ class _Export:
                 fams.append({
                     "xref": self.fresh("F", number), "partners": partners, "key": key, "entries": [] if redacted or entry is None else [entry],
                     "children": children if index == 0 else [],
+                    "adopted": adopted.get(key, set()) if index == 0 else set(),
                     "extras": [] if redacted or index else self.other_couple_events(key),
                 })
         return fams

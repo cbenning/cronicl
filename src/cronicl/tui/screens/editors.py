@@ -303,7 +303,7 @@ def editor_for(app, record_key: str, path: tuple, value: str):
         return ChoiceEditor(title, [(f, "") for f in family.media_files()], value, free=True, blank="(none: leave it out)")
     if kind == "people":
         own = record_key
-        others = {p for p in family.tree.people[own].parents if p != value} if own in family.tree.people else set()
+        others = {p for p in [*family.tree.people[own].parents, *family.tree.people[own].adoptive_parents] if p != value} if own in family.tree.people else set()
         exclude = {own} | others | descendants(family, own)
         return PeoplePicker(title, family, exclude, True, value)
     return TextEditor(title, value)

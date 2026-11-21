@@ -18,7 +18,7 @@ from .yamltext import Mapping, Sequence, load_text, locate
 
 LONG = 100  # the longest line the editor writes into a flow mapping
 
-PERSON_ORDER = ("name", "sex", "birth", "death", "parents", "events", "portrait", "living", "refs", "bio")
+PERSON_ORDER = ("name", "sex", "birth", "death", "parents", "adoptive-parents", "events", "portrait", "living", "refs", "bio")
 COUPLE_ORDER = ("events", "note")
 NAME_ORDER = ("given", "surname", "prefix", "suffix", "nickname", "also")
 VITAL_ORDER = ("date", "place", "note", "cite")

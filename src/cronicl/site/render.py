@@ -171,7 +171,12 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
     rel = relations or build_relations(tree)
     timeline = timeline if timeline is not None else build_timeline(tree, rel)
     person = tree.people[pid]
-    parents = [_ref(tree, x) for x in rel.parents.get(pid, [])]
+    adopted_by = bool(rel.adoptive_parents.get(pid))
+    parents = [{**_ref(tree, x), **({"note": "adoptive parent"} if adopted_by else {})} for x in rel.parents.get(pid, [])]
+    birth_parents = (
+        [{**_ref(tree, x), "note": "birth parent"} for x in rel.birth_parents.get(pid, [])] if adopted_by else []
+    )
+    raised_elsewhere = [{**_ref(tree, c), "note": "adopted by others"} for c in rel.raised_elsewhere.get(pid, [])]
     spouses: list[dict] = []
     children: list[dict] = []
     for cid in rel.couples_of.get(pid, []):
@@ -179,7 +184,9 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
         for other in couple.partners:
             if other != pid:
                 spouses.append({**_ref(tree, other), "partnerships": [_partnership(p) for p in couple.partnerships]})
-        children += [_ref(tree, c) for c in rel.kids.get(cid, [])]
+        children += [
+            {**_ref(tree, c), **({"note": "adopted"} if rel.adoptive_parents.get(c) else {})} for c in rel.kids.get(cid, [])
+        ]
     children.sort(key=lambda r: (r["name"].lower(), r["id"]))
     birth_date = person.birth.date if person.birth else None
     death_date = person.death.date if person.death else None
@@ -229,6 +236,8 @@ def person_payload(tree: Tree, pid: str, relations: Relations | None = None, tim
         "events": events,
         "facts": facts,
         "parents": parents,
+        "birth_parents": birth_parents,
+        "raised_elsewhere": raised_elsewhere,
         "spouses": spouses,
         "children": children,
     }

@@ -44,6 +44,7 @@ FIELDS: dict[str, Field] = dict([
     _f("death.note", "longtext", "a remark shown with the death"),
     _f("death.cite", "list", "where the death is recorded: a source text", once=False),
     _f("parents", "people", "birth parents: at most two people", once=False),
+    _f("adoptive-parents", "people", "adoptive parents: at most two people; the tree shows the person under them", once=False),
     _f("events", "list", "things that happened: occupation, residence, burial, ...", "both", once=False),
     _f("events[].type", "choice", "what kind of event (any word; hyphens read as spaces)", "both"),
     _f("events[].date", "date", "when it happened (FROM 1835 TO 1852 for something that lasted)", "both"),
@@ -94,6 +95,7 @@ EVENT_TYPES: dict[str, str] = {
     "census": "appearing in a census",
     "will": "making a will",
     "probate": "their will being proved",
+    "adoption": "being adopted (the date is optional; name the adoptive parents in adoptive-parents)",
 }
 
 COUPLE_EVENT_TYPES: dict[str, str] = {

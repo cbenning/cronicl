@@ -137,9 +137,15 @@ class PersonScreen(Screen):
         relations = family.relations
         parents = relations.parents.get(self.pid, [])
         add(Text("Family", style="bold underline"), None, True)
+        adoptive = relations.adoptive_parents.get(self.pid, [])
         if parents:
-            add(Text("Parents", style="bold"), None, True)
+            add(Text("Adoptive parents" if adoptive else "Parents", style="bold"), None, True)
             for pid in parents:
+                add(self._person_line(pid), ("open", pid))
+        birth = relations.birth_parents.get(self.pid, [])
+        if adoptive and birth:
+            add(Text("Birth parents", style="bold"), None, True)
+            for pid in birth:
                 add(self._person_line(pid), ("open", pid))
         for cid in relations.couples_of.get(self.pid, []):
             couple = relations.couples[cid]
@@ -337,6 +343,7 @@ class PersonScreen(Screen):
             if isinstance(data.get(name), str):
                 present.add((name, "date"))  # a bare date is the date part
         parent_count = len(data.get("parents") or [])
+        adoptive_count = len(data.get("adoptive-parents") or [])
         event_index = event_has = None
         target = self._target()
         if target and target[0] in ("row", "couple_row") and len(target[-1].path) >= 3 and target[-1].path[1] == "events" and isinstance(target[-1].path[2], int):
@@ -344,7 +351,7 @@ class PersonScreen(Screen):
             events = data.get("events") or []
             if event_index < len(events) and isinstance(events[event_index], dict):
                 event_has = set(events[event_index])
-        entries = build_entries(kind, present, parent_count, event_index, event_has)
+        entries = build_entries(kind, present, parent_count, event_index, event_has, adoptive_count)
         title = f"Add to {self.family.name_of(self.pid)}" if kind == "person" else f"Add to the couple {self.family.name_of(self.pid)} + {self.family.name_of(partner)}"
         self.app.push_screen(PaletteScreen(title, entries), lambda action: self._palette_chosen(action, (kind, partner, key, source)))
 
@@ -371,8 +378,8 @@ class PersonScreen(Screen):
         steps = tuple(field.path.split("."))
         if field.path in ("birth", "death"):
             steps = (field.path, "date")
-        elif field.path == "parents":
-            steps = ("parents", 0)
+        elif field.path in ("parents", "adoptive-parents"):
+            steps = (field.path, 0)
         path = (key, *steps)
         screen = editor_for(self.app, key, path, "")
         if screen is None:
@@ -381,11 +388,11 @@ class PersonScreen(Screen):
         def done(value, path=path, field=field) -> None:
             if not value:
                 return
-            if field.path == "parents":
+            if field.path in ("parents", "adoptive-parents"):
                 if value == PeoplePicker.NEW:
-                    self._new_parent(lambda pid: self._stage(source, lambda t: list_add(t, (key, "parents"), pid), (key, "parents", 0)))
+                    self._new_parent(lambda pid: self._stage(source, lambda t: list_add(t, (key, field.path), pid), (key, field.path, 0)))
                     return
-                self._stage(source, lambda t: list_add(t, (key, "parents"), value), (key, "parents", 0))
+                self._stage(source, lambda t: list_add(t, (key, field.path), value), (key, field.path, 0))
             elif field.path == "name.also":
                 self._stage(source, lambda t: list_add(t, (key, "name", "also"), value))
             else:

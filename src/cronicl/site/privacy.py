@@ -52,6 +52,7 @@ def redact(
                 sex="U",
                 living=True,
                 parents=remap(person.parents),
+                adoptive_parents=remap(person.adoptive_parents),
                 spouse=remap(person.spouse),
                 children=remap(person.children),
                 partnerships=[Partnership(id_of[p.with_id]) for p in person.partnerships if p.with_id in id_of],
@@ -68,6 +69,7 @@ def redact(
             out.people[pid] = dataclasses.replace(
                 person,
                 parents=remap(person.parents),
+                adoptive_parents=remap(person.adoptive_parents),
                 spouse=remap(person.spouse),
                 children=remap(person.children),
                 partnerships=partnerships,

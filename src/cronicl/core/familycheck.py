@@ -14,7 +14,7 @@ from .textvalues import is_extension, normal_type, parse_bool
 from .validate import suggest
 from .yamltext import Mapping, Sequence
 
-PERSON_KNOWN = {"name", "sex", "birth", "death", "parents", "events", "portrait", "living", "refs", "bio"}
+PERSON_KNOWN = {"name", "sex", "birth", "death", "parents", "adoptive-parents", "events", "portrait", "living", "refs", "bio"}
 NAME_KNOWN = {"given", "surname", "prefix", "suffix", "nickname", "also"}
 VITAL_KNOWN = {"date", "place", "note", "cite"}
 EVENT_KNOWN = {"type", "date", "place", "value", "note", "cite"}
@@ -172,11 +172,12 @@ def family_person_issues(person) -> list[Issue]:
             out.append(Issue("W-DEATH-EMPTY", f"{owner}death has no date or place, so it does not count as a death; write `date: unknown` if they died", source, raw.lines.get("death")))
         if parse_bool(living) is True and ((isinstance(death, str) and death.strip()) or (isinstance(death, Mapping) and len(death))):
             out.append(Issue("W-LIVING-AND-DEATH", f"{owner}living: true and a death are both given; the person is treated as living", source, raw.lines.get("living")))
-        parents = raw.get("parents")
-        if isinstance(parents, Sequence):
-            ids = [p.strip() for p in parents if isinstance(p, str)]
-            if len(ids) != len(set(ids)):
-                out.append(Issue("W-DUPLICATE-PARENT", f"{owner}the same parent is listed twice", source, raw.lines.get("parents")))
+        for key in ("parents", "adoptive-parents"):
+            parents = raw.get(key)
+            if isinstance(parents, Sequence):
+                ids = [p.strip() for p in parents if isinstance(p, str)]
+                if len(ids) != len(set(ids)):
+                    out.append(Issue("W-DUPLICATE-PARENT", f"{owner}the same parent is listed twice in {key}", source, raw.lines.get(key)))
     for other, record, couple_source, line in getattr(person, "couple_records", []):
         owner = f"{person.id} + {other}: "
         if isinstance(record, Mapping):

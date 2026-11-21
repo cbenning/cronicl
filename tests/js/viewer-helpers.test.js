@@ -266,3 +266,9 @@ test('wheelPixels turns lines and pages into pixels', () => {
   assert.strictEqual(v.wheelPixels(3, 1, 800), 120);
   assert.strictEqual(v.wheelPixels(-1, 2, 800), -800);
 });
+
+test('relationNote shows a relative\'s own note before the half-sibling wording', () => {
+  assert.strictEqual(v.relationNote({ note: 'adoptive parent' }), 'adoptive parent');
+  assert.strictEqual(v.relationNote({ type: 'half', via: [{ name: 'A' }] }), 'half-sibling via A');
+  assert.strictEqual(v.relationNote({}), '');
+});

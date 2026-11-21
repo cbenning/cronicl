@@ -49,7 +49,7 @@ def rename(text: str, old: str, new: str) -> tuple[str, int]:
                 spans.append((start + match.start(), start + match.end()))
         if isinstance(value_node, yaml.MappingNode):
             for inner_key, inner_value in value_node.value:
-                if inner_key.value == "parents" and isinstance(inner_value, yaml.SequenceNode):
+                if inner_key.value in ("parents", "adoptive-parents") and isinstance(inner_value, yaml.SequenceNode):
                     for item in inner_value.value:
                         if isinstance(item, yaml.ScalarNode) and item.value == old:
                             spans.append(_id_span(item))

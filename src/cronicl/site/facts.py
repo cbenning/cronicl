@@ -17,6 +17,7 @@ _PLAIN = {
     "retirement": "retired",
     "will": "made a will",
     "probate": "estate went to probate",
+    "adoption": "was adopted",
 }
 _WITH_VALUE = {"occupation": ("worked as", "worked"), "education": ("studied", "studied")}
 

@@ -32,7 +32,13 @@ class Couple:
 
 @dataclass
 class Relations:
+    """`parents` is who the tree draws above each person: their adoptive parents when any are recorded, otherwise
+    their birth parents. `birth_parents` and `adoptive_parents` keep the two kinds apart."""
+
     parents: dict[str, list[str]] = field(default_factory=dict)
+    birth_parents: dict[str, list[str]] = field(default_factory=dict)
+    adoptive_parents: dict[str, list[str]] = field(default_factory=dict)
+    raised_elsewhere: dict[str, list[str]] = field(default_factory=dict)  # a birth parent -> children an adoptive family raised
     birth_couple: dict[str, str] = field(default_factory=dict)
     couples: dict[str, Couple] = field(default_factory=dict)
     kids: dict[str, list[str]] = field(default_factory=dict)
@@ -137,6 +143,26 @@ def build_relations(tree: Tree) -> Relations:
             )
             declared[pid] = declared[pid][:2]
 
+    adoptive: dict[str, list[str]] = {pid: [] for pid in people}
+    for pid in sorted(people):
+        for parent in people[pid].adoptive_parents:
+            if parent not in people:
+                dangling(pid, "adoptive-parents", parent)
+            elif parent not in adoptive[pid]:
+                adoptive[pid].append(parent)
+        if len(adoptive[pid]) > 2:
+            issues.append(
+                Issue(
+                    "W-TOO-MANY-ADOPTIVE-PARENTS",
+                    f"{pid}: {len(adoptive[pid])} adoptive parents declared; using {adoptive[pid][:2]}",
+                    people[pid].location,
+                    line_of(pid, "adoptive-parents"),
+                )
+            )
+            adoptive[pid] = adoptive[pid][:2]
+    birth = {pid: list(ids) for pid, ids in declared.items()}
+    declared = {pid: adoptive[pid] or declared[pid] for pid in declared}  # the tree draws the adoptive family when there is one
+
     # Spouse and marriage pairs, declared on either end.
     pairs: set[tuple[str, ...]] = set()
     merged: dict[tuple[str, ...], list[CouplePartnership]] = {}
@@ -208,8 +234,18 @@ def build_relations(tree: Tree) -> Relations:
     for pid in couples_of:
         couples_of[pid].sort()
 
+    raised_elsewhere: dict[str, list[str]] = {pid: [] for pid in people}
+    for child in sorted(people):
+        if adoptive[child]:
+            for parent in birth[child]:
+                if parent not in adoptive[child]:
+                    raised_elsewhere[parent].append(child)
+
     return Relations(
         parents=declared,
+        birth_parents=birth,
+        adoptive_parents=adoptive,
+        raised_elsewhere=raised_elsewhere,
         birth_couple=birth_couple,
         couples=couples,
         kids=kids,
