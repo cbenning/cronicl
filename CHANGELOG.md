@@ -9,6 +9,11 @@
 - GEDCOM: `FAMC` with `PEDI adopted` now imports as `adoptive-parents` (it was set aside), `ADOP` imports as an
   `adoption` event, and export writes both family links with `PEDI`, plus `ADOP`. A person with a birth family and an
   adoptive family no longer gets a `W-CHIL-CONFLICT` warning.
+- The site draws an adopted child's line to the adoptive couple dotted. A person's page shows "Birth parents" when
+  they are known, marks adoptive parents and adopted children, and a birth parent's page lists "Children raised by
+  others".
+- GEDCOM import no longer links a `PEDI foster` or `PEDI sealing` family as the person's birth parents; it warns
+  (`W-PEDI-UNMAPPED`) and keeps the lines. `ADOP HUSB` and `ADOP WIFE` limit `adoptive-parents` to that one parent.
 - New check `W-TOO-MANY-ADOPTIVE-PARENTS`. Date checks (`W-CHILD-BEFORE-PARENT`, `W-CHILD-AFTER-PARENT-DEATH`) look
   at birth parents only.
 

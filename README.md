@@ -187,6 +187,9 @@ The viewer has two modes on the tree page, **Everyone** and **This person's line
   Ancestors (four generations) and Descendants lists. Empty parts are left out. The side panel shows the same
   life sentence and relatives. Warm neutral colours, serif names and headings, and automatic dark mode are used
   throughout; no web fonts are loaded.
+- **Adopted children:** a child with `adoptive-parents` hangs under the adoptive couple by a dotted line. Their page lists
+  the adoptive parents under "Parents" (marked "adoptive parent") and any known birth parents under "Birth parents".
+  A birth parent's page lists the child under "Children raised by others".
 - **Ended partnerships:** a couple that has an ending event (divorce, annulment, separation or `end`) is drawn with dashed spouse lines and a
   hollow dot; the side panel shows "Married 1975 – divorced 1990".
 - **Tree, Overview and zoom:** opening the viewer with no address shows the **Everyone** (`tree/`): everyone, fitted
@@ -686,8 +689,10 @@ an existing file.
 - **Adoption:** a person with both kinds of parents gets two `FAMC` links, the birth family first (with `PEDI
   birth`) and the adoptive family with `PEDI adopted`; an `adoption` event is written as `ADOP` and names the
   adoptive family. On import, a `FAMC` with `PEDI adopted` (or the family an `ADOP` event names) becomes
-  `adoptive-parents`, and a `FAMC` with `PEDI birth` or no `PEDI` becomes `parents`. `PEDI foster` and `PEDI sealing`
-  are not mapped; they are set aside in `archive/gedcom-extra.yml`.
+  `adoptive-parents`, and a `FAMC` with `PEDI birth` or no `PEDI` becomes `parents`. When the `ADOP` event says only
+  the husband or only the wife adopted (`3 ADOP HUSB`), `adoptive-parents` holds just that one. `PEDI foster` and
+  `PEDI sealing` are not birth or adoptive links: they are not linked, a `W-PEDI-UNMAPPED` warning names them, and
+  the lines are set aside in `archive/gedcom-extra.yml`.
 - **Not written:** `portrait`, `refs.gallery`, `x-` keys and `living` have no GEDCOM equivalent.
 - **Privacy:** with `privacy.living` set to `placeholder`, a living person is written as `NAME Living` with their
   family links and nothing else; with `hidden` they are left out. `full` writes everyone. `--include-living` writes

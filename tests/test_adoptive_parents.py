@@ -224,14 +224,61 @@ def test_import_uses_the_family_an_adop_event_names():
     assert people["C"].parents == [] and people["C"].adoptive_parents == [people["A"].id]
 
 
-def test_import_keeps_a_foster_link_as_before_and_sets_the_detail_aside():
+def test_import_does_not_link_a_foster_family_as_birth_parents():
     text = (
         "0 @I1@ INDI\n1 NAME A /B/\n0 @I2@ INDI\n1 NAME C /D/\n1 FAMC @F1@\n2 PEDI foster\n"
         "0 @F1@ FAM\n1 HUSB @I1@\n1 CHIL @I2@\n0 TRLR\n"
     )
-    kid = by_name(import_text(text))["C"]
-    assert kid.parents and not kid.adoptive_parents
+    result = import_text(text)
+    kid = by_name(result)["C"]
+    assert not kid.parents and not kid.adoptive_parents
     assert "2 PEDI foster" in kid.gedcom_extra
+    assert "W-PEDI-UNMAPPED" in {i.code for i in result.issues}
+    assert "W-CHIL-CONFLICT" not in {i.code for i in result.issues} and "W-CHIL-WITHOUT-FAMC" not in {i.code for i in result.issues}
+
+
+def test_a_foster_link_beside_a_birth_family_leaves_the_birth_family_alone():
+    text = (
+        "0 @I1@ INDI\n1 NAME A /B/\n0 @I2@ INDI\n1 NAME E /F/\n0 @I3@ INDI\n1 NAME C /D/\n"
+        "1 FAMC @F1@\n1 FAMC @F2@\n2 PEDI foster\n"
+        "0 @F1@ FAM\n1 HUSB @I1@\n1 CHIL @I3@\n0 @F2@ FAM\n1 HUSB @I2@\n1 CHIL @I3@\n0 TRLR\n"
+    )
+    people = by_name(import_text(text))
+    assert people["C"].parents == [people["A"].id] and not people["C"].adoptive_parents
+
+
+ADOPTED_BY_ONE = """\
+0 @I1@ INDI
+1 NAME Hal /Reed/
+1 SEX M
+0 @I2@ INDI
+1 NAME Ida /Reed/
+1 SEX F
+0 @I3@ INDI
+1 NAME Kit /Reed/
+1 FAMC @F1@
+2 PEDI adopted
+1 ADOP
+2 FAMC @F1@
+3 ADOP {who}
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 CHIL @I3@
+0 TRLR
+"""
+
+
+def test_adop_husb_or_wife_names_the_one_parent_who_adopted():
+    for who, name in (("HUSB", "Hal"), ("WIFE", "Ida")):
+        people = by_name(import_text(ADOPTED_BY_ONE.format(who=who)))
+        assert people["Kit"].adoptive_parents == [people[name].id], who
+        assert not people["Kit"].gedcom_extra, who  # the line is mapped, not set aside
+
+
+def test_adop_both_names_both_parents():
+    people = by_name(import_text(ADOPTED_BY_ONE.format(who="BOTH")))
+    assert sorted(people["Kit"].adoptive_parents) == sorted([people["Hal"].id, people["Ida"].id])
 
 
 def test_import_does_not_call_a_second_valid_family_a_conflict():
@@ -333,3 +380,63 @@ def test_the_editor_palette_offers_adoptive_parents_until_there_are_two():
     assert "adoptive-parents" in labels() and "parents" in labels()
     assert "adoptive-parents" not in labels(adoptive=2) and "parents" in labels(adoptive=2)
     assert "parents" not in labels(parents=2) and "adoptive-parents" in labels(parents=2)
+
+
+# ---- the generated site ------------------------------------------------------------------------------------------
+
+
+def test_raised_elsewhere_lists_birth_children_an_adoptive_family_raised(tmp_path, write_family):
+    tree, _ = load(tmp_path, write_family)
+    rel = build_relations(tree)
+    assert rel.raised_elsewhere["kowalski-eva"] == ["smith-ben"]
+    assert rel.raised_elsewhere["smith-john"] == []
+
+
+def test_the_layout_marks_only_the_adopted_edges(tmp_path, write_family):
+    from cronicl.site.layout import compute_layout
+
+    tree, _ = load(tmp_path, write_family)
+    edges = {e["to"]: e for e in compute_layout(tree)["edges"] if e["kind"] == "child"}
+    assert edges["smith-anna"]["adopted"] is True and edges["smith-ben"]["adopted"] is True
+    tree2, _ = load(tmp_path / "plain", write_family, "a:\n  name: {given: A}\nb:\n  name: {given: B}\n  parents: [a]\n")
+    assert all("adopted" not in e for e in compute_layout(tree2)["edges"])
+
+
+def test_the_person_payload_says_who_adopted_and_who_gave_birth(tmp_path, write_family):
+    from cronicl.site.render import person_payload
+
+    tree, _ = load(tmp_path, write_family)
+    ben = person_payload(tree, "smith-ben")
+    assert [(r["id"], r["note"]) for r in ben["parents"]] == [("smith-john", "adoptive parent"), ("brown-mary", "adoptive parent")]
+    assert [(r["id"], r["note"]) for r in ben["birth_parents"]] == [("kowalski-eva", "birth parent")]
+    assert ben["raised_elsewhere"] == []
+    assert person_payload(tree, "smith-anna")["birth_parents"] == []
+    john = person_payload(tree, "smith-john")
+    assert {r["id"]: r["note"] for r in john["children"]} == {"smith-anna": "adopted", "smith-ben": "adopted"}
+    eva = person_payload(tree, "kowalski-eva")
+    assert [(r["id"], r["note"]) for r in eva["raised_elsewhere"]] == [("smith-ben", "adopted by others")]
+    assert eva["children"] == []
+
+
+def test_the_built_person_page_shows_both_families(tmp_path, write_family):
+    from cronicl.site.render import build_site
+
+    tree, _ = load(tmp_path, write_family)
+    out = tmp_path / "out"
+    build_site(tree, out, today=TODAY)
+    ben = (out / "p" / "smith-ben" / "index.html").read_text(encoding="utf-8")
+    assert "Birth parents" in ben and "adoptive parent" in ben and "Kowalski" in ben
+    eva = (out / "p" / "kowalski-eva" / "index.html").read_text(encoding="utf-8")
+    assert "Children raised by others" in eva and "adopted by others" in eva
+    john = (out / "p" / "smith-john" / "index.html").read_text(encoding="utf-8")
+    assert "Birth parents" not in john and "Children raised by others" not in john
+
+
+def test_the_viewer_draws_adopted_edges_dotted():
+    from pathlib import Path
+
+    import cronicl
+
+    viewer = Path(cronicl.__file__).parent / "site" / "viewer"
+    assert ".edge.adopted" in (viewer / "style.css").read_text(encoding="utf-8")
+    assert "edge.adopted ? ' adopted'" in (viewer / "viewer.js").read_text(encoding="utf-8")

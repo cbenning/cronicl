@@ -38,6 +38,7 @@ class Relations:
     parents: dict[str, list[str]] = field(default_factory=dict)
     birth_parents: dict[str, list[str]] = field(default_factory=dict)
     adoptive_parents: dict[str, list[str]] = field(default_factory=dict)
+    raised_elsewhere: dict[str, list[str]] = field(default_factory=dict)  # a birth parent -> children an adoptive family raised
     birth_couple: dict[str, str] = field(default_factory=dict)
     couples: dict[str, Couple] = field(default_factory=dict)
     kids: dict[str, list[str]] = field(default_factory=dict)
@@ -233,10 +234,18 @@ def build_relations(tree: Tree) -> Relations:
     for pid in couples_of:
         couples_of[pid].sort()
 
+    raised_elsewhere: dict[str, list[str]] = {pid: [] for pid in people}
+    for child in sorted(people):
+        if adoptive[child]:
+            for parent in birth[child]:
+                if parent not in adoptive[child]:
+                    raised_elsewhere[parent].append(child)
+
     return Relations(
         parents=declared,
         birth_parents=birth,
         adoptive_parents=adoptive,
+        raised_elsewhere=raised_elsewhere,
         birth_couple=birth_couple,
         couples=couples,
         kids=kids,

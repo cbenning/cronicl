@@ -301,8 +301,9 @@ is `x-notes`, so keep your own notes inside a record.
 
 `INDI` is a person and `FAM` a couple record. `FAMC`/`CHIL` become the child's `parents`; a `FAMC` with `PEDI adopted` (or the family named by the `FAMC` line
 under an `ADOP` event) becomes `adoptive-parents`, and `ADOP` becomes an `adoption` event. Export writes the birth
-family's `FAMC` first, then the adoptive one with `PEDI adopted`. Other `PEDI` values (`foster`, `sealing`) are set
-aside. Individual events and
+family's `FAMC` first, then the adoptive one with `PEDI adopted`. `ADOP HUSB` or `ADOP WIFE` under the `FAMC` of an
+`ADOP` event limits `adoptive-parents` to that one parent. Other `PEDI` values (`foster`, `sealing`) are not linked
+(`W-PEDI-UNMAPPED` on import) and are set aside. Individual events and
 attributes (BAPM, CHR, CONF, BURI, CREM, IMMI, EMIG, NATU, RESI, OCCU, EDUC, RELI, NATI, GRAD, RETI, CENS, WILL,
 PROB, ADOP) become `events`; a family's MARR, DIV, ENGA and ANUL become events in the couple's record, of type `marriage`,
 `divorce`, `engagement` and `annulment`. A `SOUR` line becomes `cite` and a `NOTE` becomes `note`. Anything that
