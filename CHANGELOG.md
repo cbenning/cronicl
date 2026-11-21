@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New: `cronicl --version` prints the installed version.
+
 ## 1.1.0
 
 - Fix: the GEDCOM export header named cronicl version 0.1.0 whatever the installed version; it now names the real one.
