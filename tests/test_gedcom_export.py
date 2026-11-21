@@ -309,3 +309,14 @@ def test_a_couples_other_events_are_exported_as_even(tmp_path, write_family):
     at = lines.index("2 TYPE residence")
     assert lines[at - 1] == "1 EVEN" and "2 DATE 1905" in lines[at:at + 4] and "2 PLAC Leeds, England" in lines[at:at + 4] and "2 NOTE Rented rooms" in lines[at:at + 5]
     assert problems(text) == []
+
+
+def test_the_export_header_names_the_installed_version(tmp_path):
+    from importlib.metadata import version
+
+    import cronicl
+    from cronicl.core.model import Tree
+
+    text, _ = export_gedcom(Tree())
+    assert cronicl.__version__ == version("cronicl")
+    assert f"2 VERS {version('cronicl')}\n" in text
