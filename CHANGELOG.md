@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
+- Fix: the GEDCOM export header named cronicl version 0.1.0 whatever the installed version; it now names the real one.
 - Python 3.10 is no longer supported: it reached end of life in October 2026. cronicl needs Python 3.11 or newer.
   Tests run on the oldest (3.11) and the newest (3.15) supported versions.
 - New: `adoptive-parents` on a person, a list of at most two ids beside `parents` (birth parents). Either may be
