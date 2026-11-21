@@ -25,7 +25,7 @@ class Entry:
     action: tuple  # ("field", Field) | ("event", slug) | ("partner",) | ("child",) | ("custom",)
 
 
-def build_entries(kind: str, present: set[tuple], parent_count: int, event_index: int | None = None, event_has: set[str] | None = None) -> list[Entry]:
+def build_entries(kind: str, present: set[tuple], parent_count: int, event_index: int | None = None, event_has: set[str] | None = None, adoptive_count: int = 0) -> list[Entry]:
     """What can be added to a `person` or `couple` record that has the fields `present` (path steps below the key).
 
     With `event_index` (the cursor is inside that event, which has the keys `event_has`) the missing parts of the event
@@ -40,8 +40,8 @@ def build_entries(kind: str, present: set[tuple], parent_count: int, event_index
         steps = tuple(field.path.split("."))
         if field.path == "events":
             continue  # replaced by one entry per event type
-        if field.path == "parents":
-            if parent_count >= 2:
+        if field.path in ("parents", "adoptive-parents"):
+            if (parent_count if field.path == "parents" else adoptive_count) >= 2:
                 continue
         elif field.once and steps in present:
             continue

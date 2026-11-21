@@ -117,6 +117,12 @@ class _Reader:
                 person.parents = [p.strip() for p in parents if p.strip()]
             else:
                 self.problem("E-RECORD-SHAPE", f"{pid}: parents must be a list of person ids", source, record.lines.get("parents"))
+        adopters = record.get("adoptive-parents")
+        if adopters is not None and adopters != "":
+            if isinstance(adopters, Sequence) and all(isinstance(p, str) for p in adopters):
+                person.adoptive_parents = [p.strip() for p in adopters if p.strip()]
+            else:
+                self.problem("E-RECORD-SHAPE", f"{pid}: adoptive-parents must be a list of person ids", source, record.lines.get("adoptive-parents"))
         for entry in self._events(record, pid, source):
             person.events.append(self._life_event(entry))
         person.portrait = _text(record.get("portrait"))
@@ -131,7 +137,7 @@ class _Reader:
             person.gallery_id = _text(refs.get("gallery"))
         bio = record.get("bio")
         person.body = bio.strip("\n") if isinstance(bio, str) else ""
-        known = {"name", "sex", "birth", "death", "parents", "events", "portrait", "living", "refs", "bio"}
+        known = {"name", "sex", "birth", "death", "parents", "adoptive-parents", "events", "portrait", "living", "refs", "bio"}
         person.extra = {k: v for k, v in record.items() if k not in known}
         self.people[pid] = person
 

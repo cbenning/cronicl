@@ -27,8 +27,12 @@ def describe(tree: Tree, relations: Relations, pid: str) -> str:
             if bits:
                 out.append(f"  {label}: " + " ".join(bits))
     parents = relations.parents.get(pid, [])
+    adoptive = relations.adoptive_parents.get(pid, [])
     if parents:
-        out.append("  parents: " + ", ".join(_name(tree, p) for p in parents))
+        out.append(("  adoptive parents: " if adoptive else "  parents: ") + ", ".join(_name(tree, p) for p in parents))
+    birth = relations.birth_parents.get(pid, [])
+    if adoptive and birth:
+        out.append("  birth parents: " + ", ".join(_name(tree, p) for p in birth))
     for cid in relations.couples_of.get(pid, []):
         couple = relations.couples[cid]
         partner = next((p for p in couple.partners if p != pid), None)

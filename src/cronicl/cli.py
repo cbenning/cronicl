@@ -316,7 +316,7 @@ def _cmd_new_family(args) -> int:
     pid, target, text = plan_new_family(
         Path(args.dir), given=args.given, surname=args.surname, sex=args.sex, birth=args.birth,
         birth_place=args.birth_place, death=args.death, death_place=args.death_place, parents=args.parents or [],
-        partners=args.partner or [], new_id=args.id, file=args.file,
+        adoptive_parents=args.adoptive_parents or [], partners=args.partner or [], new_id=args.id, file=args.file,
     )
     rel = target.relative_to(Path(args.dir)).as_posix()
     if not args.apply:
@@ -429,6 +429,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--death", metavar="DATE")
     p.add_argument("--death-place", metavar="PLACE")
     p.add_argument("--parents", nargs="+", metavar="ID", help="one or two parent ids")
+    p.add_argument("--adoptive-parents", nargs="+", metavar="ID", help="one or two adoptive parent ids")
     _add_apply(p)
     p.set_defaults(func=cmd_new)
 

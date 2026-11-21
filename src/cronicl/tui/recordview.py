@@ -90,7 +90,7 @@ def build(text: str, key: str, issues: list[Issue], name_of) -> RecordView:
                     visit(item, here, depth + 1)
                 else:
                     value = _scalar_text(item)
-                    extra = name_of(value) if parent_key == "parents" else ""
+                    extra = name_of(value) if parent_key in ("parents", "adoptive-parents") else ""
                     rows.append(Row("-", value, here, depth, line, "text", _trailing_comment(lines, item), extra=extra, raw=item.value))
 
     if isinstance(value_node, yaml.MappingNode):

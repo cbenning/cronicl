@@ -151,7 +151,7 @@ def _date_sanity(tree: Tree, relations, issues: list[Issue]) -> None:
             issues.append(Issue("W-BIRTH-AFTER-DEATH", f"{pid}: born ({born_plain}) after dying ({died_plain})", person.location, _line_of(person, "death")))
         if born is None:
             continue
-        for parent_id in relations.parents.get(pid, []):
+        for parent_id in relations.birth_parents.get(pid, []):  # adopters' dates say nothing about a birth
             parent = tree.people.get(parent_id)
             if parent is None:
                 continue
@@ -179,7 +179,7 @@ def check_tree(tree: Tree, load_issues: list[Issue] | None = None) -> list[Issue
         return sorted(issues, key=lambda i: (i.path or "", i.code, i.message))
     issues += relations.issues
 
-    linked = {p for ps in relations.parents.values() for p in ps} | {p for p in tree.people if relations.couples_of.get(p)}
+    linked = {p for table in (relations.birth_parents, relations.adoptive_parents) for ps in table.values() for p in ps} | {p for p in tree.people if relations.couples_of.get(p)}
     linked = frozenset(linked)
 
     def person_step(person: Person) -> None:

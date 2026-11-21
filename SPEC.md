@@ -144,6 +144,7 @@ person as dead without a date. A fact left blank (`death:` with nothing after it
 | `sex` | `male`, `female`, `unknown`, `other` | in any case; absent means unknown. Anything else, including `M` and `F`, is reported and read as unknown |
 | `birth`, `death` | dated fact | a person with `death` is deceased |
 | `parents` | list of at most two person ids | birth parents. A third is reported and ignored; the same id twice is reported |
+| `adoptive-parents` | list of at most two person ids | the parents who adopted the person. A third is reported (`W-TOO-MANY-ADOPTIVE-PARENTS`) and ignored; the same id twice is reported. Either list may be absent: birth parents who are not known are left out, not invented. The adoption itself is an `events` entry of type `adoption`, whose `date` is optional. A reader that draws one set of parents per person SHOULD use `adoptive-parents` when it has any, and `parents` otherwise |
 | `events` | list of mappings | see 4.6 |
 | `portrait` | text | a path under `media/` |
 | `living` | `true` | only to say someone is alive when their dates suggest otherwise (`yes`, `on` and `1` are read as `true`, in any case; any other value is reported and ignored). To say someone is dead, use `death`. `living: true` next to a `death` is reported, and the person is treated as living |
@@ -278,6 +279,7 @@ married to a woman and later to her daughter, can conflict too).
 | `W-CHILD-BEFORE-PARENT` | warning | a child born before a parent |
 | `W-CHILD-AFTER-PARENT-DEATH` | warning | a child born more than a year after a parent died |
 | `W-TOO-MANY-PARENTS` | warning | more than two parents |
+| `W-TOO-MANY-ADOPTIVE-PARENTS` | warning | more than two adoptive parents |
 
 ## 7. Your own keys
 
@@ -297,9 +299,12 @@ is `x-notes`, so keep your own notes inside a record.
 
 ## 9. GEDCOM
 
-`INDI` is a person and `FAM` a couple record. `FAMC`/`CHIL` become the child's `parents`. Individual events and
+`INDI` is a person and `FAM` a couple record. `FAMC`/`CHIL` become the child's `parents`; a `FAMC` with `PEDI adopted` (or the family named by the `FAMC` line
+under an `ADOP` event) becomes `adoptive-parents`, and `ADOP` becomes an `adoption` event. Export writes the birth
+family's `FAMC` first, then the adoptive one with `PEDI adopted`. Other `PEDI` values (`foster`, `sealing`) are set
+aside. Individual events and
 attributes (BAPM, CHR, CONF, BURI, CREM, IMMI, EMIG, NATU, RESI, OCCU, EDUC, RELI, NATI, GRAD, RETI, CENS, WILL,
-PROB) become `events`; a family's MARR, DIV, ENGA and ANUL become events in the couple's record, of type `marriage`,
+PROB, ADOP) become `events`; a family's MARR, DIV, ENGA and ANUL become events in the couple's record, of type `marriage`,
 `divorce`, `engagement` and `annulment`. A `SOUR` line becomes `cite` and a `NOTE` becomes `note`. Anything that
 cannot be mapped is set aside in `archive/gedcom-extra.yml`, keyed by person id, which nothing reads, and
 `refs.gedcom` keeps the original record id. Export writes GEDCOM 5.5.1 (UTF-8); each distinct `cite` text becomes

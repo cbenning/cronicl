@@ -144,7 +144,7 @@ def _events(entries: list[dict], indent: str = "  ") -> list[str]:
 
 def person(pid: str, spec: dict) -> str:
     """One person record. `spec` keys: name{given,surname,prefix,suffix,nickname,also,extra}, sex (a word), birth/death
-    (a date string or {date, place, note, cite, extra}), parents, events, portrait, living (True), refs{gedcom,gallery},
+    (a date string or {date, place, note, cite, extra}), parents, adoptive_parents, events, portrait, living (True), refs{gedcom,gallery},
     x{key: value} extras, bio."""
     lines = [f"{pid}:"]
     name = spec.get("name") or {}
@@ -167,6 +167,8 @@ def person(pid: str, spec: dict) -> str:
             lines += _line("  ", key, _fact(**value), only_date=True)
     if spec.get("parents"):
         lines.append("  parents: [" + ", ".join(quote(p) for p in spec["parents"]) + "]")
+    if spec.get("adoptive_parents"):
+        lines.append("  adoptive-parents: [" + ", ".join(quote(p) for p in spec["adoptive_parents"]) + "]")
     lines += _events(spec.get("events") or [])
     if spec.get("portrait"):
         lines.append(f"  portrait: {quote(spec['portrait'], flow=False)}")
@@ -242,6 +244,7 @@ def spec_from_person(p) -> dict:
         "birth": vital(p.birth),
         "death": vital(p.death, empty_means_unknown=True),
         "parents": list(p.parents),
+        "adoptive_parents": list(p.adoptive_parents),
         "events": events,
         "portrait": p.portrait,
         "living": p.living is True,

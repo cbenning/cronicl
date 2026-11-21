@@ -112,8 +112,8 @@ lines and the order of records stay as you left them.
 | `show ID` | Print one person as the site sees them: record, parents, partners, children, siblings and where each record lives. |
 | `search WORD... [--limit N] [--format json]` | Fuzzy-find people and print their ids (name, id, years, places; typo- and accent-tolerant). `*` marks people the privacy rules treat as living. Exit 1 when nothing matches. |
 | `gaps [--limit N] [--format json]` | List people with missing names, dates, places or parents, best-connected first. |
-| `new --given G --surname S [...] [-a]` | Append one person record to `family.yml` (`--file` picks the file in a `family/` folder), with optional dates, places, parents (`--parents`), and `--partner ID` for an empty couple record. |
-| `rename OLD NEW [-a]` | Change a person's id everywhere it is used: the record key, `parents` lists, couple keys and `home` in `site.yml`. |
+| `new --given G --surname S [...] [-a]` | Append one person record to `family.yml` (`--file` picks the file in a `family/` folder), with optional dates, places, parents (`--parents`), adoptive parents (`--adoptive-parents`), and `--partner ID` for an empty couple record. |
+| `rename OLD NEW [-a]` | Change a person's id everywhere it is used: the record key, `parents` and `adoptive-parents` lists, couple keys and `home` in `site.yml`. |
 | `edit mark-deceased ID... [-a]` | Write `death: unknown` for the named people (no date needed). All ids are validated first. |
 | `edit mark-living ID... [-a]` | Write `living: true` for the named people. |
 | `import-gedcom FILE [-a]` | One-time GEDCOM import into `family.yml`; archives the original file. |
@@ -286,6 +286,7 @@ The rules that keep it simple:
 | `sex` | `male`, `female`, `unknown`, `other` (any case) | absent means unknown |
 | `birth`, `death` | dated fact | a person with a `death` that has a date, `unknown` or a place is deceased; `death: unknown` means dead, date not known. A `death` that is not a date (`no`, `~`) or has only a note does not count (it is reported) |
 | `parents` | list of at most two ids | birth parents |
+| `adoptive-parents` | list of at most two ids | the parents who adopted them. The tree, the relatives lists and the descendants draw the child under these when any are given; `parents` stays their birth parents and may be left out when unknown. Record the adoption itself as an event: `- {type: adoption, date: 1962}` (the date is optional) |
 | `events` | list of mappings | `type` plus the dated-fact keys and `value` (for attributes such as an occupation) |
 | `portrait` | text | a file under `media/` |
 | `living` | `true` | only to say someone is alive when the dates suggest otherwise; to say someone is dead, use `death` |
@@ -375,7 +376,7 @@ Errors about the family file:
 | `E-BAD-FAMILY` | `family.yml` cannot be parsed, is not a mapping, uses a merge key, or both `family.yml` and `family/` exist |
 | `E-NO-FAMILY` | there is no `family.yml` or `family/`; the message says to run `cronicl init` |
 | `E-RECORD-KEY` | a top-level key is neither a person id nor a couple key |
-| `E-RECORD-SHAPE` | a record is not a mapping; `name` is not a mapping; `parents` or `events` has the wrong shape; a list or mapping where text belongs |
+| `E-RECORD-SHAPE` | a record is not a mapping; `name` is not a mapping; `parents`, `adoptive-parents` or `events` has the wrong shape; a list or mapping where text belongs |
 | `E-DUPLICATE-ID` | the same person, or the same couple in either order, twice (also across split files); the later record in one file wins, across files the first |
 | `E-COUPLE-SELF` | a couple key names one person twice |
 | `E-DANGLING-REF` | a parent, or half of a couple key, is not a person in the family |
@@ -393,7 +394,7 @@ Warnings, and the rest:
 | `W-BAD-SEX` | `sex` is not `male`, `female`, `unknown` or `other` |
 | `W-LIVING-FALSE` | `living:` is not `true`; it is ignored (dates decide), so say `death: unknown` for someone who has died |
 | `W-EVENT-IS-FIELD`, `W-EVENT-ONCE`, `W-EVENT-PLACEMENT` | a birth or death in `events` (use the field); two burials or cremations; a marriage or divorce in a person's events (put it in the couple's record) |
-| `W-NO-NAME`, `W-TOO-MANY-PARENTS`, `W-DUPLICATE-PARENT` | a person with no name who is not a partner or parent either; more than two parents; the same parent twice |
+| `W-NO-NAME`, `W-TOO-MANY-PARENTS`, `W-TOO-MANY-ADOPTIVE-PARENTS`, `W-DUPLICATE-PARENT` | a person with no name who is not a partner or parent either; more than two parents; more than two adoptive parents; the same parent twice in `parents` or `adoptive-parents` |
 | `E-INVALID-ID` | a person id over 64 characters |
 | `W-EVENT-NO-TYPE`, `W-IGNORED-FILE` | an event with no `type`; a `.yaml` file or folder inside `family/`, which is not read |
 | `W-DEATH-EMPTY`, `W-COUPLE-EVENT-TYPE` | a `death` with no date or place (it does not count); a couple event type that looks like a misspelling of `marriage`, `divorce`, ... |
@@ -682,6 +683,11 @@ an existing file.
   and one `FAM` per partnership (marriage, engagement, divorce, annulment; other couple events as `EVEN`), with
   children, parents and links. Dates are written GEDCOM-style (`1850-03-15` is `15 MAR 1850`). A place that has
   coordinates in `places:` gets a `MAP` with `LATI` and `LONG`.
+- **Adoption:** a person with both kinds of parents gets two `FAMC` links, the birth family first (with `PEDI
+  birth`) and the adoptive family with `PEDI adopted`; an `adoption` event is written as `ADOP` and names the
+  adoptive family. On import, a `FAMC` with `PEDI adopted` (or the family an `ADOP` event names) becomes
+  `adoptive-parents`, and a `FAMC` with `PEDI birth` or no `PEDI` becomes `parents`. `PEDI foster` and `PEDI sealing`
+  are not mapped; they are set aside in `archive/gedcom-extra.yml`.
 - **Not written:** `portrait`, `refs.gallery`, `x-` keys and `living` have no GEDCOM equivalent.
 - **Privacy:** with `privacy.living` set to `placeholder`, a living person is written as `NAME Living` with their
   family links and nothing else; with `hidden` they are left out. `full` writes everyone. `--include-living` writes

@@ -65,7 +65,8 @@ class Person:
     living_text: str | None = None  # the `living` value as written (None when absent), for validation only
     portrait: str | None = None
     gallery_id: str | None = None
-    parents: list[str] = field(default_factory=list)
+    parents: list[str] = field(default_factory=list)  # birth parents
+    adoptive_parents: list[str] = field(default_factory=list)
     spouse: list[str] = field(default_factory=list)
     children: list[str] = field(default_factory=list)
     partnerships: list[Partnership] = field(default_factory=list)

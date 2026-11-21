@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- New: `adoptive-parents` on a person, a list of at most two ids beside `parents` (birth parents). Either may be
+  left out, so a person whose birth parents are unknown needs only `adoptive-parents`, and an `adoption` event needs
+  no date. The tree, relatives and descendants use the adoptive parents when there are any; `show` and the terminal
+  editor list both kinds. `cronicl new` takes `--adoptive-parents`, and `rename` follows the ids.
+- GEDCOM: `FAMC` with `PEDI adopted` now imports as `adoptive-parents` (it was set aside), `ADOP` imports as an
+  `adoption` event, and export writes both family links with `PEDI`, plus `ADOP`. A person with a birth family and an
+  adoptive family no longer gets a `W-CHIL-CONFLICT` warning.
+- New check `W-TOO-MANY-ADOPTIVE-PARENTS`. Date checks (`W-CHILD-BEFORE-PARENT`, `W-CHILD-AFTER-PARENT-DEATH`) look
+  at birth parents only.
+
 ## 1.0.1
 
 - Fix: a photo gallery served from the same address as the site, behind one login such as HTTP Basic auth, now shows

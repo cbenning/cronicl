@@ -220,7 +220,7 @@ _EVENT_TAGS = {
     "EMIG": ("emigration", False), "NATU": ("naturalization", False), "RESI": ("residence", False),
     "OCCU": ("occupation", True), "EDUC": ("education", True), "RELI": ("religion", True),
     "NATI": ("nationality", True), "GRAD": ("graduation", False), "RETI": ("retirement", False),
-    "CENS": ("census", False), "WILL": ("will", False), "PROB": ("probate", False),
+    "CENS": ("census", False), "WILL": ("will", False), "PROB": ("probate", False), "ADOP": ("adoption", False),
 }
 
 
@@ -312,8 +312,38 @@ def _is_pointer(value: str) -> bool:
     return value.startswith("@") and value.endswith("@")
 
 
-def _person_from(node: Node, issues: list[Issue], sources: Sources | None = None) -> tuple[Person, str | None]:
-    """Return (person with a placeholder id, first FAMC xref)."""
+@dataclass
+class _Links:
+    """The families a person is a child of: the one they were born into, the one that adopted them, and every FAMC xref."""
+
+    birth: str | None = None
+    adoptive: str | None = None
+    every: set = field(default_factory=set)
+
+
+def _pedigree(node: Node) -> str:
+    for sub in node.children:
+        if sub.tag == "PEDI":
+            return sub.value.strip().lower()
+    return ""
+
+
+def _adoption_family(node: Node) -> tuple[Node, str | None]:
+    """An ADOP event without the FAMC line that names the adopting family, and that family's xref.
+
+    The line is only taken when nothing but `ADOP BOTH` hangs under it (which the two adoptive parents already say);
+    any other detail stays on the event and is set aside with it.
+    """
+    for sub in node.children:
+        if sub.tag == "FAMC" and _is_pointer(sub.value.strip()):
+            if all(g.tag == "ADOP" and g.value.strip().upper() == "BOTH" and not g.children for g in sub.children):
+                rest = [c for c in node.children if c is not sub]
+                return Node(node.level, node.tag, node.value, node.xref, rest), sub.value.strip().strip("@")
+    return node, None
+
+
+def _person_from(node: Node, issues: list[Issue], sources: Sources | None = None) -> tuple[Person, _Links]:
+    """Return (person with a placeholder id, the families they are a child of)."""
     xref = node.xref.strip("@")
     extra: list[Node] = []
     given = surname = None
@@ -322,7 +352,8 @@ def _person_from(node: Node, issues: list[Issue], sources: Sources | None = None
     sex = "U"
     birth = death = None
     life_events: list[LifeEvent] = []
-    famc: list[str] = []
+    famc: list[Node] = []
+    adop_famc: str | None = None
     notes: list[str] = []
     seen: set[str] = set()
     for child in node.children:
@@ -348,6 +379,9 @@ def _person_from(node: Node, issues: list[Issue], sources: Sources | None = None
             seen.add("DEAT")
             death = _event(child, "death", xref, extra, issues, sources)
         elif tag in _EVENT_TAGS:
+            if tag == "ADOP":
+                child, found_family = _adoption_family(child)
+                adop_famc = adop_famc or found_family
             kind, takes_value = _EVENT_TAGS[tag]
             if any(sub.tag == "DATE" and sub.value.strip() and not from_gedcom(sub.value)[1] for sub in child.children):
                 extra.append(child)  # a date cronicl cannot convert stays exactly as written, in gedcom_extra
@@ -365,12 +399,7 @@ def _person_from(node: Node, issues: list[Issue], sources: Sources | None = None
                 )
             )
         elif tag == "FAMC":
-            if not famc:
-                famc.append(child.value.strip())
-                if child.children:
-                    extra.append(child)  # e.g. 2 PEDI adopted
-            else:
-                extra.append(child)
+            famc.append(child)
         elif tag == "FAMS":
             continue  # derived from the FAM records
         elif tag == "NOTE" and child.value and not _is_pointer(child.value.strip()):
@@ -379,6 +408,22 @@ def _person_from(node: Node, issues: list[Issue], sources: Sources | None = None
                 extra.append(child)  # e.g. 2 SOUR under the note
         else:
             extra.append(child)
+    links = _Links(every={n.value.strip() for n in famc})
+    birth_node = next((n for n in famc if _pedigree(n) in ("", "birth")), None)
+    adopted_node = next((n for n in famc if _pedigree(n) == "adopted"), None)
+    if birth_node is None and adopted_node is None and famc:
+        birth_node = famc[0]  # a foster or sealing link and nothing else: link it as before, its PEDI kept below
+    if adopted_node is not None:
+        links.adoptive = adopted_node.value.strip()
+    elif adop_famc:
+        links.adoptive = f"@{adop_famc}@"  # an ADOP event names the family when the FAMC line does not
+    if birth_node is not None and birth_node.value.strip() != links.adoptive:
+        links.birth = birth_node.value.strip()
+    used = [n for n in (birth_node, adopted_node) if n is not None]
+    for found in famc:
+        only_pedi = all(c.tag == "PEDI" and c.value.strip().lower() in ("birth", "adopted") and not c.children for c in found.children)
+        if not any(found is u for u in used) or not only_pedi:
+            extra.append(found)  # an unused link, or one with details we do not map (a note, a status, PEDI foster)
     person = Person(
         id=f"@{xref}",
         given=given,
@@ -395,7 +440,7 @@ def _person_from(node: Node, issues: list[Issue], sources: Sources | None = None
         gedcom_extra=_lines(extra),
         body="\n\n".join(notes),
     )
-    return person, (famc[0] if famc else None)
+    return person, links
 
 
 def import_nodes(nodes: list[Node]) -> ImportResult:
@@ -417,11 +462,11 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
     fam_nodes.sort(key=lambda n: natural_key(n.xref.strip("@")))
 
     people: list[Person] = []
-    first_famc: dict[str, str | None] = {}
+    child_links: dict[str, _Links] = {}
     for node in indi_nodes:
-        person, famc = _person_from(node, issues, sources)
+        person, links = _person_from(node, issues, sources)
         people.append(person)
-        first_famc[person.gedcom_id] = famc
+        child_links[person.gedcom_id] = links
 
     taken: set[str] = set()
     id_by_xref: dict[str, str] = {}
@@ -501,15 +546,19 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
         fam_extra[xref] = extra
 
     for person in people:
-        famc = first_famc[person.gedcom_id]
-        if famc is None:
-            continue
-        key = famc.strip("@")
-        if key in fam_partners:
-            person.parents = list(fam_partners[key])
-        else:
-            issues.append(Issue("W-DANGLING-FAMC", f"{person.gedcom_id}: FAMC {famc!r} is not a known family"))
-            person.gedcom_extra = "\n".join(filter(None, [person.gedcom_extra, f"1 FAMC {famc}"]))
+        links = child_links[person.gedcom_id]
+        for famc, adopted in ((links.birth, False), (links.adoptive, True)):
+            if famc is None:
+                continue
+            key = famc.strip("@")
+            if key in fam_partners:
+                if adopted:
+                    person.adoptive_parents = list(fam_partners[key])
+                else:
+                    person.parents = list(fam_partners[key])
+            else:
+                issues.append(Issue("W-DANGLING-FAMC", f"{person.gedcom_id}: FAMC {famc!r} is not a known family"))
+                person.gedcom_extra = "\n".join(filter(None, [person.gedcom_extra, f"1 FAMC {famc}" + ("\n2 PEDI adopted" if adopted else "")]))
 
     for xref in fam_order:
         partners = fam_partners[xref]
@@ -517,8 +566,8 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
             child = person_by_xref.get(child_xref)
             if child is None:
                 continue
-            famc = first_famc[child_xref]
-            if famc is None:
+            every = child_links[child_xref].every
+            if not every:
                 if partners:
                     child.parents = list(partners)
                     issues.append(
@@ -527,9 +576,9 @@ def import_nodes(nodes: list[Node]) -> ImportResult:
                             f"{child_xref}: listed as CHIL of {xref} without a matching FAMC; linked",
                         )
                     )
-            elif famc.strip("@") != xref:
+            elif f"@{xref}@" not in every:
                 issues.append(
-                    Issue("W-CHIL-CONFLICT", f"{child_xref}: CHIL of {xref} but FAMC points at {famc}; kept FAMC")
+                    Issue("W-CHIL-CONFLICT", f"{child_xref}: CHIL of {xref} but FAMC points at {', '.join(sorted(every))}; kept FAMC")
                 )
 
     for xref in fam_order:
