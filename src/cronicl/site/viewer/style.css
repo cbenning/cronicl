@@ -101,6 +101,7 @@ main { flex: 1; display: flex; min-height: 0; }
 .error { padding: 1rem; color: #b91c1c; }
 .plain-list { padding: 1rem 2rem; }
 .edge.ended { stroke-dasharray: 6px 4px; }
+.edge.adopted { stroke-dasharray: 2px 4px; }
 .union.ended { fill: var(--node); stroke: var(--line); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .union.ended.hi { stroke: var(--sel); }
 #panel { width: 24rem; max-width: 42vw; overflow: auto; padding: var(--space-4); border-left: 1px solid var(--border); background: var(--surface); }

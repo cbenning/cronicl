@@ -2,6 +2,7 @@
 <a class="chip" href="../{{ rel.id }}/">
   <span class="chip-name">{{ rel.name }}</span>
   {% if rel.years %}<span class="chip-years">{{ rel.years }}</span>{% endif %}
+  {% if rel.note %}<span class="chip-note">{{ rel.note }}</span>{% endif %}
   {% if rel.type == "half" %}<span class="chip-note">half-sibling{% if rel.via %} via {{ rel.via | map(attribute="name") | join(" & ") }}{% endif %}</span>{% endif %}
   {% for part in rel.partnerships or [] %}{% if part.text %}<span class="partnership">{{ part.text }}</span>{% endif %}{% endfor %}
 </a>
@@ -57,17 +58,23 @@
     <p class="gallery-more"><a target="_blank" rel="noopener"></a></p>
   </section>
   {% endif %}
-  {% if person.parents or person.spouses or person.children or person.siblings %}
+  {% if person.parents or person.birth_parents or person.spouses or person.children or person.raised_elsewhere or person.siblings %}
   <section class="family">
     <h2>Family</h2>
     {% if person.parents %}
     <div class="fam-parents"><h3>Parents</h3><ul class="chips row">{% for rel in person.parents %}<li>{{ chip(rel) }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    {% if person.birth_parents %}
+    <div class="fam-birth-parents"><h3>Birth parents</h3><ul class="chips row">{% for rel in person.birth_parents %}<li>{{ chip(rel) }}</li>{% endfor %}</ul></div>
     {% endif %}
     {% if person.spouses %}
     <div class="fam-partners"><h3>Partners</h3><ul class="chips row">{% for rel in person.spouses %}<li>{{ chip(rel) }}</li>{% endfor %}</ul></div>
     {% endif %}
     {% if person.children %}
     <div class="fam-children"><h3>Children</h3><ul class="chips row">{% for rel in person.children %}<li>{{ chip(rel) }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    {% if person.raised_elsewhere %}
+    <div class="fam-raised-elsewhere"><h3>Children raised by others</h3><ul class="chips row">{% for rel in person.raised_elsewhere %}<li>{{ chip(rel) }}</li>{% endfor %}</ul></div>
     {% endif %}
     {% if person.siblings %}
     <div class="fam-siblings"><h3>Siblings</h3><ul class="chips compact">{% for rel in person.siblings %}<li>{{ chip(rel) }}</li>{% endfor %}</ul></div>

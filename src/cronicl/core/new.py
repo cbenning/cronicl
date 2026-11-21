@@ -18,6 +18,7 @@ def plan_new_family(
     death: str | None = None,
     death_place: str | None = None,
     parents: list[str] = (),
+    adoptive_parents: list[str] = (),
     partners: list[str] = (),
     new_id: str | None = None,
     file: str | None = None,
@@ -35,7 +36,7 @@ def plan_new_family(
     if not has_family(data_dir):
         raise EditError(f"{data_dir} has no family.yml; run cronicl init")
     tree, _ = load_tree(data_dir)
-    listed = [*parents, *partners]
+    listed = [*parents, *adoptive_parents, *partners]
     unknown = sorted({pid for pid in listed if pid not in tree.people})
     if unknown:
         raise EditError(f"unknown person id(s): {', '.join(unknown)}; use cronicl search to find ids")
@@ -44,6 +45,8 @@ def plan_new_family(
             raise EditError(f"{pid} is listed twice")
     if len(parents) > 2:
         raise EditError("at most two parents")
+    if len(adoptive_parents) > 2:
+        raise EditError("at most two adoptive parents")
     for value, label in ((birth, "--birth"), (death, "--death")):
         if value and not (is_unknown(value) or parse_date(value)):
             raise EditError(f"{label} {value!r} is not a date (use YYYY, YYYY-MM, YYYY-MM-DD, ABT/BEF/AFT/BET ..., or unknown)")
@@ -75,6 +78,7 @@ def plan_new_family(
         "birth": {"date": birth, "place": birth_place} if (birth and birth_place) or (birth_place and not birth) else birth,
         "death": {"date": death, "place": death_place} if (death and death_place) or (death_place and not death) else death,
         "parents": list(parents),
+        "adoptive_parents": list(adoptive_parents),
     }
     text = person(pid, spec) + "".join(couple(pid, other) for other in partners)
     return pid, target, text

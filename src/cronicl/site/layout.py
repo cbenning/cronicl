@@ -344,9 +344,10 @@ def _layout_connected(tree: Tree) -> dict:
             else:
                 above = ky - JOG_EDGE
                 path = [(jx, jy), (jx, mid), (detour, mid), (detour, above), (entry_x, above), (entry_x, ky)]
-            edges.append(
-                {"from": uid, "to": kid, "kind": "child", "points": [[_num(x), _num(y)] for x, y in path]}
-            )
+            edge = {"from": uid, "to": kid, "kind": "child", "points": [[_num(x), _num(y)] for x, y in path]}
+            if relations.adoptive_parents.get(kid):
+                edge["adopted"] = True  # drawn dashed: this couple adopted them
+            edges.append(edge)
     edges.sort(key=lambda e: (e["from"], e["to"], e["kind"]))
     width = max(n["x"] + n["w"] for n in nodes) + MARGIN
     height = max(n["y"] + n["h"] for n in nodes) + MARGIN

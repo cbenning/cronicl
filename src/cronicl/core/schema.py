@@ -74,6 +74,7 @@ FAMILY_SCHEMA = {
                         "birth": _FACT,
                         "death": _FACT,
                         "parents": {"oneOf": [{"type": "null"}, {"type": "array", "items": _TEXT, "maxItems": 2}]},
+                        "adoptive-parents": {"oneOf": [{"type": "null"}, {"type": "array", "items": _TEXT, "maxItems": 2}]},
                         "events": {"oneOf": [{"type": "null"}, {"type": "array", "items": _EVENT}]},
                         "portrait": _TEXT,
                         "living": _TEXT,

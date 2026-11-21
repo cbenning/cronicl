@@ -142,10 +142,10 @@ def test_gedcom_subrecords_of_mapped_tags_are_preserved():
         "0 @I1@ INDI\n1 NAME A /B/\n1 SEX X\n"
         "1 BIRT\n2 DATE 1950\n3 SOUR @S1@\n2 PLAC Vancouver\n3 MAP\n4 LATI N49\n4 LONG W123\n"
         "1 NOTE a note\n2 SOUR @S2@\n"
-        "1 FAMC @F1@\n2 PEDI adopted\n"
+        "1 FAMC @F1@\n2 PEDI foster\n"
         "0 @F1@ FAM\n1 CHIL @I1@\n0 TRLR\n"
     ).people[0]
-    for needle in ["3 SOUR @S1@", "3 MAP", "4 LATI N49", "4 LONG W123", "2 SOUR @S2@", "2 PEDI adopted", "1 SEX X"]:
+    for needle in ["3 SOUR @S1@", "3 MAP", "4 LATI N49", "4 LONG W123", "2 SOUR @S2@", "2 PEDI foster", "1 SEX X"]:
         assert needle in person.gedcom_extra, needle
     assert person.birth.date == "1950" and person.birth.place == "Vancouver"
     assert person.sex == "U"

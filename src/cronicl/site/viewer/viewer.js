@@ -375,6 +375,7 @@
   }
 
   function relationNote(rel) {
+    if (rel.note) return rel.note;
     if (rel.type !== 'half') return '';
     var via = (rel.via || []).map(function (p) { return p.name; }).join(' & ');
     return via ? 'half-sibling via ' + via : 'half-sibling';
@@ -675,7 +676,7 @@
             body.appendChild(evSection);
           }
           [
-            ['Parents', p.parents], ['Partners', p.spouses], ['Siblings', p.siblings], ['Children', p.children]
+            ['Parents', p.parents], ['Birth parents', p.birth_parents], ['Partners', p.spouses], ['Siblings', p.siblings], ['Children', p.children], ['Children raised by others', p.raised_elsewhere]
           ].forEach(function (pair) {
             var section = relativeGroup(pair[0], pair[1], state.view);
             if (section) body.appendChild(section);
@@ -830,7 +831,7 @@
         var linEdge = lin ? lin.edges.get(Number(ref)) : undefined;
         var line = svgEl('polyline', {
           points: edge.points.map(function (p) { return p.join(','); }).join(' '),
-          'class': 'edge ' + edge.kind + (edge.kind === 'spouse' && endedUnions.has(edge.to) ? ' ended' : '') +
+          'class': 'edge ' + edge.kind + (edge.adopted ? ' adopted' : '') + (edge.kind === 'spouse' && endedUnions.has(edge.to) ? ' ended' : '') +
             (lin ? (linEdge !== undefined ? ' hi lin' : ' dim')
               : hl ? (role ? ' hi role-' + role : ' dim')
               : ''),

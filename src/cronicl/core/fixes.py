@@ -78,10 +78,10 @@ def _options(text: str, issue: Issue) -> list[FixOption]:
             ]
         return [_one(issue, text, renamed, f"rename it to {match.group(2)}")]
     if code == "W-DUPLICATE-PARENT":
-        path = _pick(text, issue.line, last="parents", length=2)
+        path = _pick(text, issue.line, last="parents", length=2) or _pick(text, issue.line, last="adoptive-parents", length=2)
         if not path:
             return []
-        parents = record_data(text, path[0]).get("parents") or []
+        parents = record_data(text, path[0]).get(path[-1]) or []
         new = text
         seen: set = set()
         drop = [i for i, p in enumerate(parents) if p in seen or seen.add(p)]
