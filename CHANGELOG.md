@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Python 3.10 is no longer supported: it reached end of life in October 2026. cronicl needs Python 3.11 or newer.
+  Tests run on the oldest (3.11) and the newest (3.15) supported versions.
+
 ## 1.0.1
 
 - Fix: a photo gallery served from the same address as the site, behind one login such as HTTP Basic auth, now shows

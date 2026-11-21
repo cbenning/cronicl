@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://github.com/cbenning/cronicl/actions/workflows/ci.yml"><img src="https://github.com/cbenning/cronicl/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/cbenning/cronicl/blob/main/LICENSE"><img src="https://img.shields.io/github/license/cbenning/cronicl" alt="MIT license"></a>
-  <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10 and newer">
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11 and newer">
 </p>
 
 <p align="center"><b>Your family tree, kept as plain text you own.</b><br>
@@ -51,7 +51,7 @@ and write the same file.
 uv tool install cronicl      # or: pipx install cronicl, or pip install cronicl
 ```
 
-Python 3.10 or newer. To work on cronicl itself, clone the repository and run `uv sync`, then put `uv run` in front
+Python 3.11 or newer. To work on cronicl itself, clone the repository and run `uv sync`, then put `uv run` in front
 of the commands below.
 
 ## Quick start

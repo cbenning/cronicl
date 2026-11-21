@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.10", "3.12", "3.13"]
+        python: ["3.11", "3.15"]  # the oldest and the newest supported; the ones between rarely differ
     env:
       # The browser tests drive the Chrome that ships on the runner; they skip themselves when it is missing.
       CRONICL_CHROME: /usr/bin/google-chrome
