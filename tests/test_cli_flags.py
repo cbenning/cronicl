@@ -103,3 +103,16 @@ def test_force_is_split_into_allow_dirty_and_ignore_errors(tmp_path, write):
         main(["build", "--dir", str(tmp_path), "--force"])
     with pytest.raises(SystemExit):  # --allow-dirty is not a flag of rename
         main(["rename", "a", "b", "--dir", str(tmp_path), "--allow-dirty"])
+
+
+def test_version_flag_prints_the_installed_version(capsys):
+    from importlib.metadata import version
+
+    import pytest
+
+    from cronicl.cli import main
+
+    with pytest.raises(SystemExit) as stop:
+        main(["--version"])
+    assert stop.value.code == 0
+    assert capsys.readouterr().out.strip() == f"cronicl {version('cronicl')}"

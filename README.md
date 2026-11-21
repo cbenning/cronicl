@@ -121,6 +121,7 @@ lines and the order of records stay as you left them.
 | `build [--out OUT] [--ignore-errors]` | Run `check`, then generate the static site (default `OUT` is `<dir>/out`). |
 | `serve [--out OUT] [--port N] [--ignore-errors]` | Build and serve locally. |
 | `schema` | Print the JSON Schema for `family.yml` (for editors and agents). Needs no folder. |
+| `--version` | Print the installed version (`cronicl 1.1.0`). With uvx: `uvx cronicl@latest --version`. |
 
 `edit` holds the commands that change a person's record by hand-picked id, so it stays separate from the
 read-only utilities. There is deliberately no bulk form.

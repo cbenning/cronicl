@@ -10,6 +10,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from . import __version__
 from .checks import check_all
 from .core.edit import EditError
 from .core.familyedit import plan_mark, plan_rename
@@ -386,6 +387,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cronicl", description="Family tree file to static site", parents=[common]
     )
+    parser.add_argument("--version", action="version", version=f"cronicl {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("init", parents=[common], help="create a new cronicl folder")
