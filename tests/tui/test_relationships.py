@@ -602,3 +602,20 @@ def test_adoptive_parents_are_counted_apart_from_birth_parents(tmp_path):
 
     name, text = drive(tmp_path, script)
     assert name == "PeoplePicker" and "adoptive-parents: [third-person]" in text
+
+
+def test_a_search_is_cleared_after_a_pick_so_the_next_enter_is_not_new_person(tmp_path):
+    folder(tmp_path, family=FAMILY_THREE)
+
+    async def script(pilot, app):
+        from textual.widgets import Input
+
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "child")
+        await type_text(pilot, "Other")
+        await pilot.press("enter")
+        await pilot.pause()
+        return app.screen.query_one("#people-query", Input).value, option_texts(app, "#people")
+
+    query, rows = drive(tmp_path, script)
+    assert query == "" and any("Third Person" in r for r in rows) and not any("Other Person" in r for r in rows)

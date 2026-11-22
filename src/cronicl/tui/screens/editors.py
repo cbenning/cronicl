@@ -198,7 +198,7 @@ class ChoiceEditor(_Base):
 
 
 class PeoplePicker(_Base):
-    """Pick a person (by name), or "New person…". Returns the id, or NEW."""
+    """Pick a person (by name), or "New person…". Returns the id, or NEW (None when cancelled, or when `on_pick` closed it)."""
 
     NEW = "__new__"
     BINDINGS = [Binding("escape", "cancel", "Cancel"), Binding("down", "move(1)", show=False), Binding("up", "move(-1)", show=False)]
@@ -266,7 +266,11 @@ class PeoplePicker(_Base):
         added = self.query_one("#people-added", Label)
         added.update("Added: " + ", ".join(self.family.name_of(p) for p in self.picked))
         added.display = True
-        self._fill(self.query_one("#people-query", Input).value)
+        query = self.query_one("#people-query", Input)
+        if query.value:
+            query.value = ""  # typing a name then Enter picks them; the next Enter must not land on "New person…"
+        else:
+            self._fill("")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self._pick()
