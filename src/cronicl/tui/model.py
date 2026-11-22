@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ..checks import check_all
 from ..checktext import load_tree_from_texts
-from ..core.dates import format_years
+from ..core.dates import format_years, plain_form
 from ..core.family import family_files
 from ..core.issues import Issue
 from ..core.living import is_living
@@ -26,6 +26,8 @@ class Row:
     place: str
     living: bool
     warnings: int
+    parents: str = ""  # compact: the given names of the parents the tree draws, "George & Anne"
+    children: str = ""  # compact: the first few children's given names, "Ada, Tom +2"
 
 
 def read_disk(data_dir: Path) -> tuple[str | None, dict[str, str]]:
@@ -139,7 +141,24 @@ class Family:
         person = self.tree.people[pid]
         place = (person.birth.place if person.birth and person.birth.place else "") or (person.death.place if person.death and person.death.place else "")
         years = format_years(person.birth.date if person.birth else None, person.death.date if person.death else None)
-        return Row(pid, person.display_name if person.display_name != pid else pid, years, place or "", is_living(person, self.today, self.cutoff), counts.get(pid, 0))
+        relations = self.relations
+        parents = " & ".join(self._short(p, person.surname) for p in relations.parents.get(pid, []))
+        kids = sorted(
+            {k for cid in relations.couples_of.get(pid, []) for k in relations.kids.get(cid, [])},
+            key=lambda k: (plain_form(self.tree.people[k].birth.date) if self.tree.people[k].birth and self.tree.people[k].birth.date else "\uffff", k),
+        )
+        children = ", ".join(self._short(k, person.surname) for k in kids[:2]) + (f" +{len(kids) - 2}" if len(kids) > 2 else "")
+        return Row(pid, person.display_name if person.display_name != pid else pid, years, place or "", is_living(person, self.today, self.cutoff), counts.get(pid, 0), parents, children)
+
+    def _short(self, pid: str, home: str | None = None) -> str:
+        """A person in a few characters: the first given name, plus the surname when it is not `home`, else the whole name."""
+        person = self.tree.people.get(pid)
+        if person is None:
+            return pid
+        given = (person.given or "").split()
+        if not given:
+            return person.display_name
+        return f"{given[0]} {person.surname}" if person.surname and person.surname != home else given[0]
 
     def counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}

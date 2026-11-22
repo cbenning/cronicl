@@ -13,15 +13,20 @@ from ..widgets import fit, room
 
 
 def row_text(row, width: int = 80) -> Text:
-    """One person as a list row. Columns appear as the terminal allows: name and years always, then place, then id."""
+    """One person as a list row. Columns appear as the terminal allows: name and years always, then parents, children,
+    place and id (parents and children tell apart people who share a name)."""
     text = Text(no_wrap=True)
     text.append("● " if row.living else "  ", style="bold yellow")
     name_w = 24 if width < 70 else 28
     text.append(f"{row.name:<{name_w}.{name_w}} ", style="bold")
     text.append(f"{row.years:<11.11} ", style="dim")
-    if width >= 84:
-        text.append(f"{row.place:<20.20} ", style="dim")
-    if width >= 100:
+    left = width - (2 + name_w + 1 + 12)
+    for value, size, glyph in ((row.parents, 24, "↑ "), (row.children, 24, "↓ "), (row.place, 20, "")):
+        if left < size + 1:
+            break
+        text.append(f"{glyph if value else '  '}{value:<{size - 2}.{size - 2}} " if glyph else f"{value:<{size}.{size}} ", style="dim")
+        left -= size + 1
+    if left >= len(row.id):
         text.append(f"{row.id}", style="dim italic")
     if row.warnings:
         text.append(f" ⚠{row.warnings}", style="bold red")
