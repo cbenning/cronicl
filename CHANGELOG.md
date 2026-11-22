@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
 - The terminal editor's person list and person picker show each person's parents (`↑ Tom & Anne`) and first children
   (`↓ Sam, Pat +1`) as the terminal allows, so people who share a name can be told apart. A parent or child with a
