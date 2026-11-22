@@ -34,7 +34,7 @@ def test_the_finder_lists_everyone_by_surname_when_the_query_is_empty(tmp_path, 
     name, listed, shown = drive(tmp_path, script, size)
     assert name == "FinderScreen"
     assert [r.split()[0] for r in listed] == ["George", "Augusta", "Annabella", "Zoë"] or len(listed) == 4
-    order = [next(w for w in ("Byron", "Lovelace", "Milbanke", "Müller") if w in r) for r in listed]
+    order = [next(w for w in ("Byron", "Lovelace", "Milbanke", "Müller") if w in r[:30]) for r in listed]  # the name column (parents follow it)
     assert order == ["Byron", "Lovelace", "Milbanke", "Müller"]
     assert "4 people" in shown
 
@@ -112,3 +112,50 @@ def test_an_empty_family_says_how_to_add_the_first_person(tmp_path):
         return texts(app)
 
     assert "Ctrl+N" in drive(tmp_path, script)
+
+
+TWINS = """\
+anne-a:
+  name: {given: Anne, surname: Ames}
+tom-a:
+  name: {given: Tom, surname: Ames}
+anne-b:
+  name: {given: Anne, surname: Bell}
+tom-b:
+  name: {given: Tom, surname: Bell}
+john-1:
+  name: {given: John, surname: Ames}
+  birth: 1900
+  parents: [tom-a, anne-a]
+john-2:
+  name: {given: John, surname: Ames}
+  birth: 1905
+  parents: [tom-b, anne-b]
+kid-1:
+  name: {given: Kit, surname: Ames}
+  parents: [john-1]
+kid-2:
+  name: {given: Pat, surname: Ames}
+  birth: 1930
+  parents: [john-1]
+kid-3:
+  name: {given: Sam, surname: Ames}
+  birth: 1925
+  parents: [john-1]
+"""
+
+
+@pytest.mark.parametrize("size", SIZES)
+def test_rows_show_parents_and_children_so_people_with_one_name_can_be_told_apart(tmp_path, size):
+    folder(tmp_path, family=TWINS)
+
+    async def script(pilot, app):
+        await type_text(pilot, "john")
+        return rows(app)
+
+    first, second = drive(tmp_path, script, size)
+    assert "↑ Tom & Anne " in first  # the parents share John's surname, so only given names show
+    assert "↑ Tom Bell & Anne Bell" in second  # same given names: the surname tells the two Johns apart
+    assert "↓" not in second  # John 2 has no children
+    if size[0] >= 120:  # a narrow terminal has room for the parents only
+        assert "↓ Sam, Pat +1" in first  # eldest first; Kit has no date, so comes last

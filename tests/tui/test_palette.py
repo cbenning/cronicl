@@ -294,3 +294,21 @@ def test_a_death_place_alone_is_fine_too(tmp_path):
     text, codes = drive(tmp_path, script)
     assert "death: {place: Hull}" in text.split("place-only:")[1]
     assert "W-DEATH-EMPTY" not in codes
+
+
+def test_adoptive_parents_can_be_added_from_the_palette(tmp_path):
+    folder(tmp_path, family=FAMILY + "\nlone:\n  name: {given: Lone}\n")
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "lone")
+        await pilot.press("a")
+        await pilot.pause()
+        await type_text(pilot, "adopt")
+        await pilot.press("enter")
+        await pilot.pause()
+        await highlight(pilot, app, "George Byron", selector="#people")
+        await pilot.press("enter")
+        await pilot.pause()
+        return staged(app)
+
+    assert "adoptive-parents: [byron-george]" in drive(tmp_path, script)
