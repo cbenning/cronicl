@@ -33,6 +33,7 @@ def find_chrome() -> str | None:
     return None
 
 
+@pytest.mark.browser
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
 @pytest.mark.skipif(find_chrome() is None, reason="no headless Chrome found (set CRONICL_CHROME)")
 def test_viewer_in_a_real_browser(tmp_path, sample_ged):

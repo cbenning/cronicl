@@ -768,7 +768,7 @@ accounting (a hand-edited file, a strict checker, generated views). The format i
 
 ```bash
 uv sync --extra dev
-uv run pytest
+uv run pytest -n auto          # in parallel; add -m "not browser" to skip the Chrome tests
 ```
 
 The suite includes a click-through test that drives a built site in headless Chrome. It is skipped when `node`
