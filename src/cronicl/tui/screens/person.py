@@ -517,22 +517,22 @@ class PersonScreen(Screen):
         exclude = {self.pid} | ancestors(family, self.pid) | children
 
         def picked(value) -> None:
-            if value is None:
-                return
-            if value == PeoplePicker.NEW:
+            if value == PeoplePicker.NEW:  # existing people are linked as they are picked, in pick_child
                 self._new_child()
-            else:
-                self._existing_child(value)
 
-        self.app.push_screen(PeoplePicker("Add a child", family, exclude, True), picked)
+        def pick_child(pid: str) -> bool | None:
+            return False if self._existing_child(pid) else None  # a child pick never closes the picker: Esc does
 
-    def _existing_child(self, child: str) -> None:
+        self.app.push_screen(PeoplePicker("Add a child", family, exclude, True, on_pick=pick_child), picked)
+
+    def _existing_child(self, child: str) -> bool:
+        """Make `child` a child of this person; False when that was refused."""
         family = self.family
         person = family.tree.people[child]
         if len(person.parents) >= 2:
             self.app.notify(f"{family.name_of(child)} already has two parents", severity="warning")
-            return
-        self._stage(person.source, lambda t: list_add(t, (child, "parents"), self.pid), (child, "parents", 0))
+            return False
+        return self._stage(person.source, lambda t: list_add(t, (child, "parents"), self.pid), (child, "parents", 0))
 
     def _new_child(self) -> None:
         family = self.family
