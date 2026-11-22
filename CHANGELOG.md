@@ -3,6 +3,8 @@
 ## Unreleased
 
 - New: `cronicl --version` prints the installed version.
+- New: in the terminal app, "Add a child" keeps the picker open so you can pick several children in a row (Esc when
+  done), and "Add a parent" lets you pick both parents before it closes.
 
 ## 1.1.0
 

@@ -543,3 +543,62 @@ def test_the_partner_picker_still_closes_after_one_pick(tmp_path):
         return screen_name(app)
 
     assert drive(tmp_path, script) != "PeoplePicker"
+
+
+def test_adding_parents_closes_the_picker_after_the_second(tmp_path):
+    folder(tmp_path, family=FAMILY_THREE)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "other-person")
+        await palette_pick(pilot, "parents")
+        await pick_person(pilot, app, "Third Person")
+        after_one = screen_name(app)
+        await pick_person(pilot, app, "George Byron")
+        return after_one, screen_name(app), staged(app)
+
+    after_one, after_two, text = drive(tmp_path, script)
+    assert after_one == "PeoplePicker" and after_two == "PersonScreen"
+    assert "parents: [third-person, byron-george]" in text
+
+
+def test_a_person_with_one_parent_closes_the_picker_after_one_more(tmp_path):
+    family = FAMILY.replace("lovelace-ada:", "other-person:\n  name: {given: Other, surname: Person}\n  parents: [byron-george]\n\nlovelace-ada:")
+    folder(tmp_path, family=family)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "other-person")
+        await palette_pick(pilot, "parents")
+        await pick_person(pilot, app, "Annabella Milbanke")
+        return screen_name(app), staged(app)
+
+    name, text = drive(tmp_path, script)
+    assert name == "PersonScreen" and "parents: [byron-george, milbanke-annabella]" in text
+
+
+def test_escape_after_the_first_parent_keeps_it(tmp_path):
+    folder(tmp_path, family=FAMILY_THREE)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "other-person")
+        await palette_pick(pilot, "parents")
+        await pick_person(pilot, app, "Third Person")
+        await pilot.press("escape")
+        await pilot.pause()
+        return screen_name(app), staged(app)
+
+    name, text = drive(tmp_path, script)
+    assert name == "PersonScreen" and "other-person:\n  name: {given: Other, surname: Person}\n  parents: [third-person]" in text
+
+
+def test_adoptive_parents_are_counted_apart_from_birth_parents(tmp_path):
+    family = FAMILY_THREE.replace("other-person:\n  name: {given: Other, surname: Person}", "other-person:\n  name: {given: Other, surname: Person}\n  parents: [byron-george, milbanke-annabella]")
+    folder(tmp_path, family=family)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "other-person")
+        await palette_pick(pilot, "adoptive-parents")
+        await pick_person(pilot, app, "Third Person")
+        return screen_name(app), staged(app)
+
+    name, text = drive(tmp_path, script)
+    assert name == "PeoplePicker" and "adoptive-parents: [third-person]" in text

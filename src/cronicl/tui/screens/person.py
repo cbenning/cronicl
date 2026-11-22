@@ -384,6 +384,8 @@ class PersonScreen(Screen):
         screen = editor_for(self.app, key, path, "")
         if screen is None:
             return
+        if field.path in ("parents", "adoptive-parents"):
+            screen.on_pick = lambda pid: self._pick_parent(pid, key, field.path, source)
 
         def done(value, path=path, field=field) -> None:
             if not value:
@@ -437,6 +439,12 @@ class PersonScreen(Screen):
             self._ask_event_fields(key, source, index, rest, finish)
 
         self.app.push_screen(screen, done)
+
+    def _pick_parent(self, pid: str, key: str, field_path: str, source: str) -> bool | None:
+        """Add `pid` as a parent; True once the person has two (the picker closes), None when staging was refused."""
+        if not self._stage(source, lambda t: list_add(t, (key, field_path), pid), (key, field_path, 0)):
+            return None
+        return len(record_data(self.app.session.staged[source], key).get(field_path) or []) >= 2
 
     def _custom_key(self, name: str | None, key: str, source: str) -> None:
         if not name:
