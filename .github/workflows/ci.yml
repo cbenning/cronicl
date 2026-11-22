@@ -21,6 +21,22 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.11", "3.15"]  # the oldest and the newest supported; the ones between rarely differ
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Run the tests
+        # The browser tests have their own job; the rest run in parallel across the runner's cores.
+        run: uv run --python ${{ matrix.python }} --extra dev pytest -q -n auto -m "not browser"
+
+  browser:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       # The browser tests drive the Chrome that ships on the runner; they skip themselves when it is missing.
       CRONICL_CHROME: /usr/bin/google-chrome
@@ -34,8 +50,9 @@ jobs:
           node-version: "22"
       - name: Check that Chrome is there
         run: google-chrome --version
-      - name: Run the tests
-        run: uv run --python ${{ matrix.python }} --extra dev pytest -q
+      - name: Run the browser tests
+        # What the browser sees does not depend on the Python version, so one (the newest) is enough.
+        run: uv run --python 3.15 --extra dev pytest -q -n auto -m browser
 
   package:
     name: Package builds and runs

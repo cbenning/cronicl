@@ -6,7 +6,7 @@ import http from 'node:http';
 
 const [chrome, base, gallery, shots] = process.argv.slice(2);
 mkdirSync(shots, { recursive: true });
-const port = 9300 + Math.floor(Math.random() * 400);
+const port = 9900 + Math.floor(Math.random() * 200);
 // A full Chrome needs --headless; chrome-headless-shell is always headless.
 const headless = /headless[-_]shell/.test(chrome) ? [] : ['--headless=new'];
 const proc = spawn(chrome, [...headless, '--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--window-size=1400,820',
@@ -45,18 +45,39 @@ async function main() {
   await send("Page.enable");
   await send("Network.enable");
   const requests = [];
-  ws.addEventListener("message", (e) => { const m = JSON.parse(e.data); if (m.method === "Network.requestWillBeSent") requests.push(m.params.request.url); });
-  const ev = async (expr) => (await send('Runtime.evaluate', { expression: expr, returnByValue: true })).result.result.value;
+  const inflight = new Set();
+  let loadWaiters = [];
+  ws.addEventListener("message", (e) => {
+    const m = JSON.parse(e.data);
+    if (m.method === "Network.requestWillBeSent") { requests.push(m.params.request.url); inflight.add(m.params.requestId); }
+    else if (m.method === "Network.loadingFinished" || m.method === "Network.loadingFailed") inflight.delete(m.params.requestId);
+    // A page that rejects an error response without reading its body never gets a loadingFinished for it.
+    else if (m.method === "Network.responseReceived" && m.params.response.status >= 400) inflight.delete(m.params.requestId);
+    else if (m.method === "Page.loadEventFired") { const w = loadWaiters; loadWaiters = []; w.forEach((r) => r()); }
+  });
+  const ev = async (expr) => (await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true })).result.result.value;
+  // The page reacts synchronously apart from a redraw frame, so two animation frames is "settled".
+  const settle = () => ev('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))');
+  // Wait for the page to load and for every request it made (the gallery listing, the photos) to finish, instead of a fixed delay.
+  const idle = async () => {
+    for (let quiet = 0, i = 0; quiet < 3 && i < 300; i++) { await sleep(50); quiet = inflight.size === 0 ? quiet + 1 : 0; }
+    await settle();
+  };
   const shot = async (name) => {
     const r = await send('Page.captureScreenshot', { format: 'png' });
     writeFileSync(`${shots}/${name}.png`, Buffer.from(r.result.data, 'base64'));
   };
   const setMode = (mode) => new Promise((resolve, reject) => { http.get(`${gallery}/__mode/${mode}`, (res) => { res.resume(); res.on('end', resolve); }).on('error', reject); });
-  const open = async (mode, path, wait = 1000) => {
+  const open = async (mode, path, wait) => {
     await setMode(mode);
-    await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
-    errors.length = 0; requests.length = 0;
-    await send('Page.navigate', { url: base + path }); await sleep(wait);
+    const loadEvent = () => new Promise((r) => { loadWaiters.push(r); setTimeout(r, 30000); });
+    let fired = loadEvent();
+    await send('Page.navigate', { url: 'about:blank' }); await fired;
+    errors.length = 0; requests.length = 0; inflight.clear();
+    fired = loadEvent();
+    await send('Page.navigate', { url: base + path }); await fired;
+    // Only a gallery that never answers needs a fixed wait: its request never finishes, so there is nothing to wait for.
+    if (wait) await sleep(wait); else await idle();
   };
   const state = () => ev(`(() => { const s = document.getElementById('gallery'); if (!s) return { exists: false }; const r = s.getBoundingClientRect(); const imgs = [...s.querySelectorAll('img')]; const links = [...s.querySelectorAll('a')]; return { exists: true, hidden: s.hidden, height: r.height, heading: s.querySelector('h2').textContent, thumbs: s.querySelectorAll('.gallery-thumbs li').length, loaded: imgs.every((i) => i.complete && i.naturalWidth > 0), blank: links.every((a) => a.target === '_blank' && /noopener/.test(a.rel)), hrefs: links.map((a) => a.href), more: s.querySelector('.gallery-more a').textContent, srcs: imgs.map((i) => i.src) }; })()`);
   const galleryRequests = () => requests.filter((u) => u.includes('people.json'));
@@ -84,8 +105,8 @@ async function main() {
   check('even with portrait photos the featured tile is square and the tiles sit flush against it', Math.abs(mosaic.h0 - mosaic.w0) < 3 && Math.abs(mosaic.h0 - (2 * mosaic.h1 + mosaic.gap)) < 2 && mosaic.gap < 20, JSON.stringify(mosaic));
   check('the featured photo uses the large size, the tiles the small one', mosaic.srcs[0].endsWith('/big1.jpg') && mosaic.srcs.slice(1).every((u, i) => u.endsWith('/p' + (i + 2) + '.jpg')), mosaic.srcs.join(' '));
   const lightbox = () => ev(`(() => { const d = document.querySelector('dialog.gallery-lightbox'); if (!d) return { exists: false, n: 0 }; const r = d.getBoundingClientRect(); const open = d.querySelector('.gallery-open'); return { exists: true, n: document.querySelectorAll('dialog.gallery-lightbox').length, open: d.open, h: r.height, w: r.width, imgW: d.querySelector('.gallery-big').getBoundingClientRect().width, src: d.querySelector('.gallery-big').src, counter: d.querySelector('.gallery-count').textContent, href: open.href, rel: open.rel }; })()`);
-  const key = async (k, code, vk) => { for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: k, code, windowsVirtualKeyCode: vk }); await sleep(250); };
-  await ev(`document.querySelector('#gallery .gallery-thumbs li a').click()`); await sleep(400);
+  const key = async (k, code, vk) => { for (const type of ['keyDown', 'keyUp']) await send('Input.dispatchKeyEvent', { type, key: k, code, windowsVirtualKeyCode: vk }); await settle(); };
+  await ev(`document.querySelector('#gallery .gallery-thumbs li a').click()`); await settle();
   let lb = await lightbox();
   check('clicking a photo opens the lightbox in the page, on the large photo', lb.exists && lb.open && lb.h > 0 && lb.src.endsWith('/big1.jpg') && lb.counter === '1 / 6', JSON.stringify(lb));
   check('the lightbox links to that photo in the gallery, in a new tab', lb.href.startsWith(gallery + '/photos/#/collections/people/jane-doe/p1') && /noopener/.test(lb.rel), JSON.stringify(lb));
@@ -100,16 +121,16 @@ async function main() {
   lb = await lightbox();
   check('Escape closes the lightbox', lb.exists && lb.open === false, JSON.stringify(lb));
   check('focus returns to the photo that was opened', (await ev(`document.activeElement === document.querySelector('#gallery .gallery-thumbs li a')`)) === true);
-  await ev(`document.querySelectorAll('#gallery .gallery-thumbs li a')[2].click()`); await sleep(400);
+  await ev(`document.querySelectorAll('#gallery .gallery-thumbs li a')[2].click()`); await settle();
   lb = await lightbox();
   check('opening again reuses one lightbox, on the clicked photo', lb.n === 1 && lb.open && lb.counter === '3 / 6' && lb.src.endsWith('/big3.jpg'), JSON.stringify(lb));
-  await ev(`document.querySelector('dialog.gallery-lightbox .gallery-next').click()`); await sleep(250);
+  await ev(`document.querySelector('dialog.gallery-lightbox .gallery-next').click()`); await settle();
   lb = await lightbox();
   check('the next button shows the next photo', lb.counter === '4 / 6' && lb.src.endsWith('/big4.jpg'), JSON.stringify(lb));
   const around = await ev(`(() => { const r = document.querySelector('dialog.gallery-lightbox').getBoundingClientRect(); return { left: r.left, right: r.right }; })()`);
   check('the lightbox hugs the photo, so there is no dead zone beside it', around.left > 300 && around.right < 1100, JSON.stringify(around));
   for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: 150, y: 400, button: 'left', clickCount: 1 });
-  await sleep(250);
+  await settle();
   lb = await lightbox();
   check('clicking the dark area beside the photo closes the lightbox', lb.open === false, JSON.stringify(lb));
   const avatar = () => ev(`(() => { const a = document.querySelector('.hero .avatar'); const r = a.getBoundingClientRect(); return { tag: a.tagName, src: a.src || '', w: Math.round(r.width), round: getComputedStyle(a).borderRadius }; })()`);
@@ -124,7 +145,7 @@ async function main() {
   // ---- the top bar carries the same link on every page, in the same place
   const bar = [];
   for (const path of ['/index.html', '/people/index.html', '/p/jane-doe/']) {
-    await open('ok', path, 700);
+    await open('ok', path);
     bar.push(await ev(`(() => { const a = document.querySelector('.site-gallery'); const n = document.querySelector('.site-bar nav').getBoundingClientRect(); return JSON.stringify([a && a.href, a && a.target, Math.round(n.left), Math.round(n.top), Math.round(n.width), Math.round(n.height)]); })()`));
     if (path !== '/p/jane-doe/') check('no request to the gallery from ' + path, galleryRequests().length === 0, requests.join(' '));
   }
@@ -147,7 +168,7 @@ async function main() {
   check('hostile: a bad large size falls back to the small one, a bad face is ignored', s.srcs.length === 1 && s.srcs[0].endsWith('/p1.jpg') && (await ev(`document.querySelector('.hero .avatar').tagName`)) === 'DIV', JSON.stringify(s.srcs));
 
   // ---- a large size that is listed but will not load
-  await open('badsrc', '/p/jane-doe/', 1500);
+  await open('badsrc', '/p/jane-doe/');
   s = await state();
   const featuredImg = await ev(`(() => { const i = document.querySelector('#gallery .gallery-thumbs li.featured img'); return { w: i.naturalWidth, src: i.src }; })()`);
   check('badsrc: the featured photo falls back to its small size', s.exists && !s.hidden && featuredImg.w > 0 && featuredImg.src.endsWith('/p1.jpg'), JSON.stringify(featuredImg));
@@ -156,14 +177,14 @@ async function main() {
   await open('nosrc', '/p/jane-doe/');
   s = await state();
   check('nosrc: the featured photo falls back to the small size', s.exists && !s.hidden && s.srcs[0].endsWith('/p1.jpg'), JSON.stringify(s.srcs));
-  await ev(`document.querySelector('#gallery .gallery-thumbs li a').click()`); await sleep(400);
+  await ev(`document.querySelector('#gallery .gallery-thumbs li a').click()`); await settle();
   lb = await lightbox();
   check('nosrc: the lightbox still works', lb.open === true && lb.src.endsWith('/p1.jpg'), JSON.stringify(lb));
   await key('Escape', 'Escape', 27);
   check('nosrc: the initials stay', (await ev(`document.querySelector('.hero .avatar').tagName`)) === 'DIV');
 
   // ---- a gallery that fails in every way leaves the page alone
-  for (const [mode, wait] of [['notfound', 1000], ['badjson', 1000], ['badversion', 1000], ['nocors', 1000], ['hang', 6500]]) {
+  for (const [mode, wait] of [['notfound'], ['badjson'], ['badversion'], ['nocors'], ['hang', 5500]]) {
     await open(mode, '/p/jane-doe/', wait);
     s = await state();
     check(`${mode}: the block stays hidden and takes no space`, s.exists && s.hidden === true && s.height === 0 && s.thumbs === 0, JSON.stringify(s));
@@ -184,7 +205,7 @@ async function main() {
   await shot('gallery-phone');
   const phoneMosaic = await ev(`(() => { const f = document.querySelector('#gallery .gallery-thumbs li.featured').getBoundingClientRect(); const b = document.getElementById('gallery').getBoundingClientRect(); return { f: f.width, b: b.width }; })()`);
   check('phone: the featured photo spans the block', phoneMosaic.f >= phoneMosaic.b * 0.95, JSON.stringify(phoneMosaic));
-  await ev(`document.querySelector('#gallery .gallery-thumbs li a').click()`); await sleep(400);
+  await ev(`document.querySelector('#gallery .gallery-thumbs li a').click()`); await settle();
   lb = await lightbox();
   check('phone: the lightbox fits the screen', lb.open && lb.w <= 390 && lb.imgW <= 390 && (await ev('document.documentElement.scrollWidth')) <= 390, JSON.stringify(lb));
   await shot('gallery-phone-lightbox');
@@ -193,7 +214,7 @@ async function main() {
   const touch = (type, x, y) => send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
   await touch('touchStart', centre.x + 120, centre.y); await sleep(50);
   for (const dx of [80, 40, 0, -40, -80, -120]) { await touch('touchMove', centre.x + dx + 0, centre.y); await sleep(20); }
-  await touch('touchEnd', 0, 0); await sleep(300);
+  await touch('touchEnd', 0, 0); await settle();
   lb = await lightbox();
   check('phone: swiping left shows the next photo', lb.counter === '2 / 6', JSON.stringify(lb));
   await send('Emulation.setTouchEmulationEnabled', { enabled: false });

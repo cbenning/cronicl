@@ -37,11 +37,19 @@ async function main() {
   await new Promise((r) => (ws.onopen = r));
   const send = (method, params = {}) => new Promise((res) => { const i = ++id; pending.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
   await send('Runtime.enable'); await send('Page.enable'); await send('Network.enable');
-  const ev = async (expr) => (await send('Runtime.evaluate', { expression: expr, returnByValue: true })).result.result.value;
-  const open = async (path, wait = 1200) => {
-    await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
+  const ev = async (expr) => (await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true })).result.result.value;
+  // Poll for what a step should have produced, instead of sleeping a fixed time and hoping it was enough.
+  const until = async (expr, what) => {
+    for (let i = 0; i < 300; i++) { if (await ev(expr)) return; await sleep(50); }
+    throw new Error('timed out waiting for ' + what);
+  };
+  const tilesLoaded = `(() => { const t = [...document.querySelectorAll('.map-tile')]; return t.length > 0 && t.every((i) => i.complete); })()`;
+  const settle = () => ev('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))');
+  const open = async (path, withMap = true) => {
+    await send('Page.navigate', { url: 'about:blank' }); await until(`location.href === 'about:blank'`, 'about:blank');
     errors.length = 0; requests.length = 0;
-    await send('Page.navigate', { url: base + path }); await sleep(wait);
+    await send('Page.navigate', { url: base + path });
+    await until(`location.href.startsWith(${JSON.stringify(base)}) && document.readyState === 'complete' && ${withMap ? tilesLoaded : 'true'}`, 'the page at ' + path);
   };
   const tileHost = new URL(tiles).host, siteHost = new URL(base).host;
   const state = () => ev(`(() => { const imgs = [...document.querySelectorAll('.map-tile')]; const ms = [...document.querySelectorAll('.map-marker')];
@@ -64,17 +72,19 @@ async function main() {
   const z0 = zoomOf(s);
   await ev(`document.querySelector('.map-view').focus()`);
   const key = (k) => send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, text: k }).then(() => send('Input.dispatchKeyEvent', { type: 'keyUp', key: k }));
-  await key('+'); await sleep(500);
-  s = await state();
+  // A zoom redraws the tiles; wait for the zoom level to arrive (a wrong level still falls through to the check).
+  const zoomed = async (want) => { for (let i = 0; i < 100 && zoomOf(await state()) !== want; i++) await sleep(50); await until(tilesLoaded, 'tiles'); return state(); };
+  await key('+');
+  s = await zoomed(z0 + 1);
   check('+ zooms in', zoomOf(s) === z0 + 1, `${z0} -> ${zoomOf(s)}`);
-  await key('-'); await sleep(400);
-  s = await state();
+  await key('-');
+  s = await zoomed(z0);
   check('- zooms out', zoomOf(s) === z0, String(zoomOf(s)));
-  await ev(`document.querySelectorAll('.map-controls button')[0].click()`); await sleep(400);
-  s = await state();
+  await ev(`document.querySelectorAll('.map-controls button')[0].click()`);
+  s = await zoomed(z0 + 1);
   check('the + button zooms in', zoomOf(s) === z0 + 1, String(zoomOf(s)));
-  await ev(`document.querySelectorAll('.map-controls button')[2].click()`); await sleep(400);
-  s = await state();
+  await ev(`document.querySelectorAll('.map-controls button')[2].click()`);
+  s = await zoomed(z0);
   check('Fit goes back to showing every place', zoomOf(s) === z0, String(zoomOf(s)));
 
   const before = s.pos[0];
@@ -82,11 +92,11 @@ async function main() {
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: view.x, y: view.y, button: 'left', clickCount: 1 });
   for (const d of [10, 30, 60]) { await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: view.x + d, y: view.y + d / 2, button: 'left' }); await sleep(30); }
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: view.x + 60, y: view.y + 30, button: 'left', clickCount: 1 });
-  await sleep(300);
+  await settle();
   s = await state();
   check('dragging pans the map', Math.abs(s.pos[0][0] - before[0] - 60) <= 2 && Math.abs(s.pos[0][1] - before[1] - 30) <= 2, JSON.stringify([before, s.pos[0]]));
 
-  await ev(`[...document.querySelectorAll('.map-marker')].find((m) => /London/.test(m.getAttribute('aria-label'))).click()`); await sleep(200);
+  await ev(`[...document.querySelectorAll('.map-marker')].find((m) => /London/.test(m.getAttribute('aria-label'))).click()`); await settle();
   s = await state();
   check('clicking a marker lists its people with links', s.listOpen && /London/.test(s.listText) && s.links.some((h) => h.endsWith('p/ada/')) && s.links.some((h) => h.endsWith('p/bob/')), JSON.stringify([s.listText, s.links]));
   check('the address now names the place', (await ev('location.hash')).length > 1);
@@ -97,7 +107,7 @@ async function main() {
   check('a place address opens that place', s.listOpen && /Ockham/.test(s.listText), s.listText);
   check('and zooms in on it', zoomOf(s) >= 9, String(zoomOf(s)));
 
-  await open('/places/index.html');
+  await open('/places/index.html', false);
   const link = await ev(`(() => { const a = document.querySelector('a.on-map'); return a ? a.getAttribute('href') : null; })()`);
   check('the places page links to the map', !!link && link.startsWith('../map/#'), String(link));
   ws.close();

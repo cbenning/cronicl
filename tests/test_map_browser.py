@@ -28,6 +28,7 @@ class TileHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(PNG)
 
 
+@pytest.mark.browser
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
 @pytest.mark.skipif(find_chrome() is None, reason="no headless Chrome found (set CRONICL_CHROME)")
 def test_the_map_in_a_real_browser(tmp_path):

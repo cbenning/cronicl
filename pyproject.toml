@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "pytest-xdist>=3.5"]
 
 [project.urls]
 Homepage = "https://github.com/cbenning/cronicl"
@@ -50,6 +50,7 @@ packages = ["src/cronicl"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["browser: drives a real headless Chrome (slow; CI runs these in their own job)"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["/assets/screenshots", "/.github"]

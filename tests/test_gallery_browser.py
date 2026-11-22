@@ -112,6 +112,7 @@ def _gallery_server(state, stop):
     return http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
 
 
+@pytest.mark.browser
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
 @pytest.mark.skipif(find_chrome() is None, reason="no headless Chrome found (set CRONICL_CHROME)")
 def test_gallery_in_a_real_browser(tmp_path):
