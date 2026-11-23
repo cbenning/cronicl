@@ -440,3 +440,182 @@ def test_an_id_that_is_taken_by_a_scalar_record_is_not_proposed(tmp_path):
 
     name, text = drive(tmp_path, script)
     assert "smith-john-2" in text and name == "PersonScreen"
+
+
+# ---- picking several relatives without reopening the picker
+FAMILY_THREE = FAMILY_PLUS + """
+third-person:
+  name: {given: Third, surname: Person}
+"""
+
+
+async def pick_person(pilot, app, name):
+    await highlight(pilot, app, name, selector="#people")
+    await pilot.press("enter")
+    await pilot.pause()
+
+
+def test_add_a_child_keeps_the_picker_open_until_escape(tmp_path):
+    folder(tmp_path, family=FAMILY_THREE)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "child")
+        await pick_person(pilot, app, "Other Person")
+        after_one = (screen_name(app), option_texts(app, "#people"), texts(app))
+        await pick_person(pilot, app, "Third Person")
+        await pilot.press("escape")
+        await pilot.pause()
+        return after_one, screen_name(app), staged(app)
+
+    (name, rows, shown), after, text = drive(tmp_path, script)
+    assert name == "PeoplePicker" and not any("Other Person" in r for r in rows) and "Added: Other Person" in shown
+    assert after == "PersonScreen"
+    assert "other-person:\n  name: {given: Other, surname: Person}\n  parents: [lovelace-ada]" in text
+    assert "third-person:\n  name: {given: Third, surname: Person}\n  parents: [lovelace-ada]" in text
+
+
+def test_the_added_line_lists_everyone_picked_so_far(tmp_path):
+    folder(tmp_path, family=FAMILY_THREE)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "child")
+        await pick_person(pilot, app, "Other Person")
+        await pick_person(pilot, app, "Third Person")
+        return texts(app)
+
+    assert "Added: Other Person, Third Person" in drive(tmp_path, script)
+
+
+def test_a_child_with_two_parents_is_refused_and_the_picker_stays_open(tmp_path):
+    family = FAMILY_PLUS + "\nthird-person:\n  name: {given: Third, surname: Person}\n  parents: [byron-george, milbanke-annabella]\n"
+    folder(tmp_path, family=family)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "child")
+        before = staged(app)
+        await pick_person(pilot, app, "Third Person")
+        return screen_name(app), staged(app) == before, texts(app)
+
+    name, unchanged, shown = drive(tmp_path, script)
+    assert name == "PeoplePicker" and unchanged and "Added:" not in shown
+
+
+def test_search_text_still_hides_people_already_picked(tmp_path):
+    folder(tmp_path, family=FAMILY_THREE)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "child")
+        await pick_person(pilot, app, "Other Person")
+        await type_text(pilot, "Person")
+        return "\n".join(option_texts(app, "#people"))
+
+    listed = drive(tmp_path, script)
+    assert "Other Person" not in listed and "Third Person" in listed
+
+
+def test_picking_the_last_person_leaves_only_new_person(tmp_path):
+    folder(tmp_path, family=FAMILY_PLUS)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "child")
+        await pick_person(pilot, app, "Other Person")
+        rows = option_texts(app, "#people")
+        await pilot.press("escape")
+        await pilot.pause()
+        return rows, screen_name(app)
+
+    rows, after = drive(tmp_path, script)
+    assert rows == ["＋ New person…"] and after == "PersonScreen"
+
+
+def test_the_partner_picker_still_closes_after_one_pick(tmp_path):
+    folder(tmp_path, family=FAMILY_PLUS)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "partner")
+        await pick_person(pilot, app, "Other Person")
+        return screen_name(app)
+
+    assert drive(tmp_path, script) != "PeoplePicker"
+
+
+def test_adding_parents_closes_the_picker_after_the_second(tmp_path):
+    folder(tmp_path, family=FAMILY_THREE)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "other-person")
+        await palette_pick(pilot, "parents")
+        await pick_person(pilot, app, "Third Person")
+        after_one = screen_name(app)
+        await pick_person(pilot, app, "George Byron")
+        return after_one, screen_name(app), staged(app)
+
+    after_one, after_two, text = drive(tmp_path, script)
+    assert after_one == "PeoplePicker" and after_two == "PersonScreen"
+    assert "parents: [third-person, byron-george]" in text
+
+
+def test_a_person_with_one_parent_closes_the_picker_after_one_more(tmp_path):
+    family = FAMILY.replace("lovelace-ada:", "other-person:\n  name: {given: Other, surname: Person}\n  parents: [byron-george]\n\nlovelace-ada:")
+    folder(tmp_path, family=family)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "other-person")
+        await palette_pick(pilot, "parents")
+        await pick_person(pilot, app, "Annabella Milbanke")
+        return screen_name(app), staged(app)
+
+    name, text = drive(tmp_path, script)
+    assert name == "PersonScreen" and "parents: [byron-george, milbanke-annabella]" in text
+
+
+def test_escape_after_the_first_parent_keeps_it(tmp_path):
+    folder(tmp_path, family=FAMILY_THREE)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "other-person")
+        await palette_pick(pilot, "parents")
+        await pick_person(pilot, app, "Third Person")
+        await pilot.press("escape")
+        await pilot.pause()
+        return screen_name(app), staged(app)
+
+    name, text = drive(tmp_path, script)
+    assert name == "PersonScreen" and "other-person:\n  name: {given: Other, surname: Person}\n  parents: [third-person]" in text
+
+
+def test_adoptive_parents_are_counted_apart_from_birth_parents(tmp_path):
+    family = FAMILY_THREE.replace("other-person:\n  name: {given: Other, surname: Person}", "other-person:\n  name: {given: Other, surname: Person}\n  parents: [byron-george, milbanke-annabella]")
+    folder(tmp_path, family=family)
+
+    async def script(pilot, app):
+        await open_person(pilot, app, "other-person")
+        await palette_pick(pilot, "adoptive-parents")
+        await pick_person(pilot, app, "Third Person")
+        return screen_name(app), staged(app)
+
+    name, text = drive(tmp_path, script)
+    assert name == "PeoplePicker" and "adoptive-parents: [third-person]" in text
+
+
+def test_a_search_is_cleared_after_a_pick_so_the_next_enter_is_not_new_person(tmp_path):
+    folder(tmp_path, family=FAMILY_THREE)
+
+    async def script(pilot, app):
+        from textual.widgets import Input
+
+        await open_person(pilot, app, "lovelace-ada")
+        await palette_pick(pilot, "child")
+        await type_text(pilot, "Other")
+        await pilot.press("enter")
+        await pilot.pause()
+        return app.screen.query_one("#people-query", Input).value, option_texts(app, "#people")
+
+    query, rows = drive(tmp_path, script)
+    assert query == "" and any("Third Person" in r for r in rows) and not any("Other Person" in r for r in rows)

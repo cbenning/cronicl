@@ -384,6 +384,8 @@ class PersonScreen(Screen):
         screen = editor_for(self.app, key, path, "")
         if screen is None:
             return
+        if field.path in ("parents", "adoptive-parents"):
+            screen.on_pick = lambda pid: self._pick_parent(pid, key, field.path, source)
 
         def done(value, path=path, field=field) -> None:
             if not value:
@@ -437,6 +439,12 @@ class PersonScreen(Screen):
             self._ask_event_fields(key, source, index, rest, finish)
 
         self.app.push_screen(screen, done)
+
+    def _pick_parent(self, pid: str, key: str, field_path: str, source: str) -> bool | None:
+        """Add `pid` as a parent; True once the person has two (the picker closes), None when staging was refused."""
+        if not self._stage(source, lambda t: list_add(t, (key, field_path), pid), (key, field_path, 0)):
+            return None
+        return len(record_data(self.app.session.staged[source], key).get(field_path) or []) >= 2
 
     def _custom_key(self, name: str | None, key: str, source: str) -> None:
         if not name:
@@ -517,22 +525,22 @@ class PersonScreen(Screen):
         exclude = {self.pid} | ancestors(family, self.pid) | children
 
         def picked(value) -> None:
-            if value is None:
-                return
-            if value == PeoplePicker.NEW:
+            if value == PeoplePicker.NEW:  # existing people are linked as they are picked, in pick_child
                 self._new_child()
-            else:
-                self._existing_child(value)
 
-        self.app.push_screen(PeoplePicker("Add a child", family, exclude, True), picked)
+        def pick_child(pid: str) -> bool | None:
+            return False if self._existing_child(pid) else None  # a child pick never closes the picker: Esc does
 
-    def _existing_child(self, child: str) -> None:
+        self.app.push_screen(PeoplePicker("Add a child", family, exclude, True, on_pick=pick_child), picked)
+
+    def _existing_child(self, child: str) -> bool:
+        """Make `child` a child of this person; False when that was refused."""
         family = self.family
         person = family.tree.people[child]
         if len(person.parents) >= 2:
             self.app.notify(f"{family.name_of(child)} already has two parents", severity="warning")
-            return
-        self._stage(person.source, lambda t: list_add(t, (child, "parents"), self.pid), (child, "parents", 0))
+            return False
+        return self._stage(person.source, lambda t: list_add(t, (child, "parents"), self.pid), (child, "parents", 0))
 
     def _new_child(self) -> None:
         family = self.family

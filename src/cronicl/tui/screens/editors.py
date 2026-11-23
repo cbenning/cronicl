@@ -1,6 +1,8 @@
 """Editors for one field, chosen by the field's kind: plain text, long text, dates, choices, places, people."""
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -196,24 +198,38 @@ class ChoiceEditor(_Base):
 
 
 class PeoplePicker(_Base):
-    """Pick a person (by name), or "New person…". Returns the id, or NEW."""
+    """Pick a person (by name), or "New person…". Returns the id, or NEW (None when cancelled, or when `on_pick` closed it)."""
 
     NEW = "__new__"
     BINDINGS = [Binding("escape", "cancel", "Cancel"), Binding("down", "move(1)", show=False), Binding("up", "move(-1)", show=False)]
 
-    def __init__(self, title: str, family, exclude: set[str], allow_new: bool = True, current: str = "") -> None:
+    def __init__(
+        self,
+        title: str,
+        family,
+        exclude: set[str],
+        allow_new: bool = True,
+        current: str = "",
+        on_pick: Callable[[str], bool | None] | None = None,
+    ) -> None:
+        """With `on_pick` the picker stays open for more picks: Enter calls it with the id and it answers True to close
+        (the picker then dismisses with None), False to stay open, or None when the pick failed (nothing is recorded).
+        Picked people leave the list. Without `on_pick` one pick dismisses the picker with the id."""
         super().__init__(title, current)
-        self.family, self.exclude, self.allow_new = family, exclude, allow_new
+        self.family, self.exclude, self.allow_new, self.on_pick = family, exclude, allow_new, on_pick
+        self.picked: list[str] = []
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="dialog tall"):
             yield Label(self.heading, classes="dialog-title")
             yield Input(placeholder="Find a person…", id="people-query")
+            yield Label("", id="people-added", classes="hint")
             yield OptionList(id="people")
-            yield Label("Enter picks · Esc cancels", classes="hint")
+            yield Label("Enter adds · Esc done" if self.on_pick else "Enter picks · Esc cancels", classes="hint")
 
     def on_mount(self) -> None:
         self.query_one("#people-query", Input).focus()
+        self.query_one("#people-added", Label).display = False
         self._fill("")
 
     def _fill(self, query: str) -> None:
@@ -233,8 +249,28 @@ class PeoplePicker(_Base):
 
     def _pick(self) -> None:
         people = self.query_one("#people", OptionList)
-        if people.highlighted is not None and people.option_count:
-            self.dismiss(people.get_option_at_index(people.highlighted).id)
+        if people.highlighted is None or not people.option_count:
+            return
+        pid = people.get_option_at_index(people.highlighted).id
+        if self.on_pick is None or pid == self.NEW:
+            self.dismiss(pid)
+            return
+        done = self.on_pick(pid)
+        if done is None:
+            return
+        self.exclude.add(pid)
+        self.picked.append(pid)
+        if done:
+            self.dismiss(None)
+            return
+        added = self.query_one("#people-added", Label)
+        added.update("Added: " + ", ".join(self.family.name_of(p) for p in self.picked))
+        added.display = True
+        query = self.query_one("#people-query", Input)
+        if query.value:
+            query.value = ""  # typing a name then Enter picks them; the next Enter must not land on "New person…"
+        else:
+            self._fill("")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self._pick()

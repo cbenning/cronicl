@@ -84,7 +84,8 @@ edit by hand, and the TUI changes only the lines it has to.
   *unknown*), `sex` and event types are lists, parents and partners are picked by name from a list that never offers
   someone who would make a loop. Long text and raw YAML open a text box (Ctrl+S saves).
 - **Add things** with `a`: a searchable list of the fields this record does not have yet, each event type, a partner
-  (with the marriage date and place) and a child. Choosing "New person…" in any picker creates one.
+  (with the marriage date and place) and a child. Choosing "New person…" in any picker creates one. The child and parent pickers stay open for more picks:
+  Enter adds the highlighted person, Esc is done (a person's parent picker closes by itself at two parents).
 - **Delete** a line with `d`. Ctrl+E edits the person's whole record as YAML.
 - **Fix warnings**: `F2` (or `w` on a person) lists everything `cronicl check` reports; Enter jumps to the line, `f`
   proposes the fix. A `death: no` is never turned into a death without asking: the default answer is "they are alive".
