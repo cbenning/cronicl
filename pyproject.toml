@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cronicl"
-version = "1.4.0"
+version = "1.4.1"
 description = "Your family tree as plain text you own: edit it in a friendly terminal app, check it for mistakes, trade GEDCOM, and publish it as a website"
 readme = "README.md"
 requires-python = ">=3.11"
