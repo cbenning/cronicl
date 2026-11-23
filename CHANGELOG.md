@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.4.1
 
 - Fix: in the terminal app, a person with children by more than one partner, or with some children recorded without
   a partner, listed one couple's children right below the partner, so they looked like part of the partnership. All
