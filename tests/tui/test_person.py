@@ -199,3 +199,37 @@ def test_a_child_added_in_the_tui_shows_under_a_parent_created_in_the_tui(tmp_pa
 
     header, rows = drive(tmp_path, script)
     assert "Pat Parent" in header and "Children" in rows and "Kim" in rows
+
+
+def test_children_of_every_couple_come_under_one_heading_after_the_partners(tmp_path):
+    # A person with a lone-parent group of children and a couple with a partner: the couple's children used to be
+    # listed right below the partner, as if they belonged to the partnership.
+    family = """\
+dad:
+  name: {given: Dad, surname: Ames}
+mum:
+  name: {given: Mum, surname: Ames}
+dad + mum:
+  events:
+    - {type: marriage, date: 1900}
+alone:
+  name: {given: Alone, surname: Ames}
+  parents: [dad]
+joint:
+  name: {given: Joint, surname: Ames}
+  parents: [dad, mum]
+"""
+    folder(tmp_path, family=family)
+
+    async def script(pilot, app):
+        app.open_person("dad")
+        await pilot.pause()
+        return [t.strip() for t in option_texts(app)]
+
+    rows = drive(tmp_path, script)
+    assert rows.count("Children") == 1
+    assert rows.index("Partners") < rows.index("Children")
+    after = rows[rows.index("Children") + 1 :]
+    assert after[:2] == ["Alone Ames", "Joint Ames"]
+    between = rows[rows.index("Partners") + 1 : rows.index("Children")]
+    assert not any("Ames" in r and "▸" not in r for r in between)

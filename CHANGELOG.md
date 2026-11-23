@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fix: in the terminal app, a person with children by more than one partner, or with some children recorded without
+  a partner, listed one couple's children right below the partner, so they looked like part of the partnership. All
+  children now come under one "Children" heading after the partners.
+
 ## 1.4.0
 
 - New: in the terminal app, "Add a child" keeps the picker open so you can pick several children in a row (Esc when

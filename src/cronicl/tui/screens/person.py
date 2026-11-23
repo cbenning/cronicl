@@ -171,10 +171,10 @@ class PersonScreen(Screen):
                             add(row_text(row, 2, room(self.app)), ("couple_row", partner, row), disabled=row.comment_only)
                     else:
                         add(Text("      (no couple record yet)", style="dim italic"), None, True)
-            kids = relations.kids.get(cid, [])
-            for kid in kids:
-                if "Children" not in [str(o.prompt) for o in options if o.disabled]:
-                    add(Text("Children", style="bold"), None, True)
+        children = [kid for cid in relations.couples_of.get(self.pid, []) for kid in relations.kids.get(cid, [])]
+        if children:  # after every partner, so a couple's children are not mistaken for part of that partnership
+            add(Text("Children", style="bold"), None, True)
+            for kid in children:
                 add(self._person_line(kid), ("open", kid))
         siblings = sorted({c for p in parents for cid in relations.couples_of.get(p, []) for c in relations.kids.get(cid, []) if c != self.pid})
         if siblings:
